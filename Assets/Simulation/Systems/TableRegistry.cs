@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using TavernSim.Core.Simulation;
 using TavernSim.Simulation.Models;
 
+using Sim = TavernSim.Core.Simulation.Simulation;
+
 namespace TavernSim.Simulation.Systems
 {
     /// <summary>
@@ -13,7 +15,7 @@ namespace TavernSim.Simulation.Systems
 
         public IReadOnlyList<Table> Tables => _tables;
 
-        public void Initialize(Simulation simulation)
+        public void Initialize(Sim simulation)
         {
         }
 

@@ -1,4 +1,6 @@
 // Scripts/Agents/AgentSystem.cs
+
+using System.Collections.Generic;
 public sealed class AgentSystem : ISimSystem {
     readonly List<Customer> _customers = new();
     readonly List<Waiter> _waiters = new();

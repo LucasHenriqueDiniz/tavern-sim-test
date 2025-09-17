@@ -1,6 +1,8 @@
 using System;
 using TavernSim.Core.Simulation;
 
+using Sim = TavernSim.Core.Simulation.Simulation;
+
 namespace TavernSim.Simulation.Systems
 {
     /// <summary>
@@ -20,7 +22,7 @@ namespace TavernSim.Simulation.Systems
             _overheadPerMinute = overheadPerMinute;
         }
 
-        public void Initialize(Simulation simulation)
+        public void Initialize(Sim simulation)
         {
             CashChanged?.Invoke(Cash);
         }

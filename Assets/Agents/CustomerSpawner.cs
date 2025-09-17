@@ -3,6 +3,8 @@ using UnityEngine;
 using TavernSim.Core.Simulation;
 using TavernSim.Simulation.Systems;
 
+using Sim = TavernSim.Core.Simulation.Simulation;
+
 namespace TavernSim.Agents
 {
     /// <summary>
@@ -46,7 +48,7 @@ namespace TavernSim.Agents
             }
         }
 
-        public void Initialize(Simulation simulation)
+        public void Initialize(Sim simulation)
         {
             _timer = spawnInterval;
             if (customerPrefab == null)

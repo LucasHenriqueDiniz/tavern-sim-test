@@ -5,6 +5,8 @@ using TavernSim.Core.Simulation;
 using TavernSim.Domain;
 using TavernSim.Simulation.Models;
 
+using Sim = TavernSim.Core.Simulation.Simulation;
+
 namespace TavernSim.Simulation.Systems
 {
     /// <summary>
@@ -17,7 +19,7 @@ namespace TavernSim.Simulation.Systems
 
         public event Action<IReadOnlyList<Order>> OrdersChanged;
 
-        public void Initialize(Simulation simulation)
+        public void Initialize(Sim simulation)
         {
         }
 
