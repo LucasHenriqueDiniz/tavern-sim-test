@@ -36,7 +36,7 @@ namespace TavernSim.Agents
         {
             if (!_agent.isOnNavMesh)
             {
-                return true;
+                return false;
             }
 
             if (_agent.pathPending)
@@ -44,12 +44,19 @@ namespace TavernSim.Agents
                 return false;
             }
 
-            if (_agent.remainingDistance > Mathf.Sqrt(thresholdSqr))
+            if (float.IsInfinity(_agent.remainingDistance))
             {
                 return false;
             }
 
-            return !_agent.hasPath || _agent.velocity.sqrMagnitude <= thresholdSqr;
+            var epsilon = Mathf.Sqrt(Mathf.Max(thresholdSqr, 0f));
+            var maxDistance = Mathf.Max(_agent.stoppingDistance, epsilon);
+            if (_agent.remainingDistance > maxDistance)
+            {
+                return false;
+            }
+
+            return !_agent.hasPath || _agent.velocity.sqrMagnitude <= Mathf.Max(thresholdSqr, 0f);
         }
     }
 }

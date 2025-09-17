@@ -33,6 +33,7 @@ namespace TavernSim.Simulation.Systems
         private RecipeSO _defaultRecipe;
 
         public event Action<int> ActiveCustomerCountChanged;
+        public event Action<Customer> CustomerReleased;
 
         public AgentSystem(TableRegistry tableRegistry, OrderSystem orderSystem, EconomySystem economySystem, CleaningSystem cleaningSystem, Catalog catalog)
         {
@@ -81,6 +82,7 @@ namespace TavernSim.Simulation.Systems
             _tablesNeedingClean.Clear();
             _despawnQueue.Clear();
             ActiveCustomerCountChanged = null;
+            CustomerReleased = null;
         }
 
         public void RegisterWaiter(Waiter waiter)
@@ -137,6 +139,7 @@ namespace TavernSim.Simulation.Systems
                 }
 
                 _customersNeedingOrder.Remove(data.Agent);
+                CustomerReleased?.Invoke(data.Agent);
                 data.Agent.gameObject.SetActive(false);
             }
 

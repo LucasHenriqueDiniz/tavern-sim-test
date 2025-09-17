@@ -1,7 +1,9 @@
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 using TavernSim.Domain;
+using TavernSim.UI;
 
 namespace TavernSim.Editor
 {
@@ -14,25 +16,16 @@ namespace TavernSim.Editor
         private const string ItemPath = RootPath + "/Ale.asset";
         private const string RecipePath = RootPath + "/AlePint.asset";
         private const string CatalogPath = RootPath + "/DemoCatalog.asset";
+        private const string HudConfigFolder = "Assets/Resources/UI";
+        private const string HudConfigPath = HudConfigFolder + "/HUDVisualConfig.asset";
+        private const string HudUxmlPath = "Assets/UI/UXML/HUD.uxml";
+        private const string HudUssPath = "Assets/UI/USS/HUD.uss";
 
         [InitializeOnLoadMethod]
         private static void EnsureAssets()
         {
-            if (!AssetDatabase.IsValidFolder(RootPath))
-            {
-                var parts = RootPath.Split('/');
-                var current = "Assets";
-                for (int i = 1; i < parts.Length; i++)
-                {
-                    var next = current + "/" + parts[i];
-                    if (!AssetDatabase.IsValidFolder(next))
-                    {
-                        AssetDatabase.CreateFolder(current, parts[i]);
-                    }
-
-                    current = next;
-                }
-            }
+            EnsureFolder(RootPath);
+            EnsureFolder(HudConfigFolder);
 
             var item = LoadOrCreate<ItemSO>(ItemPath);
             ConfigureAle(item);
@@ -43,7 +36,30 @@ namespace TavernSim.Editor
             var catalog = LoadOrCreate<Catalog>(CatalogPath);
             ConfigureCatalog(catalog, item, recipe);
 
+            EnsureHudVisualConfig();
+
             AssetDatabase.SaveAssets();
+        }
+
+        private static void EnsureFolder(string targetPath)
+        {
+            if (AssetDatabase.IsValidFolder(targetPath))
+            {
+                return;
+            }
+
+            var parts = targetPath.Split('/');
+            var current = parts[0];
+            for (int i = 1; i < parts.Length; i++)
+            {
+                var next = current + "/" + parts[i];
+                if (!AssetDatabase.IsValidFolder(next))
+                {
+                    AssetDatabase.CreateFolder(current, parts[i]);
+                }
+
+                current = next;
+            }
         }
 
         private static T LoadOrCreate<T>(string path) where T : ScriptableObject
@@ -94,6 +110,22 @@ namespace TavernSim.Editor
             recipesProp.GetArrayElementAtIndex(0).objectReferenceValue = recipe;
             so.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(catalog);
+        }
+
+        private static void EnsureHudVisualConfig()
+        {
+            var config = AssetDatabase.LoadAssetAtPath<HUDVisualConfig>(HudConfigPath);
+            if (config == null)
+            {
+                config = ScriptableObject.CreateInstance<HUDVisualConfig>();
+                AssetDatabase.CreateAsset(config, HudConfigPath);
+            }
+
+            var so = new SerializedObject(config);
+            so.FindProperty("visualTree").objectReferenceValue = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(HudUxmlPath);
+            so.FindProperty("styleSheet").objectReferenceValue = AssetDatabase.LoadAssetAtPath<StyleSheet>(HudUssPath);
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(config);
         }
     }
 }

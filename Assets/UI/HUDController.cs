@@ -13,6 +13,8 @@ namespace TavernSim.UI
     [RequireComponent(typeof(UIDocument))]
     public sealed class HUDController : MonoBehaviour
     {
+        [SerializeField] private HUDVisualConfig visualConfig;
+
         private EconomySystem _economy;
         private OrderSystem _orders;
         private SaveService _saveService;
@@ -44,7 +46,12 @@ namespace TavernSim.UI
         private void Awake()
         {
             _document = GetComponent<UIDocument>();
-            LoadVisualTree();
+            if (visualConfig == null)
+            {
+                visualConfig = Resources.Load<HUDVisualConfig>("UI/HUDVisualConfig");
+            }
+
+            ApplyVisualTree();
         }
 
         private void OnEnable()
@@ -83,25 +90,32 @@ namespace TavernSim.UI
             }
         }
 
-        private void LoadVisualTree()
+        private void ApplyVisualTree()
         {
-            var visualTree = Resources.Load<VisualTreeAsset>("UI/HUD");
-            if (visualTree != null)
+            if (visualConfig != null)
             {
-                _document.visualTreeAsset = visualTree;
-            }
+                if (visualConfig.VisualTree != null)
+                {
+                    _document.visualTreeAsset = visualConfig.VisualTree;
+                }
 
-            if (_document.visualTreeAsset == null)
-            {
-                var root = new VisualElement { style = { flexDirection = FlexDirection.Column } };
-                _document.rootVisualElement.Add(root);
+                if (visualConfig.StyleSheet != null)
+                {
+                    var root = _document.rootVisualElement;
+                    if (!root.styleSheets.Contains(visualConfig.StyleSheet))
+                    {
+                        root.styleSheets.Add(visualConfig.StyleSheet);
+                    }
+                }
             }
 
             var rootElement = _document.rootVisualElement;
-            var styleSheet = Resources.Load<StyleSheet>("UI/HUD");
-            if (styleSheet != null)
+            if (_document.visualTreeAsset == null)
             {
-                rootElement.styleSheets.Add(styleSheet);
+                rootElement.Clear();
+                var fallbackRoot = new VisualElement { style = { flexDirection = FlexDirection.Column } };
+                rootElement.Add(fallbackRoot);
+                rootElement = fallbackRoot;
             }
 
             _cashLabel = rootElement.Q<Label>("cashLabel") ?? CreateLabel(rootElement, "cashLabel", "Cash: 0");

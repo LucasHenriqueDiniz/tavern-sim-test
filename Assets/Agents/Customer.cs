@@ -36,7 +36,7 @@ namespace TavernSim.Agents
         {
             if (!_agent.isOnNavMesh)
             {
-                return true;
+                return false;
             }
 
             if (_agent.pathPending)
@@ -44,23 +44,39 @@ namespace TavernSim.Agents
                 return false;
             }
 
-            if (_agent.remainingDistance > Mathf.Sqrt(thresholdSqr))
+            if (float.IsInfinity(_agent.remainingDistance))
             {
                 return false;
             }
 
-            return !_agent.hasPath || _agent.velocity.sqrMagnitude <= thresholdSqr;
+            var epsilon = Mathf.Sqrt(Mathf.Max(thresholdSqr, 0f));
+            var maxDistance = Mathf.Max(_agent.stoppingDistance, epsilon);
+            if (_agent.remainingDistance > maxDistance)
+            {
+                return false;
+            }
+
+            return !_agent.hasPath || _agent.velocity.sqrMagnitude <= Mathf.Max(thresholdSqr, 0f);
         }
 
         public void SitAt(Transform anchor)
         {
-            if (_agent.isOnNavMesh)
+            var wasEnabled = _agent.enabled;
+            if (wasEnabled)
             {
-                _agent.Warp(anchor.position);
+                _agent.enabled = false;
             }
 
-            transform.position = anchor.position;
-            transform.rotation = anchor.rotation;
+            transform.SetPositionAndRotation(anchor.position, anchor.rotation);
+
+            if (wasEnabled)
+            {
+                _agent.enabled = true;
+                if (_agent.isOnNavMesh)
+                {
+                    _agent.Warp(anchor.position);
+                }
+            }
         }
 
         public void StandUp()

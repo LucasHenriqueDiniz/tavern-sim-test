@@ -12,6 +12,8 @@ namespace TavernSim.Agents
     {
         [SerializeField] private int maxCustomers = 8;
         [SerializeField] private float spawnInterval = 10f;
+        [SerializeField] private int prewarmCount = 8;
+        [SerializeField] private Customer customerPrefab;
 
         private readonly List<Customer> _pool = new List<Customer>(16);
         private readonly List<Customer> _active = new List<Customer>(16);
@@ -21,12 +23,22 @@ namespace TavernSim.Agents
 
         public void Configure(AgentSystem agentSystem)
         {
+            if (_agentSystem != null)
+            {
+                _agentSystem.CustomerReleased -= Release;
+            }
+
             _agentSystem = agentSystem;
+            if (_agentSystem != null)
+            {
+                _agentSystem.CustomerReleased += Release;
+            }
         }
 
         public void Initialize(Simulation simulation)
         {
             _timer = spawnInterval;
+            Prewarm();
         }
 
         public void Tick(float deltaTime)
@@ -59,6 +71,11 @@ namespace TavernSim.Agents
 
         public void Dispose()
         {
+            if (_agentSystem != null)
+            {
+                _agentSystem.CustomerReleased -= Release;
+            }
+
             _pool.Clear();
             _active.Clear();
         }
@@ -73,15 +90,9 @@ namespace TavernSim.Agents
                 }
             }
 
-            var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            go.name = $"Customer_{_createdCount++}";
-            go.transform.SetParent(transform, false);
-            var agent = go.AddComponent<UnityEngine.AI.NavMeshAgent>();
-            agent.radius = 0.3f;
-            agent.height = 1.8f;
-            var customer = go.AddComponent<Customer>();
-            _pool.Add(customer);
-            return customer;
+            var created = CreateInstance();
+            _pool.Add(created);
+            return created;
         }
 
         private void CleanupInactive()
@@ -92,6 +103,61 @@ namespace TavernSim.Agents
                 {
                     _active.RemoveAt(i);
                 }
+            }
+        }
+
+        private void Prewarm()
+        {
+            var target = Mathf.Clamp(prewarmCount, 0, maxCustomers);
+            for (int i = _pool.Count; i < target; i++)
+            {
+                var customer = CreateInstance();
+                customer.gameObject.SetActive(false);
+                _pool.Add(customer);
+            }
+        }
+
+        private Customer CreateInstance()
+        {
+            Customer instance;
+            if (customerPrefab != null)
+            {
+                instance = Instantiate(customerPrefab, transform);
+                instance.name = $"Customer_{_createdCount++}";
+            }
+            else
+            {
+                var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                go.name = $"Customer_{_createdCount++}";
+                go.transform.SetParent(transform, false);
+                var agent = go.GetComponent<UnityEngine.AI.NavMeshAgent>();
+                if (agent == null)
+                {
+                    agent = go.AddComponent<UnityEngine.AI.NavMeshAgent>();
+                }
+
+                agent.radius = 0.3f;
+                agent.height = 1.8f;
+                instance = go.AddComponent<Customer>();
+            }
+
+            instance.transform.SetParent(transform, false);
+            instance.gameObject.SetActive(false);
+            return instance;
+        }
+
+        private void Release(Customer customer)
+        {
+            if (customer == null)
+            {
+                return;
+            }
+
+            customer.gameObject.SetActive(false);
+            _active.Remove(customer);
+            if (!_pool.Contains(customer))
+            {
+                _pool.Add(customer);
             }
         }
     }

@@ -9,6 +9,7 @@ namespace TavernSim.Core.Simulation
     /// MonoBehaviour bootstrap for the deterministic simulation. Runs the Simulation in FixedUpdate at 10 Hz.
     /// </summary>
     [DisallowMultipleComponent]
+    [DefaultExecutionOrder(-100)]
     public sealed class SimulationRunner : MonoBehaviour
     {
         [SerializeField] private float timeStep = 0.1f;
