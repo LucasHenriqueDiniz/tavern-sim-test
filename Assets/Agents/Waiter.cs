@@ -49,14 +49,14 @@ namespace TavernSim.Agents
                 return false;
             }
 
-            var epsilon = Mathf.Sqrt(Mathf.Max(thresholdSqr, 0f));
-            var maxDistance = Mathf.Max(_agent.stoppingDistance, epsilon);
-            if (_agent.remainingDistance > maxDistance)
+            var threshold = Mathf.Max(thresholdSqr, 0f);
+            var epsilon = Mathf.Max(Mathf.Sqrt(threshold), _agent.stoppingDistance);
+            if (_agent.remainingDistance > epsilon)
             {
                 return false;
             }
 
-            return !_agent.hasPath || _agent.velocity.sqrMagnitude <= Mathf.Max(thresholdSqr, 0f);
+            return !_agent.hasPath || _agent.velocity.sqrMagnitude <= threshold;
         }
     }
 }

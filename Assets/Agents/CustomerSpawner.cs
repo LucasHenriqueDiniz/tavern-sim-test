@@ -21,7 +21,7 @@ namespace TavernSim.Agents
         private float _timer;
         private int _createdCount;
 
-        public void Configure(AgentSystem agentSystem)
+        public void Configure(AgentSystem agentSystem, Customer prefab = null)
         {
             if (_agentSystem != null)
             {
@@ -33,17 +33,34 @@ namespace TavernSim.Agents
             {
                 _agentSystem.CustomerReleased += Release;
             }
+
+            if (prefab != null)
+            {
+                customerPrefab = prefab;
+            }
+
+            if (customerPrefab != null && customerPrefab.gameObject.scene.IsValid())
+            {
+                customerPrefab.gameObject.SetActive(false);
+                customerPrefab.transform.SetParent(transform, false);
+            }
         }
 
         public void Initialize(Simulation simulation)
         {
             _timer = spawnInterval;
+            if (customerPrefab == null)
+            {
+                Debug.LogError("CustomerSpawner requires a customer prefab to be assigned.", this);
+                return;
+            }
+
             Prewarm();
         }
 
         public void Tick(float deltaTime)
         {
-            if (_agentSystem == null)
+            if (_agentSystem == null || customerPrefab == null)
             {
                 return;
             }
@@ -60,8 +77,11 @@ namespace TavernSim.Agents
             {
                 _timer = 0f;
                 var customer = GetOrCreate();
-                _active.Add(customer);
-                _agentSystem.SpawnCustomer(customer);
+                if (customer != null)
+                {
+                    _active.Add(customer);
+                    _agentSystem.SpawnCustomer(customer);
+                }
             }
         }
 
@@ -91,7 +111,10 @@ namespace TavernSim.Agents
             }
 
             var created = CreateInstance();
-            _pool.Add(created);
+            if (created != null)
+            {
+                _pool.Add(created);
+            }
             return created;
         }
 
@@ -108,45 +131,37 @@ namespace TavernSim.Agents
 
         private void Prewarm()
         {
+            if (customerPrefab == null)
+            {
+                return;
+            }
+
             var target = Mathf.Clamp(prewarmCount, 0, maxCustomers);
             for (int i = _pool.Count; i < target; i++)
             {
                 var customer = CreateInstance();
-                customer.gameObject.SetActive(false);
-                _pool.Add(customer);
+                if (customer != null)
+                {
+                    _pool.Add(customer);
+                }
             }
         }
 
         private Customer CreateInstance()
         {
-            Customer instance;
-            if (customerPrefab != null)
+            if (customerPrefab == null)
             {
-                instance = Instantiate(customerPrefab, transform);
-                instance.name = $"Customer_{_createdCount++}";
-            }
-            else
-            {
-                var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-                go.name = $"Customer_{_createdCount++}";
-                go.transform.SetParent(transform, false);
-                var agent = go.GetComponent<UnityEngine.AI.NavMeshAgent>();
-                if (agent == null)
-                {
-                    agent = go.AddComponent<UnityEngine.AI.NavMeshAgent>();
-                }
-
-                agent.radius = 0.3f;
-                agent.height = 1.8f;
-                instance = go.AddComponent<Customer>();
+                return null;
             }
 
-            instance.transform.SetParent(transform, false);
+            var instance = Instantiate(customerPrefab, transform);
+            instance.name = $"Customer_{_createdCount++}";
             instance.gameObject.SetActive(false);
+            instance.gameObject.hideFlags = HideFlags.None;
             return instance;
         }
 
-        private void Release(Customer customer)
+        public void Release(Customer customer)
         {
             if (customer == null)
             {
@@ -155,10 +170,6 @@ namespace TavernSim.Agents
 
             customer.gameObject.SetActive(false);
             _active.Remove(customer);
-            if (!_pool.Contains(customer))
-            {
-                _pool.Add(customer);
-            }
         }
     }
 }

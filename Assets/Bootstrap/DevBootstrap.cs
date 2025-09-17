@@ -133,7 +133,8 @@ namespace TavernSim.Bootstrap
 
             _customerSpawner = new GameObject("CustomerSpawner").AddComponent<CustomerSpawner>();
             _customerSpawner.transform.SetParent(transform, false);
-            _customerSpawner.Configure(_agentSystem);
+            var customerPrefab = CreateCustomerPrefab(_customerSpawner.transform);
+            _customerSpawner.Configure(_agentSystem, customerPrefab);
             _runner.RegisterSystem(_customerSpawner);
 
             _saveService = new SaveService(_economySystem);
@@ -164,6 +165,20 @@ namespace TavernSim.Bootstrap
 
             _hudController.BindSaveService(_saveService);
             _hudController.SetCustomers(0);
+        }
+
+        private static Customer CreateCustomerPrefab(Transform parent)
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            go.name = "CustomerPrefab";
+            go.transform.SetParent(parent, false);
+            var agent = go.GetComponent<UnityEngine.AI.NavMeshAgent>() ?? go.AddComponent<UnityEngine.AI.NavMeshAgent>();
+            agent.radius = 0.3f;
+            agent.height = 1.8f;
+            var customer = go.AddComponent<Customer>();
+            go.hideFlags = HideFlags.HideInHierarchy;
+            go.SetActive(false);
+            return customer;
         }
     }
 }

@@ -49,33 +49,29 @@ namespace TavernSim.Agents
                 return false;
             }
 
-            var epsilon = Mathf.Sqrt(Mathf.Max(thresholdSqr, 0f));
-            var maxDistance = Mathf.Max(_agent.stoppingDistance, epsilon);
-            if (_agent.remainingDistance > maxDistance)
+            var threshold = Mathf.Max(thresholdSqr, 0f);
+            var epsilon = Mathf.Max(Mathf.Sqrt(threshold), _agent.stoppingDistance);
+            if (_agent.remainingDistance > epsilon)
             {
                 return false;
             }
 
-            return !_agent.hasPath || _agent.velocity.sqrMagnitude <= Mathf.Max(thresholdSqr, 0f);
+            return !_agent.hasPath || _agent.velocity.sqrMagnitude <= threshold;
         }
 
         public void SitAt(Transform anchor)
         {
-            var wasEnabled = _agent.enabled;
-            if (wasEnabled)
+            if (_agent.isOnNavMesh)
             {
-                _agent.enabled = false;
+                _agent.Warp(anchor.position);
+                var previous = _agent.updateRotation;
+                _agent.updateRotation = false;
+                transform.rotation = anchor.rotation;
+                _agent.updateRotation = previous;
             }
-
-            transform.SetPositionAndRotation(anchor.position, anchor.rotation);
-
-            if (wasEnabled)
+            else
             {
-                _agent.enabled = true;
-                if (_agent.isOnNavMesh)
-                {
-                    _agent.Warp(anchor.position);
-                }
+                transform.SetPositionAndRotation(anchor.position, anchor.rotation);
             }
         }
 
