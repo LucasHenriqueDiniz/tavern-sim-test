@@ -1,0 +1,29 @@
+.root {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 260px;
+    padding: 8px;
+    background-color: rgba(20, 20, 20, 0.85);
+    color: white;
+    border-radius: 6px;
+    gap: 4px;
+}
+
+.stat {
+    font-size: 14px;
+}
+
+.orders {
+    height: 120px;
+}
+
+.time-controls, .save-controls {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 4px;
+}
+
+.time-controls button, .save-controls button {
+    flex-grow: 1;
+}
