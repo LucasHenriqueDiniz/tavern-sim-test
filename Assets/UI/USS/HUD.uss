@@ -7,7 +7,10 @@
     background-color: rgba(20, 20, 20, 0.85);
     color: white;
     border-radius: 6px;
-    gap: 4px;
+}
+
+.root > * + * {
+    margin-top: 4px;
 }
 
 .stat {
@@ -18,12 +21,18 @@
     height: 120px;
 }
 
-.time-controls, .save-controls {
+.time-controls,
+.save-controls {
     flex-direction: row;
     justify-content: space-between;
-    gap: 4px;
 }
 
-.time-controls button, .save-controls button {
+.time-controls button + button,
+.save-controls button + button {
+    margin-left: 4px;
+}
+
+.time-controls button,
+.save-controls button {
     flex-grow: 1;
 }
