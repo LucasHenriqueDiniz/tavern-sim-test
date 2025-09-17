@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xmlns:engine="UnityEngine.UIElements">
+  <ui:VisualElement class="root">
+    <ui:Label name="cashLabel" class="stat" text="Cash: 0" />
+    <ui:Label name="customerLabel" class="stat" text="Customers: 0" />
+    <ui:Label name="ordersLabel" class="stat" text="Orders" />
+    <ui:ScrollView name="ordersScroll" class="orders" />
+    <ui:VisualElement class="time-controls">
+      <ui:Button name="pauseBtn" text="Pause" />
+      <ui:Button name="play1Btn" text="1x" />
+      <ui:Button name="play2Btn" text="2x" />
+      <ui:Button name="play4Btn" text="4x" />
+    </ui:VisualElement>
+    <ui:VisualElement class="save-controls">
+      <ui:Button name="saveBtn" text="Save (F5)" />
+      <ui:Button name="loadBtn" text="Load (F9)" />
+    </ui:VisualElement>
+  </ui:VisualElement>
+</engine:UXML>
