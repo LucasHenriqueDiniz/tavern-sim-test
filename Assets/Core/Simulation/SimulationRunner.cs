@@ -1,61 +1,39 @@
-using System.Collections.Generic;
 using UnityEngine;
-using TavernSim.Simulation.Systems;
-using TavernSim.Domain;
 
 namespace TavernSim.Core.Simulation
 {
-    /// <summary>
-    /// MonoBehaviour bootstrap for the deterministic simulation. Runs the Simulation in FixedUpdate at 10 Hz.
-    /// </summary>
-    [DisallowMultipleComponent]
     [DefaultExecutionOrder(-100)]
     public sealed class SimulationRunner : MonoBehaviour
     {
-        [SerializeField] private float timeStep = 0.1f;
+        [SerializeField] private float simHz = 10f;
 
-        private Simulation _simulation;
-        private readonly List<ISimSystem> _registeredSystems = new List<ISimSystem>(16);
+        private readonly Simulation _simulation = new();
+        private float _accumulator;
 
-        public Simulation Simulation => _simulation;
+        public void RegisterSystem(ISimSystem system) => _simulation.Register(system);
 
-        private void Awake()
+        private void Start()
         {
-            Time.fixedDeltaTime = timeStep;
-            _simulation = new Simulation(timeStep);
-        }
-
-        public void RegisterSystem(ISimSystem system, bool lateTick = false)
-        {
-            if (_registeredSystems.Contains(system))
-            {
-                return;
-            }
-
-            _registeredSystems.Add(system);
-            _simulation.AddSystem(system, lateTick);
-        }
-
-        private void FixedUpdate()
-        {
-            if (_simulation == null)
-            {
-                return;
-            }
-
-            _simulation.Tick();
+            _simulation.Initialize();
         }
 
         private void OnDestroy()
         {
-            if (_simulation == null)
+            _simulation.Dispose();
+        }
+
+        private void FixedUpdate()
+        {
+            _accumulator += Time.fixedDeltaTime;
+            float step = 1f / Mathf.Max(1f, simHz);
+
+            while (_accumulator >= step)
             {
-                return;
+                _simulation.Tick(step);
+                _accumulator -= step;
             }
 
-            _simulation.Dispose();
-            _simulation = null;
-            _registeredSystems.Clear();
+            _simulation.LateTick(Time.fixedDeltaTime);
         }
     }
 }

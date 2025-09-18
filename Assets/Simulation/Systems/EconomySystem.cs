@@ -1,67 +1,75 @@
-using System;
+using UnityEngine;
 using TavernSim.Core.Simulation;
-
 using Sim = TavernSim.Core.Simulation.Simulation;
 
 namespace TavernSim.Simulation.Systems
 {
-    /// <summary>
-    /// Handles all money related simulation logic such as recurring costs and revenue.
-    /// </summary>
     public sealed class EconomySystem : ISimSystem
     {
-        private readonly float _overheadPerMinute;
-        private float _overheadTimer;
-
         public float Cash { get; private set; }
-        public event Action<float> CashChanged;
+        private readonly float _overheadPerGameMinute;
+        private float _minuteAccumulator;
 
-        public EconomySystem(float startingCash, float overheadPerMinute)
+        public event System.Action<float> CashChanged;
+
+        public EconomySystem(float initialCash, float overheadPerMinute)
         {
-            Cash = startingCash;
-            _overheadPerMinute = overheadPerMinute;
+            Cash = initialCash;
+            _overheadPerGameMinute = Mathf.Max(0f, overheadPerMinute);
         }
 
-        public void Initialize(Sim simulation)
+        public void AddRevenue(float v)
         {
+            if (v <= 0f)
+            {
+                return;
+            }
+
+            Cash += v;
             CashChanged?.Invoke(Cash);
         }
 
-        public void Tick(float deltaTime)
+        public bool TrySpend(float v)
         {
-            _overheadTimer += deltaTime;
-            if (_overheadTimer >= 60f)
+            if (v < 0f)
             {
-                _overheadTimer -= 60f;
-                TrySpend(_overheadPerMinute);
+                return true;
             }
-        }
 
-        public void LateTick(float deltaTime)
-        {
-        }
-
-        public bool TrySpend(float amount)
-        {
-            if (Cash < amount)
+            if (Cash < v)
             {
                 return false;
             }
 
-            Cash -= amount;
+            Cash -= v;
             CashChanged?.Invoke(Cash);
             return true;
         }
 
-        public void AddRevenue(float amount)
+        public void Initialize(Sim simulation)
         {
-            Cash += amount;
-            CashChanged?.Invoke(Cash);
+        }
+
+        public void Tick(float dt)
+        {
+            _minuteAccumulator += dt;
+            if (_minuteAccumulator >= 60f)
+            {
+                _minuteAccumulator -= 60f;
+                if (_overheadPerGameMinute > 0f)
+                {
+                    Cash = Mathf.Max(0f, Cash - _overheadPerGameMinute);
+                    CashChanged?.Invoke(Cash);
+                }
+            }
+        }
+
+        public void LateTick(float dt)
+        {
         }
 
         public void Dispose()
         {
-            CashChanged = null;
         }
     }
 }

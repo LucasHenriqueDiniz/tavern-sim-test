@@ -1,68 +1,40 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using TavernSim.Core.Simulation;
-using TavernSim.Domain;
-using TavernSim.Simulation.Models;
-
 using Sim = TavernSim.Core.Simulation.Simulation;
 
 namespace TavernSim.Simulation.Systems
 {
-    /// <summary>
-    /// Tracks orders placed by customers and advances their preparation timers.
-    /// </summary>
     public sealed class OrderSystem : ISimSystem
     {
-        private readonly List<Order> _activeOrders = new List<Order>(16);
-        private readonly List<Order> _buffer = new List<Order>(16);
+        private readonly Queue<Order> _pending = new(32);
+        private readonly List<Order> _inPrep = new(32);
+        private int _maxStations = 1;
 
-        public event Action<IReadOnlyList<Order>> OrdersChanged;
+        public event System.Action<IReadOnlyList<Order>> OrdersChanged;
 
-        public void Initialize(Sim simulation)
+        public void SetKitchenStations(int count) => _maxStations = Mathf.Max(1, count);
+
+        public void EnqueueOrder(int tableId, TavernSim.Domain.RecipeSO recipe)
         {
-        }
-
-        public void Tick(float deltaTime)
-        {
-            if (_activeOrders.Count == 0)
+            if (recipe == null)
             {
                 return;
             }
 
-            _buffer.Clear();
-            for (int i = 0; i < _activeOrders.Count; i++)
+            _pending.Enqueue(new Order(tableId, recipe, recipe.PrepTime));
+            OrdersChanged?.Invoke(GetOrders());
+        }
+
+        public bool TryConsumeReadyOrder(int tableId, out TavernSim.Domain.RecipeSO recipe)
+        {
+            for (int i = 0; i < _inPrep.Count; i++)
             {
-                var order = _activeOrders[i];
-                var remaining = Mathf.Max(0f, order.Remaining - deltaTime);
-                _buffer.Add(order.WithRemaining(remaining));
-            }
-
-            _activeOrders.Clear();
-            _activeOrders.AddRange(_buffer);
-            OrdersChanged?.Invoke(_activeOrders);
-        }
-
-        public void LateTick(float deltaTime)
-        {
-        }
-
-        public void EnqueueOrder(int tableId, RecipeSO recipe)
-        {
-            var order = new Order(tableId, recipe, recipe.PrepTime);
-            _activeOrders.Add(order);
-            OrdersChanged?.Invoke(_activeOrders);
-        }
-
-        public bool TryConsumeReadyOrder(int tableId, out RecipeSO recipe)
-        {
-            for (int i = 0; i < _activeOrders.Count; i++)
-            {
-                if (_activeOrders[i].TableId == tableId && _activeOrders[i].Remaining <= 0f)
+                if (_inPrep[i].TableId == tableId && _inPrep[i].Remaining <= 0f)
                 {
-                    recipe = _activeOrders[i].Recipe;
-                    _activeOrders.RemoveAt(i);
-                    OrdersChanged?.Invoke(_activeOrders);
+                    recipe = _inPrep[i].Recipe;
+                    _inPrep.RemoveAt(i);
+                    OrdersChanged?.Invoke(GetOrders());
                     return true;
                 }
             }
@@ -71,13 +43,55 @@ namespace TavernSim.Simulation.Systems
             return false;
         }
 
-        public IReadOnlyList<Order> GetOrders() => _activeOrders;
+        public IReadOnlyList<Order> GetOrders() => _inPrep;
+
+        public void Initialize(Sim simulation)
+        {
+        }
+
+        public void Tick(float dt)
+        {
+            while (_inPrep.Count < _maxStations && _pending.Count > 0)
+            {
+                _inPrep.Add(_pending.Dequeue());
+            }
+
+            bool changed = false;
+            for (int i = 0; i < _inPrep.Count; i++)
+            {
+                float previous = _inPrep[i].Remaining;
+                _inPrep[i].Remaining = Mathf.Max(0f, previous - dt);
+                changed |= _inPrep[i].Remaining != previous;
+            }
+
+            if (changed)
+            {
+                OrdersChanged?.Invoke(GetOrders());
+            }
+        }
+
+        public void LateTick(float dt)
+        {
+        }
 
         public void Dispose()
         {
-            _activeOrders.Clear();
-            _buffer.Clear();
-            OrdersChanged = null;
+            _pending.Clear();
+            _inPrep.Clear();
+        }
+    }
+
+    public sealed class Order
+    {
+        public int TableId { get; }
+        public TavernSim.Domain.RecipeSO Recipe { get; }
+        public float Remaining { get; set; }
+
+        public Order(int tableId, TavernSim.Domain.RecipeSO recipe, float prepTime)
+        {
+            TableId = tableId;
+            Recipe = recipe;
+            Remaining = Mathf.Max(0f, prepTime);
         }
     }
 }
