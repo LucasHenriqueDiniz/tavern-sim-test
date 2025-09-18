@@ -1,4 +1,6 @@
 // Scripts/Simulation/OrderSystem.cs
+using System.Collections.Generic;
+
 public sealed class OrderSystem : ISimSystem {
     readonly Queue<Order> _pending = new();
     readonly List<Order> _inPrep = new();
