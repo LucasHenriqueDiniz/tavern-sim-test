@@ -1,6 +1,7 @@
 // Scripts/Agents/AgentSystem.cs
 
 using System.Collections.Generic;
+using Waiter = TavernSim.Agents.Waiter;
 public sealed class AgentSystem : ISimSystem {
     readonly List<Customer> _customers = new();
     readonly List<Waiter> _waiters = new();

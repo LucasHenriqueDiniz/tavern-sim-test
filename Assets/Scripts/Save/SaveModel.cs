@@ -1,4 +1,6 @@
 // Scripts/Save/SaveModel.cs
+using System.Collections.Generic;
+
 [System.Serializable]
 public sealed class SaveModel {
     public int version = 1;
