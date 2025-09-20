@@ -1,5 +1,6 @@
 using UnityEngine;
 using Unity.AI.Navigation; // Requires installing the AI Navigation package from the Package Manager.
+using UnityEngine.AI; 
 using TavernSim.Agents;
 using TavernSim.Building;
 using TavernSim.Core.Simulation;
@@ -142,6 +143,14 @@ namespace TavernSim.Bootstrap
             _customerSpawner = new GameObject("CustomerSpawner").AddComponent<CustomerSpawner>();
             _customerSpawner.transform.SetParent(transform, false);
             var customerPrefab = CreateCustomerPrefab(_customerSpawner.transform);
+
+            if (customerPrefab == null)
+            {
+                Debug.LogWarning(
+                    "DevBootstrap could not create a runtime customer prefab with a NavMeshAgent. " +
+                    "Customer spawning will be disabled until a valid NavMesh is baked.");
+            }
+
             _customerSpawner.Configure(_agentSystem, customerPrefab);
             _runner.RegisterSystem(_customerSpawner);
 
@@ -180,7 +189,21 @@ namespace TavernSim.Bootstrap
             var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             go.name = "CustomerPrefab";
             go.transform.SetParent(parent, false);
-            var agent = go.GetComponent<UnityEngine.AI.NavMeshAgent>() ?? go.AddComponent<UnityEngine.AI.NavMeshAgent>();
+            
+            if (!go.TryGetComponent(out NavMeshAgent agent))
+            {
+                agent = go.AddComponent<NavMeshAgent>();
+            }
+
+            if (agent == null)
+            {
+                Debug.LogError(
+                    "Customer prefab requires the AI Navigation package. " +
+                    "Install the package or bake a NavMesh before running the dev bootstrap scene.");
+                Destroy(go);
+                return null;
+            }
+
             agent.radius = 0.3f;
             agent.height = 1.8f;
             var customer = go.AddComponent<Customer>();
