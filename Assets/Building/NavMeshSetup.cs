@@ -24,10 +24,10 @@ namespace TavernSim.Building
 
         public static void MarkObstacle(GameObject go, bool carve = true)
         {
-            var obstacle = go.GetComponent<NavMeshObstacle>();
+            var obstacle = go.GetComponent<UnityEngine.AI.NavMeshObstacle>();
             if (obstacle == null)
             {
-                obstacle = go.AddComponent<NavMeshObstacle>();
+                obstacle = go.AddComponent<UnityEngine.AI.NavMeshObstacle>();
             }
 
             obstacle.carving = carve;
