@@ -31,7 +31,18 @@ This repository contains a Unity 2022.3.62f1 project. The notes below document t
 - Update documentation (including this file) whenever workflow expectations change so future contributors have accurate guidance.
 
 ## Working with AI assistance
-- When requesting help from Codex or other AI tooling, always include the relevant file paths and code snippets (e.g., `Assets/Debug/DebugOverlay.cs`) so the assistant can reason about namespaces, symbols, and conditional compilation like `ENABLE_INPUT_SYSTEM`.
+
+### When you are the assistant
+- Read the entire prompt and restate the player’s objective (bug fix, warning cleanup, feature, workflow doubt) before proposing code. Clarify any ambiguity instead of guessing.
+- Cross-check every referenced file or symbol exists in this repo. If context is missing, ask for the relevant snippet or explain what information is required.
+- Prefer targeted patches over prose: point to the exact Unity file paths and show only the minimal diff necessary. Call out where conditional compilation symbols like `ENABLE_INPUT_SYSTEM` or `ENABLE_LEGACY_INPUT_MANAGER` change behaviour.
+- Explain why each change helps, referencing Unity patterns (e.g., avoiding reflection, using `PlayerInput`, cleaning up coroutines) so maintainers learn alongside the fix.
+- Highlight limitations of this environment (no Unity Editor or Play Mode) and give concrete follow-up actions the user should run locally—Play Mode run, Test Runner suite, package refresh, etc.
+- When multiple approaches exist (legacy Input Manager vs. Input System, UI Toolkit vs. IMGUI), compare them briefly and recommend the most maintainable option for this project.
+- Capture assumptions about Unity version, packages, or scripting defines so future assistants understand the context baked into the advice.
+
+### When you are requesting help
+- Include the relevant file paths and snippets so the assistant can reason about namespaces, symbols, and conditional compilation.
 - State the gameplay or tooling goal you are chasing—fixing warnings, adapting to the new Input System, improving legibility—so suggestions align with Unity best practices.
 - Copy full compiler or console messages (including file, line, and condition) to make it clear where a problem originates.
 - Mention project-wide context that affects the question (Unity version, active packages, input setup, scripting defines) to avoid incorrect assumptions.
