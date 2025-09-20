@@ -3,6 +3,9 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using TavernSim.Save;
 using TavernSim.Simulation.Systems;
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+using UnityEngine.InputSystem;
+#endif
 
 namespace TavernSim.UI
 {
@@ -70,6 +73,23 @@ namespace TavernSim.UI
                 return;
             }
 
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+            var keyboard = Keyboard.current;
+            if (keyboard == null)
+            {
+                return;
+            }
+
+            if (keyboard.f5Key.wasPressedThisFrame)
+            {
+                SaveGame();
+            }
+
+            if (keyboard.f9Key.wasPressedThisFrame)
+            {
+                LoadGame();
+            }
+#else
             if (Input.GetKeyDown(KeyCode.F5))
             {
                 SaveGame();
@@ -79,6 +99,7 @@ namespace TavernSim.UI
             {
                 LoadGame();
             }
+#endif
         }
 
         public void SetCustomers(int count)
