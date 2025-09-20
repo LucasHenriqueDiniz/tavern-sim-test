@@ -22,6 +22,7 @@ namespace TavernSim.UI
         private SaveService _saveService;
 
         private UIDocument _document;
+        private Label _controlsLabel;
         private Label _cashLabel;
         private Label _customerLabel;
         private ScrollView _ordersScroll;
@@ -137,6 +138,9 @@ namespace TavernSim.UI
                 rootElement.Add(fallbackRoot);
                 rootElement = fallbackRoot;
             }
+
+            _controlsLabel = rootElement.Q<Label>("controlsLabel") ?? CreateLabel(rootElement, "controlsLabel", string.Empty);
+            _controlsLabel.text = GetControlsSummary();
 
             _cashLabel = rootElement.Q<Label>("cashLabel") ?? CreateLabel(rootElement, "cashLabel", "Cash: 0");
             _customerLabel = rootElement.Q<Label>("customerLabel") ?? CreateLabel(rootElement, "customerLabel", "Customers: 0");
@@ -274,6 +278,11 @@ namespace TavernSim.UI
             var button = new Button { name = name, text = text };
             root.Add(button);
             return button;
+        }
+
+        private static string GetControlsSummary()
+        {
+            return "Camera: WASD/Arrows move • Shift sprint • Scroll zoom • Right Drag pan • Middle Drag orbit • Q/E rotate";
         }
     }
 }

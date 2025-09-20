@@ -100,11 +100,13 @@ namespace TavernSim.Bootstrap
             seatB.transform.LookAt(seatB.transform.position + Vector3.forward);
 
             var cameraGo = new GameObject("DevCamera");
+            cameraGo.tag = "MainCamera";
             var camera = cameraGo.AddComponent<Camera>();
             camera.transform.position = new Vector3(0f, 6f, -6f);
             camera.transform.rotation = Quaternion.Euler(60f, 0f, 0f);
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(0.1f, 0.1f, 0.1f);
+            cameraGo.AddComponent<FullCameraController>();
 
             var placerGo = new GameObject("GridPlacer");
             _gridPlacer = placerGo.AddComponent<GridPlacer>();
