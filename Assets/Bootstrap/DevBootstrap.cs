@@ -98,14 +98,6 @@ namespace TavernSim.Bootstrap
             seatB.transform.localPosition = new Vector3(0f, -0.5f, -0.8f);
             seatB.transform.LookAt(seatB.transform.position + Vector3.forward);
 
-            var waiterGo = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            waiterGo.name = "Waiter";
-            waiterGo.transform.position = new Vector3(-1f, 0f, 0f);
-            var waiterAgent = waiterGo.AddComponent<UnityEngine.AI.NavMeshAgent>();
-            waiterAgent.radius = 0.3f;
-            waiterAgent.height = 1.8f;
-            waiterGo.AddComponent<Waiter>();
-
             var cameraGo = new GameObject("DevCamera");
             var camera = cameraGo.AddComponent<Camera>();
             camera.transform.position = new Vector3(0f, 6f, -6f);
@@ -119,6 +111,14 @@ namespace TavernSim.Bootstrap
             _debugOverlay = gameObject.AddComponent<DebugOverlay>();
 
             _navMeshSurface?.BuildNavMesh();
+
+            var waiterGo = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            waiterGo.name = "Waiter";
+            waiterGo.transform.position = new Vector3(-1f, 0f, 0f);
+            var waiterAgent = waiterGo.AddComponent<UnityEngine.AI.NavMeshAgent>();
+            waiterAgent.radius = 0.3f;
+            waiterAgent.height = 1.8f;
+            waiterGo.AddComponent<Waiter>();
         }
 
         private void SetupSimulation()
