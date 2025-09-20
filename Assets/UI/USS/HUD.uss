@@ -36,3 +36,38 @@
 .save-controls button {
     flex-grow: 1;
 }
+
+.selection {
+    margin-top: 6px;
+    font-size: 13px;
+    color: #d0d0d0;
+}
+
+.build-controls {
+    margin-top: 6px;
+    flex-direction: column;
+}
+
+.build-controls > * + * {
+    margin-top: 4px;
+}
+
+.build-menu {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    padding: 4px;
+    flex-direction: column;
+}
+
+.build-menu button + button {
+    margin-top: 4px;
+}
+
+.build-option {
+    justify-content: flex-start;
+}
+
+.build-option--active {
+    background-color: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+}

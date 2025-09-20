@@ -1,8 +1,10 @@
-using UnityEngine;
 using Unity.AI.Navigation; // Requires installing the AI Navigation package from the Package Manager.
-using UnityEngine.AI; 
+using UnityEngine.AI;
+using UnityEngine;
+using UnityEngine.UIElements;
 using TavernSim.Agents;
 using TavernSim.Building;
+using TavernSim.Core;
 using TavernSim.Core.Simulation;
 using TavernSim.Domain;
 using TavernSim.Debugging;
@@ -20,6 +22,8 @@ namespace TavernSim.Bootstrap
     {
         [SerializeField] private Catalog catalog;
 
+        private static PanelSettings _panelSettings;
+
         private SimulationRunner _runner;
         private EconomySystem _economySystem;
         private OrderSystem _orderSystem;
@@ -33,6 +37,7 @@ namespace TavernSim.Bootstrap
         private HUDController _hudController;
         private TimeControls _timeControls;
         private GridPlacer _gridPlacer;
+        private SelectionService _selectionService;
 
         private Vector3 _entryPoint;
         private Vector3 _exitPoint;
@@ -100,14 +105,18 @@ namespace TavernSim.Bootstrap
             seatB.transform.LookAt(seatB.transform.position + Vector3.forward);
 
             var cameraGo = new GameObject("DevCamera");
+            cameraGo.tag = "MainCamera";
             var camera = cameraGo.AddComponent<Camera>();
             camera.transform.position = new Vector3(0f, 6f, -6f);
             camera.transform.rotation = Quaternion.Euler(60f, 0f, 0f);
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(0.1f, 0.1f, 0.1f);
+            cameraGo.AddComponent<FullCameraController>();
 
             var placerGo = new GameObject("GridPlacer");
             _gridPlacer = placerGo.AddComponent<GridPlacer>();
+
+            _selectionService = new SelectionService();
 
             _debugOverlay = gameObject.AddComponent<DebugOverlay>();
 
@@ -119,6 +128,7 @@ namespace TavernSim.Bootstrap
             var waiterAgent = waiterGo.AddComponent<UnityEngine.AI.NavMeshAgent>();
             waiterAgent.radius = 0.3f;
             waiterAgent.height = 1.8f;
+            waiterGo.AddComponent<AgentIntentDisplay>();
             waiterGo.AddComponent<Waiter>();
         }
 
@@ -155,7 +165,7 @@ namespace TavernSim.Bootstrap
             _runner.RegisterSystem(_customerSpawner);
 
             _saveService = new SaveService(_economySystem);
-            _gridPlacer?.Configure(_economySystem);
+            _gridPlacer?.Configure(_economySystem, _selectionService);
 
             var tableGo = GameObject.Find("Table");
             var table = new Table(0, tableGo.transform);
@@ -174,6 +184,8 @@ namespace TavernSim.Bootstrap
         {
             var uiGo = new GameObject("HUD");
             uiGo.transform.SetParent(transform, false);
+            var document = uiGo.AddComponent<UIDocument>();
+            document.panelSettings = GetOrCreatePanelSettings();
             _hudController = uiGo.AddComponent<HUDController>();
             _hudController.Initialize(_economySystem, _orderSystem);
 
@@ -181,6 +193,7 @@ namespace TavernSim.Bootstrap
             _timeControls.Initialize();
 
             _hudController.BindSaveService(_saveService);
+            _hudController.BindSelection(_selectionService, _gridPlacer);
             _hudController.SetCustomers(0);
         }
 
@@ -206,10 +219,27 @@ namespace TavernSim.Bootstrap
 
             agent.radius = 0.3f;
             agent.height = 1.8f;
+            go.AddComponent<AgentIntentDisplay>();
             var customer = go.AddComponent<Customer>();
             go.hideFlags = HideFlags.HideInHierarchy;
             go.SetActive(false);
             return customer;
+        }
+
+        private static PanelSettings GetOrCreatePanelSettings()
+        {
+            if (_panelSettings == null)
+            {
+                _panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+                _panelSettings.name = "DevBootstrapPanelSettings";
+                _panelSettings.hideFlags = HideFlags.HideAndDontSave;
+                _panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+                _panelSettings.referenceResolution = new Vector2(1920f, 1080f);
+                _panelSettings.sortingOrder = 100;
+                _panelSettings.targetTexture = null;
+            }
+
+            return _panelSettings;
         }
     }
 }

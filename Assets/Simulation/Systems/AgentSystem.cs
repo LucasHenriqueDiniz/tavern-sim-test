@@ -94,7 +94,9 @@ namespace TavernSim.Simulation.Systems
                 return;
             }
 
-            _waiters.Add(new WaiterData(waiter));
+            var data = new WaiterData(waiter);
+            _waiters.Add(data);
+            UpdateWaiterIntent(data);
         }
 
         public void SpawnCustomer(Customer customer)
@@ -114,6 +116,7 @@ namespace TavernSim.Simulation.Systems
             customer.SetDestination(_entryPoint);
             _customers.Add(data);
             ActiveCustomerCountChanged?.Invoke(_customers.Count);
+            UpdateCustomerIntent(data);
         }
 
         private void MarkForDespawn(CustomerData data)
@@ -184,6 +187,7 @@ namespace TavernSim.Simulation.Systems
                         break;
                 }
 
+                UpdateCustomerIntent(data);
                 _customers[i] = data;
             }
         }
@@ -213,6 +217,7 @@ namespace TavernSim.Simulation.Systems
                         break;
                 }
 
+                UpdateWaiterIntent(data);
                 _waiters[i] = data;
             }
         }
@@ -490,6 +495,60 @@ namespace TavernSim.Simulation.Systems
             }
 
             return Mathf.Lerp(2f, 0f, (waitTime - 10f) / 15f);
+        }
+
+        private static void UpdateCustomerIntent(CustomerData data)
+        {
+            data.Agent?.SetIntent(GetCustomerIntent(data.State));
+        }
+
+        private static void UpdateWaiterIntent(WaiterData data)
+        {
+            data.Agent?.SetIntent(GetWaiterIntent(data.State));
+        }
+
+        private static string GetCustomerIntent(CustomerState state)
+        {
+            switch (state)
+            {
+                case CustomerState.Enter:
+                    return "Entrando";
+                case CustomerState.FindTable:
+                    return "Procurando mesa";
+                case CustomerState.Sit:
+                    return "Sentando";
+                case CustomerState.Order:
+                    return "Fazendo pedido";
+                case CustomerState.WaitDrink:
+                    return "Esperando bebida";
+                case CustomerState.Drink:
+                    return "Bebendo";
+                case CustomerState.Pay:
+                    return "Pagando";
+                case CustomerState.Leave:
+                    return "Saindo";
+                default:
+                    return string.Empty;
+            }
+        }
+
+        private static string GetWaiterIntent(WaiterState state)
+        {
+            switch (state)
+            {
+                case WaiterState.Idle:
+                    return "Disponível";
+                case WaiterState.TakeOrder:
+                    return "Anotando pedido";
+                case WaiterState.WaitPrep:
+                    return "Aguardando preparo";
+                case WaiterState.Deliver:
+                    return "Servindo";
+                case WaiterState.Clean:
+                    return "Limpando";
+                default:
+                    return string.Empty;
+            }
         }
 
         private enum CustomerState

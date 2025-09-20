@@ -1,5 +1,8 @@
 using UnityEngine;
 using UnityEngine.UIElements;
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+using UnityEngine.InputSystem;
+#endif
 
 namespace TavernSim.UI
 {
@@ -25,10 +28,18 @@ namespace TavernSim.UI
 
         private void Update()
         {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+            var keyboard = Keyboard.current;
+            if (keyboard != null && keyboard.spaceKey.wasPressedThisFrame)
+            {
+                TogglePause();
+            }
+#else
             if (Input.GetKeyDown(KeyCode.Space))
             {
                 TogglePause();
             }
+#endif
         }
 
         private void Hook()

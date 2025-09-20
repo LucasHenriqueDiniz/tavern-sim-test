@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.AI; // Requires installing the AI Navigation package from the Package Manager.
+using TavernSim.Core;
 
 namespace TavernSim.Agents
 {
@@ -7,14 +8,19 @@ namespace TavernSim.Agents
     /// Simple NavMesh driven agent used by the AgentSystem to move customers through the tavern.
     /// </summary>
     [RequireComponent(typeof(NavMeshAgent))]
-    public sealed class Customer : MonoBehaviour
+    public sealed class Customer : MonoBehaviour, ISelectable
     {
         [SerializeField] private Animator animator;
+        [SerializeField] private AgentIntentDisplay intentDisplay;
 
         private NavMeshAgent _agent;
 
         public NavMeshAgent Agent => _agent;
         public Animator Animator => animator;
+
+        public string DisplayName => "Cliente";
+
+        public Transform Transform => transform;
 
         private void Awake()
         {
@@ -22,6 +28,11 @@ namespace TavernSim.Agents
             _agent.speed = 1.5f;
             _agent.angularSpeed = 720f;
             _agent.acceleration = 6f;
+
+            if (intentDisplay == null)
+            {
+                TryGetComponent(out intentDisplay);
+            }
         }
 
         public void SetDestination(Vector3 position)
@@ -81,6 +92,16 @@ namespace TavernSim.Agents
             {
                 _agent.ResetPath();
             }
+        }
+
+        public void SetIntent(string text)
+        {
+            if (intentDisplay == null)
+            {
+                TryGetComponent(out intentDisplay);
+            }
+
+            intentDisplay?.SetIntent(text);
         }
     }
 }
