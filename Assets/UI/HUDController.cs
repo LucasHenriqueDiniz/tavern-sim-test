@@ -3,6 +3,9 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using TavernSim.Save;
 using TavernSim.Simulation.Systems;
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+using UnityEngine.InputSystem;
+#endif
 
 namespace TavernSim.UI
 {
@@ -19,6 +22,7 @@ namespace TavernSim.UI
         private SaveService _saveService;
 
         private UIDocument _document;
+        private Label _controlsLabel;
         private Label _cashLabel;
         private Label _customerLabel;
         private ScrollView _ordersScroll;
@@ -70,6 +74,23 @@ namespace TavernSim.UI
                 return;
             }
 
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+            var keyboard = Keyboard.current;
+            if (keyboard == null)
+            {
+                return;
+            }
+
+            if (keyboard.f5Key.wasPressedThisFrame)
+            {
+                SaveGame();
+            }
+
+            if (keyboard.f9Key.wasPressedThisFrame)
+            {
+                LoadGame();
+            }
+#else
             if (Input.GetKeyDown(KeyCode.F5))
             {
                 SaveGame();
@@ -79,6 +100,7 @@ namespace TavernSim.UI
             {
                 LoadGame();
             }
+#endif
         }
 
         public void SetCustomers(int count)
@@ -116,6 +138,9 @@ namespace TavernSim.UI
                 rootElement.Add(fallbackRoot);
                 rootElement = fallbackRoot;
             }
+
+            _controlsLabel = rootElement.Q<Label>("controlsLabel") ?? CreateLabel(rootElement, "controlsLabel", string.Empty);
+            _controlsLabel.text = GetControlsSummary();
 
             _cashLabel = rootElement.Q<Label>("cashLabel") ?? CreateLabel(rootElement, "cashLabel", "Cash: 0");
             _customerLabel = rootElement.Q<Label>("customerLabel") ?? CreateLabel(rootElement, "customerLabel", "Customers: 0");
@@ -253,6 +278,11 @@ namespace TavernSim.UI
             var button = new Button { name = name, text = text };
             root.Add(button);
             return button;
+        }
+
+        private static string GetControlsSummary()
+        {
+            return "Camera: WASD/Arrows move • Shift sprint • Scroll zoom • Right Drag pan • Middle Drag orbit • Q/E rotate";
         }
     }
 }
