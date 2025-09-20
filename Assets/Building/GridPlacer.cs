@@ -1,7 +1,7 @@
 using UnityEngine;
 using TavernSim.Core;
 using TavernSim.Simulation.Systems;
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+#if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
 
@@ -48,7 +48,7 @@ namespace TavernSim.Building
                 return;
             }
 
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+#if ENABLE_INPUT_SYSTEM
             var mouse = Mouse.current;
             var keyboard = Keyboard.current;
             if (mouse == null)
@@ -69,7 +69,7 @@ namespace TavernSim.Building
 
             var pointerPosition = mouse.position.ReadValue();
             var screenPoint = new Vector3(pointerPosition.x, pointerPosition.y, 0f);
-#else
+#elif ENABLE_LEGACY_INPUT_MANAGER
             if (HasActivePlacement && (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape)))
             {
                 CancelPlacement();
@@ -82,6 +82,8 @@ namespace TavernSim.Building
             }
 
             var screenPoint = Input.mousePosition;
+#else
+            return;
 #endif
 
             var mainCamera = Camera.main;

@@ -1,5 +1,5 @@
 using UnityEngine;
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+#if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
 
@@ -76,7 +76,7 @@ namespace TavernSim.Bootstrap
         {
             Vector2 moveInput = Vector2.zero;
             bool boost = false;
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+#if ENABLE_INPUT_SYSTEM
             var keyboard = Keyboard.current;
             if (keyboard != null)
             {
@@ -102,7 +102,7 @@ namespace TavernSim.Bootstrap
 
                 boost = keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed;
             }
-#else
+#elif ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow))
             {
                 moveInput.y += 1f;
@@ -124,6 +124,8 @@ namespace TavernSim.Bootstrap
             }
 
             boost = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+#else
+            return;
 #endif
 
             if (moveInput.sqrMagnitude > 1f)
@@ -144,7 +146,7 @@ namespace TavernSim.Bootstrap
         private void HandleRotation()
         {
             float yawInput = 0f;
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+#if ENABLE_INPUT_SYSTEM
             var keyboard = Keyboard.current;
             if (keyboard != null)
             {
@@ -158,7 +160,7 @@ namespace TavernSim.Bootstrap
                     yawInput += 1f;
                 }
             }
-#else
+#elif ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetKey(KeyCode.Q))
             {
                 yawInput -= 1f;
@@ -179,13 +181,13 @@ namespace TavernSim.Bootstrap
         private void HandleZoom()
         {
             float scroll = 0f;
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+#if ENABLE_INPUT_SYSTEM
             var mouse = Mouse.current;
             if (mouse != null)
             {
                 scroll = mouse.scroll.ReadValue().y;
             }
-#else
+#elif ENABLE_LEGACY_INPUT_MANAGER
             scroll = Input.mouseScrollDelta.y;
 #endif
 
@@ -203,7 +205,7 @@ namespace TavernSim.Bootstrap
 
         private void HandlePointerInput()
         {
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+#if ENABLE_INPUT_SYSTEM
             var mouse = Mouse.current;
             if (mouse == null)
             {
@@ -233,7 +235,7 @@ namespace TavernSim.Bootstrap
             }
 
             var pointer = mouse.position.ReadValue();
-#else
+#elif ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetMouseButtonDown(1))
             {
                 _isDragging = true;
@@ -255,6 +257,10 @@ namespace TavernSim.Bootstrap
             }
 
             var pointer = (Vector2)Input.mousePosition;
+#else
+            _isDragging = false;
+            _isOrbiting = false;
+            return;
 #endif
 
             if (_isDragging)
