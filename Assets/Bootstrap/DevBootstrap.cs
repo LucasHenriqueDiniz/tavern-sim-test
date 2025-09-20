@@ -46,7 +46,7 @@ namespace TavernSim.Bootstrap
         {
             if (catalog == null)
             {
-                catalog = Resources.Load<Catalog>("DemoCatalog");
+                catalog = Resources.Load<Catalog>("TavernCatalog");
             }
 
             SetupScene();
