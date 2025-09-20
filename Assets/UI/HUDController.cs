@@ -5,7 +5,7 @@ using TavernSim.Save;
 using TavernSim.Simulation.Systems;
 using TavernSim.Building;
 using TavernSim.Core;
-#if ENABLE_INPUT_SYSTEM
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem;
 #endif
 
@@ -120,7 +120,7 @@ namespace TavernSim.UI
                 return;
             }
 
-#if ENABLE_INPUT_SYSTEM
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
             var keyboard = Keyboard.current;
             if (keyboard == null)
             {
@@ -146,6 +146,8 @@ namespace TavernSim.UI
             {
                 LoadGame();
             }
+#else
+            return;
 #endif
         }
 
