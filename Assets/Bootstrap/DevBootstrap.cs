@@ -49,14 +49,20 @@ namespace TavernSim.Bootstrap
                 catalog = Resources.Load<Catalog>("DemoCatalog");
             }
 
+            if (catalog == null)
+            {
+                catalog = Resources.Load<Catalog>("TavernCatalog");
+            }
+
+            if (catalog == null)
+            {
+                Debug.LogWarning("DevBootstrap could not locate a Catalog asset in Resources. Assign one in the inspector to enable recipes and menu items.");
+                catalog = ScriptableObject.CreateInstance<Catalog>();
+            }
+
             SetupScene();
             SetupSimulation();
             SetupUI();
-        }
-
-        private void Start()
-        {
-            _navMeshSurface?.BuildNavMesh();
         }
 
         private void SetupScene()
@@ -111,6 +117,8 @@ namespace TavernSim.Bootstrap
             _gridPlacer = placerGo.AddComponent<GridPlacer>();
 
             _debugOverlay = gameObject.AddComponent<DebugOverlay>();
+
+            _navMeshSurface?.BuildNavMesh();
         }
 
         private void SetupSimulation()

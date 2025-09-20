@@ -1,6 +1,10 @@
+using System;
 using System.Text;
 using UnityEngine;
 using TavernSim.Simulation.Systems;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 namespace TavernSim.Debugging
 {
@@ -24,7 +28,7 @@ namespace TavernSim.Debugging
 
         private void Update()
         {
-            if (Input.GetKeyDown(toggleKey))
+            if (WasTogglePressed())
             {
                 _visible = !_visible;
             }
@@ -43,6 +47,29 @@ namespace TavernSim.Debugging
             _builder.AppendLine($"Orders: {_orderSystemOrdersCount()}");
 
             GUI.Label(new Rect(10, 10, 300, 120), _builder.ToString());
+        }
+
+        private bool WasTogglePressed()
+        {
+#if ENABLE_INPUT_SYSTEM
+            var keyboard = Keyboard.current;
+            if (keyboard == null)
+            {
+                return false;
+            }
+
+            if (!Enum.TryParse(toggleKey.ToString(), out Key key))
+            {
+                return false;
+            }
+
+            var control = keyboard[key];
+            return control != null && control.wasPressedThisFrame;
+#elif ENABLE_LEGACY_INPUT_MANAGER
+            return Input.GetKeyDown(toggleKey);
+#else
+            return false;
+#endif
         }
 
         private int _agentSystemCustomerCount()
