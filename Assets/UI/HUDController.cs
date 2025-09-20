@@ -3,6 +3,9 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using TavernSim.Save;
 using TavernSim.Simulation.Systems;
+using TavernSim.Building;
+using TavernSim.Core;
+
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem;
 #endif
@@ -25,10 +28,27 @@ namespace TavernSim.UI
         private Label _controlsLabel;
         private Label _cashLabel;
         private Label _customerLabel;
+        private Label _selectionLabel;
         private ScrollView _ordersScroll;
         private Button _saveButton;
         private Button _loadButton;
+        private Button _buildToggleButton;
+        private VisualElement _buildMenu;
         private readonly List<Label> _orderEntries = new List<Label>(16);
+        private readonly List<Button> _buildOptionButtons = new List<Button>();
+        private readonly Dictionary<Button, BuildOption> _buildOptionLookup = new Dictionary<Button, BuildOption>();
+        private EventCallback<ClickEvent> _buildOptionHandler;
+        private bool _buildMenuVisible;
+
+        private SelectionService _selectionService;
+        private GridPlacer _gridPlacer;
+
+        private static readonly BuildOption[] BuildOptions =
+        {
+            new BuildOption("buildTableBtn", "Mesa", GridPlacer.PlaceableKind.Table),
+            new BuildOption("buildChairBtn", "Cadeira", GridPlacer.PlaceableKind.Chair),
+            new BuildOption("buildDecorBtn", "Planta", GridPlacer.PlaceableKind.Decoration)
+        };
 
         public void Initialize(EconomySystem economySystem, OrderSystem orderSystem)
         {
@@ -44,6 +64,33 @@ namespace TavernSim.UI
         public void BindSaveService(SaveService saveService)
         {
             _saveService = saveService;
+        }
+
+        public void BindSelection(SelectionService selectionService, GridPlacer gridPlacer)
+        {
+            var changed = _selectionService != selectionService || _gridPlacer != gridPlacer;
+            if (!changed)
+            {
+                return;
+            }
+
+            if (isActiveAndEnabled)
+            {
+                UnhookEvents();
+            }
+
+            _selectionService = selectionService;
+            _gridPlacer = gridPlacer;
+
+            RefreshBuildOptionLabels();
+            HighlightActiveOption(_gridPlacer != null ? _gridPlacer.ActiveKind : GridPlacer.PlaceableKind.None);
+            UpdateSelectionLabel(_selectionService != null ? _selectionService.Current : null);
+            SetBuildMenuVisible(false);
+
+            if (isActiveAndEnabled)
+            {
+                HookEvents();
+            }
         }
 
         private void Awake()
@@ -90,7 +137,7 @@ namespace TavernSim.UI
             {
                 LoadGame();
             }
-#else
+#elif ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetKeyDown(KeyCode.F5))
             {
                 SaveGame();
@@ -100,6 +147,8 @@ namespace TavernSim.UI
             {
                 LoadGame();
             }
+#else
+            return;
 #endif
         }
 
@@ -147,6 +196,12 @@ namespace TavernSim.UI
             _ordersScroll = rootElement.Q<ScrollView>("ordersScroll") ?? CreateScroll(rootElement);
             _saveButton = rootElement.Q<Button>("saveBtn") ?? CreateButton(rootElement, "saveBtn", "Save (F5)");
             _loadButton = rootElement.Q<Button>("loadBtn") ?? CreateButton(rootElement, "loadBtn", "Load (F9)");
+            _selectionLabel = rootElement.Q<Label>("selectionLabel") ?? CreateLabel(rootElement, "selectionLabel", "Selecionado: Nenhum");
+            _buildToggleButton = rootElement.Q<Button>("buildToggleBtn") ?? CreateButton(rootElement, "buildToggleBtn", "Construir");
+            _buildMenu = rootElement.Q<VisualElement>("buildMenu") ?? CreateBuildMenu(rootElement);
+
+            CreateBuildButtons();
+            SetBuildMenuVisible(false);
         }
 
         private void HookEvents()
@@ -176,6 +231,28 @@ namespace TavernSim.UI
                 _loadButton.clicked -= LoadGame;
                 _loadButton.clicked += LoadGame;
             }
+
+            if (_buildToggleButton != null)
+            {
+                _buildToggleButton.clicked -= ToggleBuildMenu;
+                _buildToggleButton.clicked += ToggleBuildMenu;
+            }
+
+            if (_selectionService != null)
+            {
+                _selectionService.SelectionChanged -= OnSelectionChanged;
+                _selectionService.SelectionChanged += OnSelectionChanged;
+                OnSelectionChanged(_selectionService.Current);
+            }
+
+            if (_gridPlacer != null)
+            {
+                _gridPlacer.PlacementModeChanged -= OnPlacementModeChanged;
+                _gridPlacer.PlacementModeChanged += OnPlacementModeChanged;
+                OnPlacementModeChanged(_gridPlacer.ActiveKind);
+            }
+
+            AttachBuildOptionCallbacks();
         }
 
         private void UnhookEvents()
@@ -199,6 +276,23 @@ namespace TavernSim.UI
             {
                 _loadButton.clicked -= LoadGame;
             }
+
+            if (_buildToggleButton != null)
+            {
+                _buildToggleButton.clicked -= ToggleBuildMenu;
+            }
+
+            if (_selectionService != null)
+            {
+                _selectionService.SelectionChanged -= OnSelectionChanged;
+            }
+
+            if (_gridPlacer != null)
+            {
+                _gridPlacer.PlacementModeChanged -= OnPlacementModeChanged;
+            }
+
+            DetachBuildOptionCallbacks();
         }
 
         private void OnCashChanged(float value)
@@ -259,6 +353,147 @@ namespace TavernSim.UI
             Debug.Log($"Game loaded from {path}");
         }
 
+        private void ToggleBuildMenu()
+        {
+            SetBuildMenuVisible(!_buildMenuVisible);
+        }
+
+        private void SetBuildMenuVisible(bool visible)
+        {
+            _buildMenuVisible = visible;
+            if (_buildMenu != null)
+            {
+                _buildMenu.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+        }
+
+        private void AttachBuildOptionCallbacks()
+        {
+            if (_buildMenu == null || _buildOptionButtons.Count == 0)
+            {
+                return;
+            }
+
+            _buildOptionHandler ??= OnBuildOptionClicked;
+            foreach (var button in _buildOptionButtons)
+            {
+                button.UnregisterCallback(_buildOptionHandler);
+                button.RegisterCallback(_buildOptionHandler);
+            }
+        }
+
+        private void DetachBuildOptionCallbacks()
+        {
+            if (_buildOptionHandler == null)
+            {
+                return;
+            }
+
+            foreach (var button in _buildOptionButtons)
+            {
+                button.UnregisterCallback(_buildOptionHandler);
+            }
+        }
+
+        private void OnBuildOptionClicked(ClickEvent evt)
+        {
+            if (_gridPlacer == null)
+            {
+                return;
+            }
+
+            if (evt.currentTarget is Button optionButton && optionButton.userData is GridPlacer.PlaceableKind kind)
+            {
+                if (_gridPlacer.ActiveKind == kind)
+                {
+                    _gridPlacer.CancelPlacement();
+                }
+                else
+                {
+                    _gridPlacer.BeginPlacement(kind);
+                }
+
+                HighlightActiveOption(_gridPlacer.ActiveKind);
+                SetBuildMenuVisible(false);
+            }
+        }
+
+        private void OnSelectionChanged(ISelectable selectable)
+        {
+            UpdateSelectionLabel(selectable);
+        }
+
+        private void UpdateSelectionLabel(ISelectable selectable)
+        {
+            if (_selectionLabel == null)
+            {
+                return;
+            }
+
+            _selectionLabel.text = selectable != null
+                ? $"Selecionado: {selectable.DisplayName}"
+                : "Selecionado: Nenhum";
+        }
+
+        private void OnPlacementModeChanged(GridPlacer.PlaceableKind kind)
+        {
+            HighlightActiveOption(kind);
+        }
+
+        private void HighlightActiveOption(GridPlacer.PlaceableKind kind)
+        {
+            foreach (var button in _buildOptionButtons)
+            {
+                if (button.userData is GridPlacer.PlaceableKind buttonKind && buttonKind == kind)
+                {
+                    button.AddToClassList("build-option--active");
+                }
+                else
+                {
+                    button.RemoveFromClassList("build-option--active");
+                }
+            }
+        }
+
+        private void RefreshBuildOptionLabels()
+        {
+            foreach (var pair in _buildOptionLookup)
+            {
+                var option = pair.Value;
+                var cost = _gridPlacer != null ? _gridPlacer.GetPlacementCost(option.Kind) : 0f;
+                pair.Key.text = cost > 0f ? $"{option.Label} ({cost:0})" : option.Label;
+            }
+        }
+
+        private void CreateBuildButtons()
+        {
+            if (_buildMenu == null)
+            {
+                return;
+            }
+
+            _buildMenu.Clear();
+            _buildOptionButtons.Clear();
+            _buildOptionLookup.Clear();
+
+            foreach (var option in BuildOptions)
+            {
+                var button = new Button
+                {
+                    name = option.Name,
+                    text = option.Label,
+                    userData = option.Kind
+                };
+                button.AddToClassList("build-option");
+                _buildMenu.Add(button);
+                _buildOptionButtons.Add(button);
+                _buildOptionLookup[button] = option;
+            }
+
+            RefreshBuildOptionLabels();
+            HighlightActiveOption(GridPlacer.PlaceableKind.None);
+        }
+
         private static Label CreateLabel(VisualElement root, string name, string text)
         {
             var label = new Label(text) { name = name };
@@ -280,9 +515,30 @@ namespace TavernSim.UI
             return button;
         }
 
+        private static VisualElement CreateBuildMenu(VisualElement root)
+        {
+            var container = new VisualElement { name = "buildMenu" };
+            root.Add(container);
+            return container;
+        }
+
         private static string GetControlsSummary()
         {
-            return "Camera: WASD/Arrows move • Shift sprint • Scroll zoom • Right Drag pan • Middle Drag orbit • Q/E rotate";
+            return "Camera: WASD/Arrows move • Shift sprint • Scroll zoom • Right Drag pan • Middle Drag orbit • Q/E rotate • Left Click select • Build button to place props";
+        }
+
+        private readonly struct BuildOption
+        {
+            public readonly string Name;
+            public readonly string Label;
+            public readonly GridPlacer.PlaceableKind Kind;
+
+            public BuildOption(string name, string label, GridPlacer.PlaceableKind kind)
+            {
+                Name = name;
+                Label = label;
+                Kind = kind;
+            }
         }
     }
 }

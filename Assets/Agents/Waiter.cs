@@ -1,12 +1,19 @@
 using UnityEngine;
 using UnityEngine.AI;
+using TavernSim.Core;
 
 namespace TavernSim.Agents
 {
     [RequireComponent(typeof(NavMeshAgent))]
-    public sealed class Waiter : MonoBehaviour
+    public sealed class Waiter : MonoBehaviour, ISelectable
     {
+        [SerializeField] private AgentIntentDisplay intentDisplay;
+
         private NavMeshAgent _agent;
+
+        public string DisplayName => "Garçom";
+
+        public Transform Transform => transform;
 
         private void Awake()
         {
@@ -14,6 +21,11 @@ namespace TavernSim.Agents
             _agent.angularSpeed = 720f;
             _agent.acceleration = 36f;
             _agent.stoppingDistance = 0.05f;
+
+            if (intentDisplay == null)
+            {
+                TryGetComponent(out intentDisplay);
+            }
         }
 
         public void SetDestination(Vector3 pos)
@@ -48,6 +60,16 @@ namespace TavernSim.Agents
             }
 
             return !_agent.hasPath || _agent.velocity.sqrMagnitude <= thresholdSqr;
+        }
+
+        public void SetIntent(string text)
+        {
+            if (intentDisplay == null)
+            {
+                TryGetComponent(out intentDisplay);
+            }
+
+            intentDisplay?.SetIntent(text);
         }
     }
 }

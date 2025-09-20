@@ -34,11 +34,13 @@ namespace TavernSim.UI
             {
                 TogglePause();
             }
-#else
+#elif ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetKeyDown(KeyCode.Space))
             {
                 TogglePause();
             }
+#else
+            return;
 #endif
         }
 

@@ -26,11 +26,13 @@ namespace TavernSim.Bootstrap
 
         [Header("Zoom")]
         [SerializeField] private float zoomSpeed = 6f;
+        [SerializeField] private float zoomStep = 1.5f;
         [SerializeField] private float minZoom = 4f;
         [SerializeField] private float maxZoom = 30f;
 
         private Vector3 _pivot;
         private float _distance;
+        private float _targetDistance;
         private float _yaw;
         private float _pitch;
         private bool _isDragging;
@@ -55,6 +57,7 @@ namespace TavernSim.Bootstrap
 
             var offset = transform.position - _pivot;
             _distance = Mathf.Clamp(offset.magnitude, minZoom, maxZoom);
+            _targetDistance = _distance;
 
             ApplyTransform();
         }
@@ -65,6 +68,7 @@ namespace TavernSim.Bootstrap
             HandleRotation();
             HandleZoom();
             HandlePointerInput();
+            SmoothZoom();
             ApplyTransform();
         }
 
@@ -98,7 +102,7 @@ namespace TavernSim.Bootstrap
 
                 boost = keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed;
             }
-#else
+#elif ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow))
             {
                 moveInput.y += 1f;
@@ -120,6 +124,8 @@ namespace TavernSim.Bootstrap
             }
 
             boost = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+#else
+            return;
 #endif
 
             if (moveInput.sqrMagnitude > 1f)
@@ -154,7 +160,7 @@ namespace TavernSim.Bootstrap
                     yawInput += 1f;
                 }
             }
-#else
+#elif ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetKey(KeyCode.Q))
             {
                 yawInput -= 1f;
@@ -164,6 +170,8 @@ namespace TavernSim.Bootstrap
             {
                 yawInput += 1f;
             }
+#else
+            return;
 #endif
 
             if (Mathf.Abs(yawInput) > 0.001f)
@@ -181,14 +189,22 @@ namespace TavernSim.Bootstrap
             {
                 scroll = mouse.scroll.ReadValue().y;
             }
-#else
+#elif ENABLE_LEGACY_INPUT_MANAGER
             scroll = Input.mouseScrollDelta.y;
+#else
+            return;
 #endif
 
             if (Mathf.Abs(scroll) > 0.01f)
             {
-                _distance = Mathf.Clamp(_distance - scroll * zoomSpeed, minZoom, maxZoom);
+                _targetDistance = Mathf.Clamp(_targetDistance - scroll * zoomStep, minZoom, maxZoom);
             }
+        }
+
+        private void SmoothZoom()
+        {
+            _targetDistance = Mathf.Clamp(_targetDistance, minZoom, maxZoom);
+            _distance = Mathf.MoveTowards(_distance, _targetDistance, zoomSpeed * Time.deltaTime);
         }
 
         private void HandlePointerInput()
@@ -223,7 +239,7 @@ namespace TavernSim.Bootstrap
             }
 
             var pointer = mouse.position.ReadValue();
-#else
+#elif ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetMouseButtonDown(1))
             {
                 _isDragging = true;
@@ -245,6 +261,10 @@ namespace TavernSim.Bootstrap
             }
 
             var pointer = (Vector2)Input.mousePosition;
+#else
+            _isDragging = false;
+            _isOrbiting = false;
+            return;
 #endif
 
             if (_isDragging)

@@ -15,5 +15,10 @@
       <ui:Button name="saveBtn" text="Save (F5)" />
       <ui:Button name="loadBtn" text="Load (F9)" />
     </ui:VisualElement>
+    <ui:Label name="selectionLabel" class="stat selection" text="Selecionado: Nenhum" />
+    <ui:VisualElement name="buildControls" class="build-controls">
+      <ui:Button name="buildToggleBtn" text="Construir" />
+      <ui:VisualElement name="buildMenu" class="build-menu" />
+    </ui:VisualElement>
   </ui:VisualElement>
 </engine:UXML>
