@@ -29,3 +29,11 @@ This repository contains a Unity 2022.3.62f1 project. The notes below document t
 - Keep the working tree clean (`git status` empty) before finishing a task. Each change set should be committed with a descriptive message.
 - Ensure the project opens without missing packages or compile errors. When adding packages, update both `manifest.json` and `packages-lock.json`.
 - Update documentation (including this file) whenever workflow expectations change so future contributors have accurate guidance.
+
+## Working with AI assistance
+- When requesting help from Codex or other AI tooling, always include the relevant file paths and code snippets (e.g., `Assets/Debug/DebugOverlay.cs`) so the assistant can reason about namespaces, symbols, and conditional compilation like `ENABLE_INPUT_SYSTEM`.
+- State the gameplay or tooling goal you are chasing—fixing warnings, adapting to the new Input System, improving legibility—so suggestions align with Unity best practices.
+- Copy full compiler or console messages (including file, line, and condition) to make it clear where a problem originates.
+- Mention project-wide context that affects the question (Unity version, active packages, input setup, scripting defines) to avoid incorrect assumptions.
+- Summarise previous attempts and partial fixes; this prevents repetitive advice and focuses the assistant on the next viable option.
+- Remember this environment cannot launch the Unity Editor or run its play/edit mode tests. Plan to validate fixes locally and document any unverified behaviour in your summaries.

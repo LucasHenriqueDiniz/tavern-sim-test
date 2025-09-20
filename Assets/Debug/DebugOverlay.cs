@@ -1,9 +1,6 @@
 using System;
 using System.Text;
 using UnityEngine;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
 using TavernSim.Simulation.Systems;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -52,29 +49,6 @@ namespace TavernSim.Debugging
             GUI.Label(new Rect(10, 10, 300, 120), _builder.ToString());
         }
 
-        private bool WasTogglePressed()
-        {
-#if ENABLE_INPUT_SYSTEM
-            var keyboard = Keyboard.current;
-            if (keyboard == null)
-            {
-                return false;
-            }
-
-            if (!Enum.TryParse(toggleKey.ToString(), out Key key))
-            {
-                return false;
-            }
-
-            var control = keyboard[key];
-            return control != null && control.wasPressedThisFrame;
-#elif ENABLE_LEGACY_INPUT_MANAGER
-            return Input.GetKeyDown(toggleKey);
-#else
-            return false;
-#endif
-        }
-
         private int _agentSystemCustomerCount()
         {
             return typeof(AgentSystem).GetField("_customers", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(_agentSystem) is System.Collections.ICollection collection ? collection.Count : 0;
@@ -88,16 +62,21 @@ namespace TavernSim.Debugging
         private bool WasTogglePressed()
         {
 #if ENABLE_INPUT_SYSTEM
-            if (Keyboard.current != null && TryGetKey(toggleKey, out var key))
+            var keyboard = Keyboard.current;
+            if (keyboard != null && TryGetKey(toggleKey, out var key))
             {
-                var keyControl = Keyboard.current[key];
-                if (keyControl != null && keyControl.wasPressedThisFrame)
+                var control = keyboard[key];
+                if (control != null && control.wasPressedThisFrame)
                 {
                     return true;
                 }
             }
 #endif
+#if ENABLE_LEGACY_INPUT_MANAGER
             return Input.GetKeyDown(toggleKey);
+#else
+            return false;
+#endif
         }
 
 #if ENABLE_INPUT_SYSTEM
