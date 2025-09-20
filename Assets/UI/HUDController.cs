@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using TavernSim.Save;
-using TavernSim.Simulation.Models;
 using TavernSim.Simulation.Systems;
 
 namespace TavernSim.UI

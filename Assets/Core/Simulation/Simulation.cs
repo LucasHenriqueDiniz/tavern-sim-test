@@ -1,51 +1,35 @@
-using System;
 using System.Collections.Generic;
 
 namespace TavernSim.Core.Simulation
 {
-    /// <summary>
-    /// Holds the deterministic systems and provides an execution order for the simulation step.
-    /// </summary>
-    public sealed class Simulation : IDisposable
+    public sealed class Simulation
     {
-        private readonly List<ISimSystem> _systems = new List<ISimSystem>(16);
-        private readonly List<ISimSystem> _lateSystems = new List<ISimSystem>(16);
+        private readonly List<ISimSystem> _systems = new(16);
 
-        public float TimeStep { get; }
-        public float ElapsedTime { get; private set; }
+        public void Register(ISimSystem system) => _systems.Add(system);
 
-        public Simulation(float timeStep)
-        {
-            TimeStep = timeStep;
-        }
-
-        public void AddSystem(ISimSystem system, bool runInLateTick = false)
-        {
-            if (system == null) throw new ArgumentNullException(nameof(system));
-            if (runInLateTick)
-            {
-                _lateSystems.Add(system);
-            }
-            else
-            {
-                _systems.Add(system);
-            }
-            system.Initialize(this);
-        }
-
-        public void Tick()
+        public void Initialize()
         {
             for (int i = 0; i < _systems.Count; i++)
             {
-                _systems[i].Tick(TimeStep);
+                _systems[i].Initialize(this);
             }
+        }
 
-            for (int i = 0; i < _lateSystems.Count; i++)
+        public void Tick(float dt)
+        {
+            for (int i = 0; i < _systems.Count; i++)
             {
-                _lateSystems[i].LateTick(TimeStep);
+                _systems[i].Tick(dt);
             }
+        }
 
-            ElapsedTime += TimeStep;
+        public void LateTick(float dt)
+        {
+            for (int i = 0; i < _systems.Count; i++)
+            {
+                _systems[i].LateTick(dt);
+            }
         }
 
         public void Dispose()
@@ -55,15 +39,7 @@ namespace TavernSim.Core.Simulation
                 _systems[i].Dispose();
             }
 
-            for (int i = 0; i < _lateSystems.Count; i++)
-            {
-                if (!_systems.Contains(_lateSystems[i]))
-                {
-                    _lateSystems[i].Dispose();
-                }
-            }
             _systems.Clear();
-            _lateSystems.Clear();
         }
     }
 }
