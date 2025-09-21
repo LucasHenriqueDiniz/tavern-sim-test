@@ -3,6 +3,8 @@
 > Guia de arquitetura e contratos para os **agentes** do TavernSim (clientes, garçons, bartenders e cozinheiros) e seus sistemas de apoio.
 >
 > Público-alvo: quem implementa/faz review de IA de agentes, fluxo de pedidos e integração com HUD/Inventário/Bootstrap.
+>
+> OBS: .meta guardam o GUID de cada asset e são gerados pelo Unity; quando corrompidos/feitos à mão, o Editor pode ignorar o asset. A correção é remover os .meta ruins e deixar o Unity recriá-los na importação
 
 ---
 
