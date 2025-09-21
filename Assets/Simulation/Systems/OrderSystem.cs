@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using TavernSim.Core.Events;
+using TavernSim.Core;
 using TavernSim.Core.Simulation;
 using TavernSim.Domain;
 

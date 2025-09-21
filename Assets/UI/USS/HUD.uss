@@ -55,10 +55,6 @@
     margin-top: 4px;
 }
 
-.hire-controls > .hud-button:first-child {
-    margin-top: 0px;
-}
-
 .build-menu {
     background-color: rgba(255, 255, 255, 0.05);
     border-radius: 4px;
