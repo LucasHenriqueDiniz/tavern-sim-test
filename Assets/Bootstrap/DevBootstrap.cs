@@ -30,10 +30,8 @@ namespace TavernSim.Bootstrap
         private static PanelSettings _panelSettings;
         private static ThemeStyleSheet _panelTheme;
         private static PanelTextSettings _panelTextSettings;
-        private static TextSettings _textSettings;
         private static bool _themeLookupAttempted;
         private static bool _panelTextSettingsLookupAttempted;
-        private static bool _textSettingsLookupAttempted;
 
         private SimulationRunner _runner;
         private EconomySystem _economySystem;
@@ -346,15 +344,6 @@ namespace TavernSim.Bootstrap
                 return _panelTextSettings;
             }
 
-            var textSettings = GetOrLoadTextSettings();
-            if (textSettings != null)
-            {
-                _panelTextSettings = ScriptableObject.CreateInstance<PanelTextSettings>();
-                _panelTextSettings.name = "DevBootstrapPanelTextSettings";
-                _panelTextSettings.hideFlags = HideFlags.HideAndDontSave;
-                _panelTextSettings.textSettings = textSettings;
-            }
-
             if (_panelTextSettings == null)
             {
                 Debug.LogWarning("DevBootstrap could not locate PanelTextSettings. UI text may not use the intended font assets.");
@@ -362,29 +351,9 @@ namespace TavernSim.Bootstrap
 
             return _panelTextSettings;
         }
-
-        private static TextSettings GetOrLoadTextSettings()
-        {
-            if (_textSettings != null || _textSettingsLookupAttempted)
-            {
-                return _textSettings;
-            }
-
-            _textSettingsLookupAttempted = true;
-
-            _textSettings = Resources.Load<TextSettings>(TextSettingsResourcePath);
-
-            if (_textSettings == null)
-            {
-                Debug.LogWarning("DevBootstrap could not locate default TextSettings. UI text may use fallback fonts.");
-            }
-
-            return _textSettings;
-        }
-
         private const string PanelSettingsResourcePath = "UI Toolkit/DevBootstrapPanelSettings";
         private const string ThemeResourcePath = "UI Toolkit/UnityThemes/UnityDefaultRuntimeTheme";
         private const string PanelTextSettingsResourcePath = "UI Toolkit/DevBootstrapPanelTextSettings";
-        private const string TextSettingsResourcePath = "UI Toolkit/Default UITK Text Settings";
+
     }
 }
