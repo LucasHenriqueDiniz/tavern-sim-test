@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -5,6 +6,7 @@ using TavernSim.Save;
 using TavernSim.Simulation.Systems;
 using TavernSim.Building;
 using TavernSim.Core;
+using TavernSim.Core.Events;
 
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem;
@@ -33,6 +35,9 @@ namespace TavernSim.UI
         private Button _saveButton;
         private Button _loadButton;
         private Button _buildToggleButton;
+        private VisualElement _hireControls;
+        private Button _hireWaiterButton;
+        private Button _hireCookButton;
         private VisualElement _buildMenu;
         private readonly List<Label> _orderEntries = new List<Label>(16);
         private readonly List<Button> _buildOptionButtons = new List<Button>();
@@ -42,12 +47,19 @@ namespace TavernSim.UI
 
         private SelectionService _selectionService;
         private GridPlacer _gridPlacer;
+        private IEventBus _eventBus;
+
+        public event Action HireWaiterRequested;
+        public event Action HireCookRequested;
 
         private static readonly BuildOption[] BuildOptions =
         {
             new BuildOption("buildSmallTableBtn", "Mesa pequena", GridPlacer.PlaceableKind.SmallTable),
             new BuildOption("buildLargeTableBtn", "Mesa grande", GridPlacer.PlaceableKind.LargeTable),
-            new BuildOption("buildDecorBtn", "Planta", GridPlacer.PlaceableKind.Decoration)
+            new BuildOption("buildDecorBtn", "Planta", GridPlacer.PlaceableKind.Decoration),
+            new BuildOption("buildKitchenStationBtn", "Estação de cozinha", GridPlacer.PlaceableKind.KitchenStation),
+            new BuildOption("buildBarCounterBtn", "Balcão do bar", GridPlacer.PlaceableKind.BarCounter),
+            new BuildOption("buildPickupPointBtn", "Ponto de retirada", GridPlacer.PlaceableKind.PickupPoint)
         };
 
         public void Initialize(EconomySystem economySystem, OrderSystem orderSystem)
@@ -91,6 +103,18 @@ namespace TavernSim.UI
             {
                 HookEvents();
             }
+        }
+
+        public void BindEventBus(IEventBus eventBus)
+        {
+            _eventBus = eventBus;
+            var toastController = GetComponent<HudToastController>();
+            toastController?.Initialize(_eventBus);
+        }
+
+        public void PublishEvent(GameEvent gameEvent)
+        {
+            _eventBus?.Publish(gameEvent);
         }
 
         public void SetVisualConfig(HUDVisualConfig config)
@@ -216,11 +240,27 @@ namespace TavernSim.UI
             _saveButton = rootElement.Q<Button>("saveBtn") ?? CreateButton(layoutRoot, "saveBtn", "Save (F5)");
             _loadButton = rootElement.Q<Button>("loadBtn") ?? CreateButton(layoutRoot, "loadBtn", "Load (F9)");
             _selectionLabel = rootElement.Q<Label>("selectionLabel") ?? CreateLabel(layoutRoot, "selectionLabel", "Selecionado: Nenhum");
+            _hireControls = rootElement.Q<VisualElement>("hireControls") ?? CreateHireControls(layoutRoot);
+            _hireWaiterButton = rootElement.Q<Button>("hireWaiterBtn") ?? CreateButton(_hireControls, "hireWaiterBtn", "Contratar garçom");
+            _hireCookButton = rootElement.Q<Button>("hireCookBtn") ?? CreateButton(_hireControls, "hireCookBtn", "Contratar cozinheiro");
+            _hireWaiterButton?.AddToClassList("hud-button");
+            _hireCookButton?.AddToClassList("hud-button");
+            _hireCookButton?.AddToClassList("stacked");
+            if (_hireWaiterButton != null)
+            {
+                _hireWaiterButton.style.marginTop = 0f;
+            }
             _buildToggleButton = rootElement.Q<Button>("buildToggleBtn") ?? CreateButton(layoutRoot, "buildToggleBtn", "Construir");
             _buildMenu = rootElement.Q<VisualElement>("buildMenu") ?? CreateBuildMenu(layoutRoot);
 
             CreateBuildButtons();
             SetBuildMenuVisible(false);
+
+            var menuController = GetComponent<MenuController>();
+            menuController?.RebuildMenu(rootElement);
+
+            var toastController = GetComponent<HudToastController>();
+            toastController?.AttachTo(rootElement);
         }
 
         private void HookEvents()
@@ -255,6 +295,18 @@ namespace TavernSim.UI
             {
                 _buildToggleButton.clicked -= ToggleBuildMenu;
                 _buildToggleButton.clicked += ToggleBuildMenu;
+            }
+
+            if (_hireWaiterButton != null)
+            {
+                _hireWaiterButton.clicked -= OnHireWaiterClicked;
+                _hireWaiterButton.clicked += OnHireWaiterClicked;
+            }
+
+            if (_hireCookButton != null)
+            {
+                _hireCookButton.clicked -= OnHireCookClicked;
+                _hireCookButton.clicked += OnHireCookClicked;
             }
 
             if (_selectionService != null)
@@ -301,6 +353,16 @@ namespace TavernSim.UI
                 _buildToggleButton.clicked -= ToggleBuildMenu;
             }
 
+            if (_hireWaiterButton != null)
+            {
+                _hireWaiterButton.clicked -= OnHireWaiterClicked;
+            }
+
+            if (_hireCookButton != null)
+            {
+                _hireCookButton.clicked -= OnHireCookClicked;
+            }
+
             if (_selectionService != null)
             {
                 _selectionService.SelectionChanged -= OnSelectionChanged;
@@ -338,12 +400,38 @@ namespace TavernSim.UI
 
             for (int i = 0; i < orders.Count; i++)
             {
+                var order = orders[i];
+                var recipeName = order.Recipe != null ? order.Recipe.DisplayName : "Desconhecido";
+                var areaLabel = order.Area.GetDisplayName();
+                var status = order.IsReady ? "Pronto" : order.State == OrderState.Queued ? "Fila" : $"{order.Remaining:0.0}s";
                 var label = new Label
                 {
-                    text = $"Table {orders[i].TableId} - {orders[i].Recipe?.DisplayName ?? "Unknown"} ({orders[i].Remaining:0.0}s)"
+                    text = $"Mesa {order.TableId} - {recipeName} ({areaLabel}) [{status}]"
                 };
+                ApplyOrderStyle(label, order);
                 _ordersScroll.contentContainer.Add(label);
                 _orderEntries.Add(label);
+            }
+        }
+
+        private static void ApplyOrderStyle(Label label, Order order)
+        {
+            if (label == null || order == null)
+            {
+                return;
+            }
+
+            if (order.IsReady)
+            {
+                label.style.color = new StyleColor(new Color(0.56f, 0.87f, 0.3f));
+            }
+            else if (order.State == OrderState.Queued)
+            {
+                label.style.color = new StyleColor(new Color(0.7f, 0.7f, 0.7f));
+            }
+            else
+            {
+                label.style.color = new StyleColor(Color.white);
             }
         }
 
@@ -375,6 +463,16 @@ namespace TavernSim.UI
         private void ToggleBuildMenu()
         {
             SetBuildMenuVisible(!_buildMenuVisible);
+        }
+
+        private void OnHireWaiterClicked()
+        {
+            HireWaiterRequested?.Invoke();
+        }
+
+        private void OnHireCookClicked()
+        {
+            HireCookRequested?.Invoke();
         }
 
         private void SetBuildMenuVisible(bool visible)
@@ -541,6 +639,15 @@ namespace TavernSim.UI
         private static VisualElement CreateBuildMenu(VisualElement root)
         {
             var container = new VisualElement { name = "buildMenu" };
+            root.Add(container);
+            return container;
+        }
+
+        private static VisualElement CreateHireControls(VisualElement root)
+        {
+            var container = new VisualElement { name = "hireControls" };
+            container.AddToClassList("hire-controls");
+            container.AddToClassList("stacked");
             root.Add(container);
             return container;
         }

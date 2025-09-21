@@ -39,5 +39,9 @@ namespace UnityEngine
     {
         public static float Max(float a, float b) => MathF.Max(a, b);
         public static int Max(int a, int b) => Math.Max(a, b);
+        public static bool Approximately(float a, float b)
+        {
+            return MathF.Abs(a - b) <= MathF.Max(1e-6f * MathF.Max(MathF.Abs(a), MathF.Abs(b)), float.Epsilon * 8f);
+        }
     }
 }

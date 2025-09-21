@@ -46,6 +46,15 @@
     flex-direction: column;
 }
 
+.hire-controls {
+    margin-top: 6px;
+    flex-direction: column;
+}
+
+.hire-controls > .hud-button {
+    margin-top: 4px;
+}
+
 .build-menu {
     background-color: rgba(255, 255, 255, 0.05);
     border-radius: 4px;

@@ -16,6 +16,10 @@
       <ui:Button name="loadBtn" class="hud-button hud-button--spaced" text="Load (F9)" />
     </ui:VisualElement>
     <ui:Label name="selectionLabel" class="stat selection stacked" text="Selecionado: Nenhum" />
+    <ui:VisualElement name="hireControls" class="hire-controls stacked">
+      <ui:Button name="hireWaiterBtn" class="hud-button" text="Contratar garçom" />
+      <ui:Button name="hireCookBtn" class="hud-button stacked" text="Contratar cozinheiro" />
+    </ui:VisualElement>
     <ui:VisualElement name="buildControls" class="build-controls stacked">
       <ui:Button name="buildToggleBtn" text="Construir" />
       <ui:VisualElement name="buildMenu" class="build-menu stacked" />
