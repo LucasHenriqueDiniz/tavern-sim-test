@@ -93,6 +93,20 @@ namespace TavernSim.UI
             }
         }
 
+        public void SetVisualConfig(HUDVisualConfig config)
+        {
+            if (visualConfig == config)
+            {
+                return;
+            }
+
+            visualConfig = config;
+            if (isActiveAndEnabled)
+            {
+                ApplyVisualTree();
+            }
+        }
+
         private void Awake()
         {
             _document = GetComponent<UIDocument>();
