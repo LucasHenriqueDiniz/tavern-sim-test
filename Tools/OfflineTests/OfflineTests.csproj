@@ -20,11 +20,17 @@
     <Compile Include="../../Assets/Core/Simulation/Simulation.cs">
       <Link>GameCode/Core/Simulation/Simulation.cs</Link>
     </Compile>
+    <Compile Include="../../Assets/Core/GameEvents.cs">
+      <Link>GameCode/Core/GameEvents.cs</Link>
+    </Compile>
     <Compile Include="../../Assets/Simulation/Systems/EconomySystem.cs">
       <Link>GameCode/Simulation/Systems/EconomySystem.cs</Link>
     </Compile>
     <Compile Include="../../Assets/Simulation/Systems/OrderSystem.cs">
       <Link>GameCode/Simulation/Systems/OrderSystem.cs</Link>
+    </Compile>
+    <Compile Include="../../Assets/Simulation/Systems/OrderRequestValidator.cs">
+      <Link>GameCode/Simulation/Systems/OrderRequestValidator.cs</Link>
     </Compile>
     <Compile Include="../../Assets/Domain/ItemSO.cs">
       <Link>GameCode/Domain/ItemSO.cs</Link>
@@ -37,6 +43,9 @@
     </Compile>
     <Compile Include="../../Assets/Tests/EditMode/OrderSystemTests.cs">
       <Link>Tests/EditMode/OrderSystemTests.cs</Link>
+    </Compile>
+    <Compile Include="../../Assets/Tests/EditMode/OrderRequestValidatorTests.cs">
+      <Link>Tests/EditMode/OrderRequestValidatorTests.cs</Link>
     </Compile>
   </ItemGroup>
 
