@@ -35,6 +35,7 @@
 ExportedObj/
 .consulo/
 *.csproj
+!Tools/OfflineTests/OfflineTests.csproj
 *.unityproj
 *.sln
 *.suo
