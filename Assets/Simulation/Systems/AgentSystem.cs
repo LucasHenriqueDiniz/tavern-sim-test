@@ -8,7 +8,8 @@ using TavernSim.Core.Events;
 using TavernSim.Core.Simulation;
 using TavernSim.Domain;
 using TavernSim.Simulation.Models;
-using TavernSim.UI;
+using TavernSim.UI; // para IMenuPolicy
+using TavernSim.Simulation.Systems; // para IInventoryService
 
 using Sim = TavernSim.Core.Simulation.Simulation;
 
