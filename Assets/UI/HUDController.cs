@@ -246,7 +246,7 @@ namespace TavernSim.UI
             _hireWaiterButton?.AddToClassList("hud-button");
             _hireCookButton?.AddToClassList("hud-button");
             _hireCookButton?.AddToClassList("stacked");
-            
+
             if (_hireWaiterButton != null)
             {
                 _hireWaiterButton.style.marginTop = 0f;

@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+#if UNITY_INCLUDE_TESTS
 using NUnit.Framework;
 using TavernSim.Simulation.Systems;
 

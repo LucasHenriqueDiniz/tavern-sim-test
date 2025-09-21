@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 
-namespace TavernSim.Core
+namespace TavernSim.Core.Events
+
 {
     public enum GameEventSeverity
     {
@@ -75,3 +76,13 @@ namespace TavernSim.Core
         }
     }
 }
+
+namespace TavernSim.Core.Events
+{
+    using GameEvent = TavernSim.Core.GameEvent;
+    using GameEventBus = TavernSim.Core.GameEventBus;
+    using GameEventSeverity = TavernSim.Core.GameEventSeverity;
+    using IEventBus = TavernSim.Core.IEventBus;
+    using IEventSink = TavernSim.Core.IEventSink;
+}
+

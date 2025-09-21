@@ -2,7 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
-using TavernSim.Core;
+using TavernSim.Core.Events;
+
 
 namespace TavernSim.UI
 {
