@@ -5,8 +5,6 @@ using TavernSim.Domain;
 
 namespace TavernSim.UI
 {
-    public interface IMenuPolicy { bool IsAllowed(RecipeSO recipe); }
-
     [RequireComponent(typeof(UIDocument))]
     public sealed class MenuController : MonoBehaviour, IMenuPolicy
     {
@@ -14,7 +12,10 @@ namespace TavernSim.UI
         private UIDocument _doc;
         private readonly HashSet<RecipeSO> _allowed = new HashSet<RecipeSO>();
 
-        void Awake() => _doc = GetComponent<UIDocument>();
+        private void Awake()
+        {
+            _doc = GetComponent<UIDocument>();
+        }
 
         public void Initialize(Catalog cat)
         {
@@ -22,14 +23,22 @@ namespace TavernSim.UI
             BuildUI();
         }
 
-        public bool IsAllowed(RecipeSO recipe) => recipe != null && _allowed.Contains(recipe);
+        public bool IsAllowed(RecipeSO recipe)
+        {
+            return recipe != null && _allowed.Contains(recipe);
+        }
 
         private void BuildUI()
         {
-            if (_doc == null || catalog == null) return;
+            if (_doc == null || catalog == null)
+            {
+                return;
+            }
+
             var root = _doc.rootVisualElement;
             var fold = new Foldout { text = "Menu", value = false };
-            fold.style.marginTop = 8; fold.style.marginLeft = 8;
+            fold.style.marginTop = 8;
+            fold.style.marginLeft = 8;
             root.Add(fold);
 
             foreach (var kv in catalog.Recipes)
@@ -39,8 +48,14 @@ namespace TavernSim.UI
                 _allowed.Add(recipe);
                 toggle.RegisterValueChangedCallback(ev =>
                 {
-                    if (ev.newValue) _allowed.Add(recipe);
-                    else _allowed.Remove(recipe);
+                    if (ev.newValue)
+                    {
+                        _allowed.Add(recipe);
+                    }
+                    else
+                    {
+                        _allowed.Remove(recipe);
+                    }
                 });
                 fold.Add(toggle);
             }
