@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem;
@@ -27,6 +28,7 @@ namespace TavernSim.Bootstrap
         [Header("Zoom")]
         [SerializeField] private float zoomSpeed = 6f;
         [SerializeField] private float zoomStep = 1.5f;
+        [SerializeField] private float[] zoomLevels = new float[] { 5f, 7.5f, 10f, 13f, 16f, 20f, 25f };
         [SerializeField] private float minZoom = 4f;
         [SerializeField] private float maxZoom = 30f;
 
@@ -38,6 +40,8 @@ namespace TavernSim.Bootstrap
         private bool _isDragging;
         private bool _isOrbiting;
         private Vector2 _lastPointer;
+        private float[] _sortedZoomLevels = Array.Empty<float>();
+        private int _zoomIndex;
 
         private void Start()
         {
@@ -59,7 +63,73 @@ namespace TavernSim.Bootstrap
             _distance = Mathf.Clamp(offset.magnitude, minZoom, maxZoom);
             _targetDistance = _distance;
 
+            ConfigureZoomLevels();
             ApplyTransform();
+        }
+
+        private void ConfigureZoomLevels()
+        {
+            if (zoomLevels == null || zoomLevels.Length == 0)
+            {
+                _sortedZoomLevels = Array.Empty<float>();
+                _zoomIndex = 0;
+                return;
+            }
+
+            var levels = new float[zoomLevels.Length];
+            Array.Copy(zoomLevels, levels, zoomLevels.Length);
+            Array.Sort(levels);
+
+            var count = 0;
+            var previous = float.MinValue;
+            for (int i = 0; i < levels.Length; i++)
+            {
+                var clamped = Mathf.Clamp(levels[i], minZoom, maxZoom);
+                if (count == 0 || Mathf.Abs(clamped - previous) > 0.01f)
+                {
+                    levels[count++] = clamped;
+                    previous = clamped;
+                }
+            }
+
+            if (count == 0)
+            {
+                _sortedZoomLevels = Array.Empty<float>();
+                _zoomIndex = 0;
+                return;
+            }
+
+            if (count != levels.Length)
+            {
+                Array.Resize(ref levels, count);
+            }
+
+            _sortedZoomLevels = levels;
+            _zoomIndex = FindClosestZoomIndex(_distance);
+            _targetDistance = _sortedZoomLevels[_zoomIndex];
+            _distance = _targetDistance;
+        }
+
+        private int FindClosestZoomIndex(float distance)
+        {
+            if (_sortedZoomLevels == null || _sortedZoomLevels.Length == 0)
+            {
+                return 0;
+            }
+
+            var closestIndex = 0;
+            var closestDelta = Mathf.Abs(_sortedZoomLevels[0] - distance);
+            for (int i = 1; i < _sortedZoomLevels.Length; i++)
+            {
+                var delta = Mathf.Abs(_sortedZoomLevels[i] - distance);
+                if (delta < closestDelta)
+                {
+                    closestDelta = delta;
+                    closestIndex = i;
+                }
+            }
+
+            return closestIndex;
         }
 
         private void Update()
@@ -138,7 +208,7 @@ namespace TavernSim.Bootstrap
                 var speed = moveSpeed * (boost ? fastMoveMultiplier : 1f);
                 var yawRotation = Quaternion.Euler(0f, _yaw, 0f);
                 var planarMove = yawRotation * new Vector3(moveInput.x, 0f, moveInput.y);
-                _pivot += planarMove * speed * Time.deltaTime;
+                _pivot += planarMove * speed * Time.unscaledDeltaTime;
                 _pivot.y = 0f;
             }
         }
@@ -176,7 +246,7 @@ namespace TavernSim.Bootstrap
 
             if (Mathf.Abs(yawInput) > 0.001f)
             {
-                _yaw += yawInput * rotationSpeed * Time.deltaTime;
+                _yaw += yawInput * rotationSpeed * Time.unscaledDeltaTime;
             }
         }
 
@@ -197,14 +267,23 @@ namespace TavernSim.Bootstrap
 
             if (Mathf.Abs(scroll) > 0.01f)
             {
-                _targetDistance = Mathf.Clamp(_targetDistance - scroll * zoomStep, minZoom, maxZoom);
+                var direction = scroll > 0f ? -1 : 1;
+                if (_sortedZoomLevels.Length > 0)
+                {
+                    _zoomIndex = Mathf.Clamp(_zoomIndex + direction, 0, _sortedZoomLevels.Length - 1);
+                    _targetDistance = _sortedZoomLevels[_zoomIndex];
+                }
+                else
+                {
+                    _targetDistance = Mathf.Clamp(_targetDistance + direction * zoomStep, minZoom, maxZoom);
+                }
             }
         }
 
         private void SmoothZoom()
         {
             _targetDistance = Mathf.Clamp(_targetDistance, minZoom, maxZoom);
-            _distance = Mathf.MoveTowards(_distance, _targetDistance, zoomSpeed * Time.deltaTime);
+            _distance = Mathf.MoveTowards(_distance, _targetDistance, zoomSpeed * Time.unscaledDeltaTime);
         }
 
         private void HandlePointerInput()

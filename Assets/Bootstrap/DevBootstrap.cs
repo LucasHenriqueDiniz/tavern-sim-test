@@ -184,17 +184,22 @@ namespace TavernSim.Bootstrap
         {
             var uiGo = new GameObject("HUD");
             uiGo.transform.SetParent(transform, false);
+            uiGo.SetActive(false);
+
             var document = uiGo.AddComponent<UIDocument>();
             document.panelSettings = GetOrCreatePanelSettings();
+
             _hudController = uiGo.AddComponent<HUDController>();
             _hudController.Initialize(_economySystem, _orderSystem);
-
-            _timeControls = uiGo.AddComponent<TimeControls>();
-            _timeControls.Initialize();
-
             _hudController.BindSaveService(_saveService);
             _hudController.BindSelection(_selectionService, _gridPlacer);
-            _hudController.SetCustomers(0);
+
+            _timeControls = uiGo.AddComponent<TimeControls>();
+
+            uiGo.SetActive(true);
+
+            _timeControls.Initialize();
+            _hudController.SetCustomers(_agentSystem != null ? _agentSystem.ActiveCustomerCount : 0);
         }
 
         private static Customer CreateCustomerPrefab(Transform parent)
