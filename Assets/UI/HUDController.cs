@@ -485,6 +485,10 @@ namespace TavernSim.UI
                     userData = option.Kind
                 };
                 button.AddToClassList("build-option");
+                if (_buildOptionButtons.Count > 0)
+                {
+                    button.AddToClassList("build-option--spaced");
+                }
                 _buildMenu.Add(button);
                 _buildOptionButtons.Add(button);
                 _buildOptionLookup[button] = option;

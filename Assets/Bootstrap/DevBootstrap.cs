@@ -234,7 +234,7 @@ namespace TavernSim.Bootstrap
                 _panelSettings.name = "DevBootstrapPanelSettings";
                 _panelSettings.hideFlags = HideFlags.HideAndDontSave;
                 _panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
-                _panelSettings.referenceResolution = new Vector2(1920f, 1080f);
+                _panelSettings.referenceResolution = new Vector2Int(1920, 1080);
                 _panelSettings.sortingOrder = 100;
                 _panelSettings.targetTexture = null;
             }

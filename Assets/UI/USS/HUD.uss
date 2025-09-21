@@ -9,7 +9,7 @@
     border-radius: 6px;
 }
 
-.root > * + * {
+.stacked {
     margin-top: 4px;
 }
 
@@ -27,14 +27,12 @@
     justify-content: space-between;
 }
 
-.time-controls button + button,
-.save-controls button + button {
-    margin-left: 4px;
+.hud-button {
+    flex-grow: 1;
 }
 
-.time-controls button,
-.save-controls button {
-    flex-grow: 1;
+.hud-button--spaced {
+    margin-left: 4px;
 }
 
 .selection {
@@ -48,10 +46,6 @@
     flex-direction: column;
 }
 
-.build-controls > * + * {
-    margin-top: 4px;
-}
-
 .build-menu {
     background-color: rgba(255, 255, 255, 0.05);
     border-radius: 4px;
@@ -59,12 +53,12 @@
     flex-direction: column;
 }
 
-.build-menu button + button {
-    margin-top: 4px;
-}
-
 .build-option {
     justify-content: flex-start;
+}
+
+.build-option--spaced {
+    margin-top: 4px;
 }
 
 .build-option--active {

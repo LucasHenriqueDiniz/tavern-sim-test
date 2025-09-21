@@ -2,23 +2,23 @@
 <engine:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xmlns:engine="UnityEngine.UIElements">
   <ui:VisualElement class="root">
     <ui:Label name="cashLabel" class="stat" text="Cash: 0" />
-    <ui:Label name="customerLabel" class="stat" text="Customers: 0" />
-    <ui:Label name="ordersLabel" class="stat" text="Orders" />
-    <ui:ScrollView name="ordersScroll" class="orders" />
-    <ui:VisualElement class="time-controls">
-      <ui:Button name="pauseBtn" text="Pause" />
-      <ui:Button name="play1Btn" text="1x" />
-      <ui:Button name="play2Btn" text="2x" />
-      <ui:Button name="play4Btn" text="4x" />
+    <ui:Label name="customerLabel" class="stat stacked" text="Customers: 0" />
+    <ui:Label name="ordersLabel" class="stat stacked" text="Orders" />
+    <ui:ScrollView name="ordersScroll" class="orders stacked" />
+    <ui:VisualElement class="time-controls stacked">
+      <ui:Button name="pauseBtn" class="hud-button" text="Pause" />
+      <ui:Button name="play1Btn" class="hud-button hud-button--spaced" text="1x" />
+      <ui:Button name="play2Btn" class="hud-button hud-button--spaced" text="2x" />
+      <ui:Button name="play4Btn" class="hud-button hud-button--spaced" text="4x" />
     </ui:VisualElement>
-    <ui:VisualElement class="save-controls">
-      <ui:Button name="saveBtn" text="Save (F5)" />
-      <ui:Button name="loadBtn" text="Load (F9)" />
+    <ui:VisualElement class="save-controls stacked">
+      <ui:Button name="saveBtn" class="hud-button" text="Save (F5)" />
+      <ui:Button name="loadBtn" class="hud-button hud-button--spaced" text="Load (F9)" />
     </ui:VisualElement>
-    <ui:Label name="selectionLabel" class="stat selection" text="Selecionado: Nenhum" />
-    <ui:VisualElement name="buildControls" class="build-controls">
+    <ui:Label name="selectionLabel" class="stat selection stacked" text="Selecionado: Nenhum" />
+    <ui:VisualElement name="buildControls" class="build-controls stacked">
       <ui:Button name="buildToggleBtn" text="Construir" />
-      <ui:VisualElement name="buildMenu" class="build-menu" />
+      <ui:VisualElement name="buildMenu" class="build-menu stacked" />
     </ui:VisualElement>
   </ui:VisualElement>
 </engine:UXML>
