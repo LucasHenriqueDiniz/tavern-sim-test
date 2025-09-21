@@ -233,7 +233,7 @@ namespace TavernSim.Simulation.Systems
             var areaLabel = order.Area.GetDisplayName();
             var recipeName = order.Recipe != null ? order.Recipe.DisplayName : "Desconhecido";
             var message = $"Pedido pronto ({areaLabel}) - Mesa {order.TableId}: {recipeName}";
-            _eventBus.Publish(new GameEvent("OrderReady", message, GameEventSeverity.Info, data));
+            _eventBus.Publish(new GameEvent(message, GameEventSeverity.Info, "OrderReady", data));
         }
 
         private void RaiseOrdersChanged()

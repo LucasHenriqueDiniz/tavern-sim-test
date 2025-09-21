@@ -228,7 +228,6 @@ namespace TavernSim.Bootstrap
             _hudController.BindEventBus(_eventBus);
 
             _toastController = uiGo.AddComponent<HudToastController>();
-            _toastController.Initialize(_eventBus);
 
             _menuController = uiGo.AddComponent<MenuController>();
             _menuController.Initialize(catalog);

@@ -798,7 +798,7 @@ namespace TavernSim.Simulation.Systems
             };
 
             var message = $"Pedido da mesa {tableId} bloqueado pelo cardápio: {recipeName}";
-            _eventBus.Publish(new GameEvent("OrderBlockedByMenu", message, GameEventSeverity.Warning, eventData));
+            _eventBus.Publish(new GameEvent(message, GameEventSeverity.Warning, "OrderBlockedByMenu", eventData));
         }
 
         private void PublishNoIngredients(CustomerData data, RecipeSO recipe)
@@ -817,7 +817,7 @@ namespace TavernSim.Simulation.Systems
             };
 
             var message = $"Sem ingredientes para {recipeName} na mesa {tableId}";
-            _eventBus.Publish(new GameEvent("NoIngredients", message, GameEventSeverity.Warning, eventData));
+            _eventBus.Publish(new GameEvent(message, GameEventSeverity.Warning, "NoIngredients", eventData));
         }
 
         private void PublishCustomerAngry(CustomerData data, string reason, int tableId)
@@ -836,7 +836,7 @@ namespace TavernSim.Simulation.Systems
 
             var displayName = data.Name ?? (data.Agent != null ? data.Agent.name : "Cliente");
             var message = $"{displayName} deixou a mesa {tableId} irritado: {reason}";
-            _eventBus.Publish(new GameEvent("CustomerAngry", message, GameEventSeverity.Warning, eventData));
+            _eventBus.Publish(new GameEvent(message, GameEventSeverity.Warning, "CustomerAngry", eventData));
         }
 
         private void PublishOrderDelivered(CustomerData data, RecipeSO recipe, PrepArea area)
@@ -857,7 +857,7 @@ namespace TavernSim.Simulation.Systems
 
             var areaLabel = area.GetDisplayName();
             var message = $"Pedido entregue ({areaLabel}) - Mesa {tableId}: {recipeName}";
-            _eventBus.Publish(new GameEvent("OrderDelivered", message, GameEventSeverity.Info, eventData));
+            _eventBus.Publish(new GameEvent(message, GameEventSeverity.Info, "OrderDelivered", eventData));
         }
 
         private static float CalculateTip(float waitTime)

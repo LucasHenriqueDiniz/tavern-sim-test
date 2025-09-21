@@ -48,6 +48,7 @@ namespace TavernSim.UI
         private SelectionService _selectionService;
         private GridPlacer _gridPlacer;
         private IEventBus _eventBus;
+        private HudToastController _toastController;
 
         public event Action HireWaiterRequested;
         public event Action HireCookRequested;
@@ -107,9 +108,22 @@ namespace TavernSim.UI
 
         public void BindEventBus(IEventBus eventBus)
         {
+            if (_eventBus == eventBus)
+            {
+                return;
+            }
+
+            if (isActiveAndEnabled)
+            {
+                UnhookEvents();
+            }
+
             _eventBus = eventBus;
-            var toastController = GetComponent<HudToastController>();
-            toastController?.Initialize(_eventBus);
+
+            if (isActiveAndEnabled)
+            {
+                HookEvents();
+            }
         }
 
         public void PublishEvent(GameEvent gameEvent)
@@ -134,6 +148,7 @@ namespace TavernSim.UI
         private void Awake()
         {
             _document = GetComponent<UIDocument>();
+            _toastController = GetComponent<HudToastController>();
             if (visualConfig == null)
             {
                 visualConfig = Resources.Load<HUDVisualConfig>("UI/HUDVisualConfig");
@@ -259,10 +274,9 @@ namespace TavernSim.UI
             SetBuildMenuVisible(false);
 
             var menuController = GetComponent<MenuController>();
-            menuController?.RebuildMenu(rootElement);
+            menuController?.RebuildMenu();
 
-            var toastController = GetComponent<HudToastController>();
-            toastController?.AttachTo(rootElement);
+            _toastController?.AttachTo(rootElement);
         }
 
         private void HookEvents()
@@ -326,6 +340,12 @@ namespace TavernSim.UI
             }
 
             AttachBuildOptionCallbacks();
+
+            if (_eventBus != null)
+            {
+                _eventBus.OnEvent -= OnGameEvent;
+                _eventBus.OnEvent += OnGameEvent;
+            }
         }
 
         private void UnhookEvents()
@@ -376,6 +396,30 @@ namespace TavernSim.UI
             }
 
             DetachBuildOptionCallbacks();
+
+            if (_eventBus != null)
+            {
+                _eventBus.OnEvent -= OnGameEvent;
+            }
+        }
+
+        private void OnGameEvent(GameEvent gameEvent)
+        {
+            if (_toastController == null)
+            {
+                return;
+            }
+
+            var text = string.IsNullOrEmpty(gameEvent.Source)
+                ? gameEvent.Message
+                : $"{gameEvent.Source}: {gameEvent.Message}";
+
+            if (string.IsNullOrEmpty(text))
+            {
+                return;
+            }
+
+            _toastController.Show(text);
         }
 
         private void OnCashChanged(float value)

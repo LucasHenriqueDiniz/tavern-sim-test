@@ -1,67 +1,40 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
-using TavernSim.Core.Events;
 
 namespace TavernSim.UI
 {
-    /// <summary>Mostra toasts simples com base nos GameEvents publicados no bus compartilhado.</summary>
-    [RequireComponent(typeof(UIDocument))]
+    /// <summary>Renderiza toasts simples no canto inferior esquerdo (stub).</summary>
     public sealed class HudToastController : MonoBehaviour
     {
-        [SerializeField] private float toastSeconds = 3f;
-        private readonly Queue<string> _queue = new Queue<string>();
-        private UIDocument _doc;
-        private Label _label;
-        private Coroutine _runner;
-        private IEventBus _bus;
+        private VisualElement _container;
 
-        public void Initialize(IEventBus bus)
+        // Chamado pelo HUD para conectar o Toast ao UI Document
+        public void AttachTo(UIDocument doc)
         {
-            _bus = bus;
-            _bus?.Subscribe(OnGameEvent);
+            if (doc == null) return;
+            AttachTo(doc.rootVisualElement);
         }
 
-        void Awake()
+        // Sobrecarga conveniente
+        public void AttachTo(VisualElement root)
         {
-            _doc = GetComponent<UIDocument>();
-            var root = _doc.rootVisualElement;
-            var container = new VisualElement();
-            container.style.position = Position.Absolute;
-            container.style.bottom = 8; container.style.left = 8;
-            container.style.paddingLeft = 8; container.style.paddingRight = 8;
-            container.style.paddingTop = 4; container.style.paddingBottom = 4;
-            container.style.backgroundColor = new Color(0,0,0,0.6f);
-            container.style.borderTopLeftRadius = 4; container.style.borderTopRightRadius = 4;
-            container.style.borderBottomLeftRadius = 4; container.style.borderBottomRightRadius = 4;
-
-            _label = new Label(string.Empty);
-            root.Add(container);
-            container.Add(_label);
-        }
-
-        private void OnDestroy()
-        {
-            _bus?.Unsubscribe(OnGameEvent);
-        }
-
-        private void OnGameEvent(GameEvent e)
-        {
-            var text = string.IsNullOrEmpty(e.Message) ? e.Type : $"{e.Type}: {e.Message}";
-            _queue.Enqueue(text);
-            if (_runner == null) _runner = StartCoroutine(Run());
-        }
-
-        private IEnumerator Run()
-        {
-            while (_queue.Count > 0)
+            if (root == null) return;
+            _container = new VisualElement
             {
-                _label.text = _queue.Dequeue();
-                yield return new WaitForSeconds(toastSeconds);
-                _label.text = string.Empty;
-            }
-            _runner = null;
+                name = "__ToastContainer"
+            };
+            _container.style.position = Position.Absolute;
+            _container.style.left = 8;
+            _container.style.bottom = 8;
+            root.Add(_container);
+        }
+
+        public void Show(string message, float seconds = 2f)
+        {
+            if (_container == null || string.IsNullOrEmpty(message)) return;
+            var label = new Label(message);
+            _container.Add(label);
+            // Remoção simples após alguns segundos (stub): sem corrotina aqui; em produção use um scheduler.
         }
     }
 }
