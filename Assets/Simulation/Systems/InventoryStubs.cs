@@ -1,4 +1,5 @@
 using TavernSim.Domain;
+using TavernSim.UI;
 
 namespace TavernSim.Simulation.Systems
 {
@@ -15,4 +16,27 @@ namespace TavernSim.Simulation.Systems
         public bool TryConsume(RecipeSO recipe) => recipe != null;
     }
 
+    /// <summary>Validador simples de pedido (menu + estoque).</summary>
+    public static class OrderRequestValidator
+    {
+        public static bool IsAllowed(IMenuPolicy menu, IInventoryService inv, RecipeSO recipe)
+        {
+            if (recipe == null)
+            {
+                return false;
+            }
+
+            if (menu != null && !menu.IsAllowed(recipe))
+            {
+                return false;
+            }
+
+            if (inv != null && !inv.CanCraft(recipe))
+            {
+                return false;
+            }
+
+            return true;
+        }
+    }
 }

@@ -43,7 +43,6 @@ namespace TavernSim.Simulation.Systems
         private RecipeSO _defaultRecipe;
         private IMenuPolicy _menuPolicy;
         private IInventoryService _inventory;
-        private OrderRequestValidator _orderValidator;
         private IEventBus _eventBus;
 
         public event Action<int> ActiveCustomerCountChanged;
@@ -58,7 +57,6 @@ namespace TavernSim.Simulation.Systems
             _economySystem = economySystem;
             _cleaningSystem = cleaningSystem;
             _catalog = catalog;
-            _orderValidator = new OrderRequestValidator(null, null);
         }
 
         public void Configure(Vector3 entryPoint, Vector3 exitPoint, Vector3 kitchenPoint)
@@ -77,13 +75,11 @@ namespace TavernSim.Simulation.Systems
         public void SetMenuPolicy(IMenuPolicy menuPolicy)
         {
             _menuPolicy = menuPolicy;
-            _orderValidator = new OrderRequestValidator(_menuPolicy, _inventory);
         }
 
         public void SetInventory(IInventoryService inventory)
         {
             _inventory = inventory;
-            _orderValidator = new OrderRequestValidator(_menuPolicy, _inventory);
         }
 
         public void SetEventBus(IEventBus eventBus)
@@ -546,21 +542,25 @@ namespace TavernSim.Simulation.Systems
             if (recipe != null && customerData.Table != null)
             {
                 customerData.PendingRecipe = recipe;
-                var validation = _orderValidator != null ? _orderValidator.Validate(recipe) : OrderValidationResult.Allowed;
-                if (!validation.IsAllowed)
+                var isAllowed = OrderRequestValidator.IsAllowed(_menuPolicy, _inventory, recipe);
+                if (!isAllowed)
                 {
                     customerData.OrderBlocked = true;
                     customerData.WaiterAssigned = false;
-                    switch (validation.Reason)
+
+                    if (_menuPolicy != null && !_menuPolicy.IsAllowed(recipe))
                     {
-                        case OrderBlockReason.MenuPolicy:
-                            customerData.BlockReason = "Bloqueado pelo cardápio";
-                            PublishOrderBlockedByMenu(customerData, recipe);
-                            break;
-                        case OrderBlockReason.InventoryUnavailable:
-                            customerData.BlockReason = "Sem ingredientes";
-                            PublishNoIngredients(customerData, recipe);
-                            break;
+                        customerData.BlockReason = "Bloqueado pelo cardápio";
+                        PublishOrderBlockedByMenu(customerData, recipe);
+                    }
+                    else if (_inventory != null && !_inventory.CanCraft(recipe))
+                    {
+                        customerData.BlockReason = "Sem ingredientes";
+                        PublishNoIngredients(customerData, recipe);
+                    }
+                    else
+                    {
+                        customerData.BlockReason = "Pedido indisponível";
                     }
 
                     data.TargetCustomer = null;

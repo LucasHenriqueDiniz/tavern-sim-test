@@ -4,32 +4,13 @@ using UnityEngine;
 
 namespace TavernSim.Core.Events
 {
-    public enum GameEventSeverity
-    {
-        Info = 0,
-        Warning = 1,
-        Error = 2
-    }
-
     public struct GameEvent
     {
-        public string Type { get; }
-        public string Message { get; }
-        public int TableId { get; }
-        public GameEventSeverity Severity { get; }
-        public IReadOnlyDictionary<string, object> Data { get; }
-
-        public GameEvent(string type, string message, GameEventSeverity severity = GameEventSeverity.Info, IDictionary<string, object> data = null, int tableId = -1)
-        {
-            Type = string.IsNullOrEmpty(type) ? string.Empty : type;
-            Message = message ?? string.Empty;
-            Severity = severity;
-            TableId = tableId;
-            Data = data != null ? new Dictionary<string, object>(data) : null;
-        }
-
+        public string Type;     // ex: "CustomerAngry", "MenuBlocked", "NoIngredients"
+        public string Message;  // exibição no HUD
+        public int TableId;     // opcional
         public static GameEvent Info(string type, string msg, int tableId = -1)
-            => new GameEvent(type, msg, GameEventSeverity.Info, null, tableId);
+            => new GameEvent { Type = type, Message = msg, TableId = tableId };
     }
 
     public interface IEventBus

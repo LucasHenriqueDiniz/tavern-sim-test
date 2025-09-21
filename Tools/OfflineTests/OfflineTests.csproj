@@ -29,8 +29,8 @@
     <Compile Include="../../Assets/Simulation/Systems/OrderSystem.cs">
       <Link>GameCode/Simulation/Systems/OrderSystem.cs</Link>
     </Compile>
-    <Compile Include="../../Assets/Simulation/Systems/OrderRequestValidator.cs">
-      <Link>GameCode/Simulation/Systems/OrderRequestValidator.cs</Link>
+    <Compile Include="../../Assets/Simulation/Systems/InventoryStubs.cs">
+      <Link>GameCode/Simulation/Systems/InventoryStubs.cs</Link>
     </Compile>
     <Compile Include="../../Assets/Domain/ItemSO.cs">
       <Link>GameCode/Domain/ItemSO.cs</Link>
