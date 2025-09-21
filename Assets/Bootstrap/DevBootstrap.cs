@@ -10,6 +10,7 @@ using UnityEngine.InputSystem.UI;
 using TavernSim.Agents;
 using TavernSim.Building;
 using TavernSim.Core;
+using TavernSim.Core.Events;
 using TavernSim.Core.Simulation;
 using TavernSim.Domain;
 using TavernSim.Debugging;
