@@ -35,6 +35,7 @@ namespace TavernSim.Simulation.Systems
         private RecipeSO _defaultRecipe;
 
         public event Action<int> ActiveCustomerCountChanged;
+        public int ActiveCustomerCount => _customers.Count;
         public event Action<Customer> CustomerReleased;
 
         public AgentSystem(TableRegistry tableRegistry, OrderSystem orderSystem, EconomySystem economySystem, CleaningSystem cleaningSystem, Catalog catalog)
