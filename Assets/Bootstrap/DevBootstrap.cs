@@ -97,22 +97,6 @@ namespace TavernSim.Bootstrap
             bar.transform.localScale = new Vector3(2f, 1.5f, 1f);
             NavMeshSetup.MarkObstacle(bar);
 
-            var tableGo = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            tableGo.name = "Table";
-            tableGo.transform.position = new Vector3(0f, 0.6f, 1f);
-            tableGo.transform.localScale = new Vector3(1.2f, 1.2f, 1.2f);
-            NavMeshSetup.MarkObstacle(tableGo);
-
-            var seatA = new GameObject("Seat_A");
-            seatA.transform.SetParent(tableGo.transform, false);
-            seatA.transform.localPosition = new Vector3(0f, -0.5f, 0.8f);
-            seatA.transform.LookAt(seatA.transform.position + Vector3.back);
-
-            var seatB = new GameObject("Seat_B");
-            seatB.transform.SetParent(tableGo.transform, false);
-            seatB.transform.localPosition = new Vector3(0f, -0.5f, -0.8f);
-            seatB.transform.LookAt(seatB.transform.position + Vector3.forward);
-
             var cameraGo = new GameObject("DevCamera");
             cameraGo.tag = "MainCamera";
             var camera = cameraGo.AddComponent<Camera>();
@@ -152,6 +136,7 @@ namespace TavernSim.Bootstrap
             _agentSystem = new AgentSystem(_tableRegistry, _orderSystem, _economySystem, _cleaningSystem, catalog);
             _agentSystem.Configure(_entryPoint, _exitPoint, _kitchenPoint);
             _agentSystem.ActiveCustomerCountChanged += count => _hudController?.SetCustomers(count);
+            _agentSystem.CustomerLeftAngry += HandleCustomerLeftAngry;
 
             _runner.RegisterSystem(_economySystem);
             _runner.RegisterSystem(_orderSystem);
@@ -174,14 +159,11 @@ namespace TavernSim.Bootstrap
             _runner.RegisterSystem(_customerSpawner);
 
             _saveService = new SaveService(_economySystem);
-            _gridPlacer?.Configure(_economySystem, _selectionService);
+            _gridPlacer?.Configure(_economySystem, _selectionService, _tableRegistry, _cleaningSystem);
 
-            var tableGo = GameObject.Find("Table");
-            var table = new Table(0, tableGo.transform);
-            table.AddSeat(new Seat(0, tableGo.transform.Find("Seat_A")));
-            table.AddSeat(new Seat(1, tableGo.transform.Find("Seat_B")));
-            _tableRegistry.RegisterTable(table);
-            _cleaningSystem.RegisterTable(table);
+            var initialTable = TableBuilderUtility.CreateSmallTable(_tableRegistry.Tables.Count, new Vector3(0f, 0f, 1f));
+            _tableRegistry.RegisterTable(initialTable);
+            _cleaningSystem.RegisterTable(initialTable);
 
             var waiter = FindObjectOfType<Waiter>();
             _agentSystem.RegisterWaiter(waiter);
@@ -211,6 +193,26 @@ namespace TavernSim.Bootstrap
 
             _timeControls.Initialize();
             _hudController.SetCustomers(_agentSystem != null ? _agentSystem.ActiveCustomerCount : 0);
+        }
+
+        private void HandleCustomerLeftAngry(Customer customer)
+        {
+            if (customer != null)
+            {
+                Debug.LogWarning($"Cliente {customer.name} saiu irritado por falta de mesas.");
+            }
+            else
+            {
+                Debug.LogWarning("Um cliente saiu irritado por falta de mesas.");
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (_agentSystem != null)
+            {
+                _agentSystem.CustomerLeftAngry -= HandleCustomerLeftAngry;
+            }
         }
 
         private static Customer CreateCustomerPrefab(Transform parent)
