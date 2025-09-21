@@ -202,6 +202,7 @@ namespace TavernSim.Bootstrap
             _timeControls = uiGo.AddComponent<TimeControls>();
 
             EnsureEventSystem();
+            
             uiGo.SetActive(true);
 
             _timeControls.Initialize();
