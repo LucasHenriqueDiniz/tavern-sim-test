@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <DefineConstants>UNITY_EDITOR;UNITY_2022_3</DefineConstants>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="UnityStubs/UnityEngine.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="../../Assets/Core/Simulation/ISimSystem.cs">
+      <Link>GameCode/Core/Simulation/ISimSystem.cs</Link>
+    </Compile>
+    <Compile Include="../../Assets/Core/Simulation/Simulation.cs">
+      <Link>GameCode/Core/Simulation/Simulation.cs</Link>
+    </Compile>
+    <Compile Include="../../Assets/Simulation/Systems/EconomySystem.cs">
+      <Link>GameCode/Simulation/Systems/EconomySystem.cs</Link>
+    </Compile>
+    <Compile Include="../../Assets/Simulation/Systems/OrderSystem.cs">
+      <Link>GameCode/Simulation/Systems/OrderSystem.cs</Link>
+    </Compile>
+    <Compile Include="../../Assets/Domain/ItemSO.cs">
+      <Link>GameCode/Domain/ItemSO.cs</Link>
+    </Compile>
+    <Compile Include="../../Assets/Domain/RecipeSO.cs">
+      <Link>GameCode/Domain/RecipeSO.cs</Link>
+    </Compile>
+    <Compile Include="../../Assets/Tests/EditMode/EconomySystemTests.cs">
+      <Link>Tests/EditMode/EconomySystemTests.cs</Link>
+    </Compile>
+    <Compile Include="../../Assets/Tests/EditMode/OrderSystemTests.cs">
+      <Link>Tests/EditMode/OrderSystemTests.cs</Link>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
+    <PackageReference Include="NUnit" Version="3.13.3" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
+  </ItemGroup>
+</Project>

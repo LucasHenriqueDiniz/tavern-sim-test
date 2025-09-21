@@ -1,50 +1,91 @@
 # Unity contributor handbook
 
-This repository contains a Unity 2022.3.62f1 project. The notes below document the expectations for tooling, coding, and testing so contributions remain reproducible across machines.
+This repository targets **Unity 2022.3.62f1**. The guidance below codifies our workflow expectations so local development, CI,
+and Codex assistance stay aligned.
 
 ## Toolchain & packages
-- Author or modify assets using **Unity 2022.3.62f1**. When upgrading, update this document and verify the project opens cleanly.
-- Required packages include:
-  - AI Navigation (`com.unity.ai.navigation`) for `NavMeshSurface`, `NavMeshAgent`, and related components.
-  - Input System (`com.unity.inputsystem`) with both Player Input and the generated input actions committed.
-  - Any other dependencies present in `Packages/manifest.json`—avoid removing or downgrading them without coordination.
-- Never hand-craft `.meta` files or binary assets. Always create ScriptableObjects, prefabs, and scenes through the Unity editor so GUIDs remain stable.
-- Commit new assets together with their `.meta` files. If an asset is deleted, delete its `.meta` as well.
+- Open and author the project with Unity 2022.3 LTS (62f1). If you intentionally upgrade, update this document, bump CI, and
+  confirm the editor launches without compile errors.
+- Keep required packages installed and locked:
+  - AI Navigation (`com.unity.ai.navigation`) for `NavMeshSurface`, `NavMeshAgent`, and NavMesh baking.
+  - Input System (`com.unity.inputsystem`) with the generated input actions checked in.
+  - Any dependency already listed in `Packages/manifest.json`. Coordinate before removing or downgrading items.
+- Never hand-craft `.meta` files—create and delete assets through the editor so GUIDs remain stable. Commit assets together with
+  their matching `.meta` files.
 
 ## Project & source layout
-- Runtime C# scripts live under `Assets/` and use the `TavernSim.*` namespace tree. Keep editor utilities inside `Assets/Editor/` and gate them with `#if UNITY_EDITOR` when necessary.
-- Keep serialized fields private with `[SerializeField]` unless public access is required. Avoid adding `try/catch` around imports or other boilerplate.
-- Prefer explicit null/`TryGet` checks with informative `Debug.LogWarning` messages when optional references may be missing—this eases diagnosis in editor and CI runs.
-- Use assembly definition files (`.asmdef`) when adding new code folders so edit mode tests can target smaller assemblies and to speed up player builds.
+- Runtime scripts belong under `Assets/` and should use the `TavernSim.*` namespace hierarchy. Editor utilities live in
+  `Assets/Editor/` and must be wrapped in `#if UNITY_EDITOR` guards when they reference editor-only APIs.
+- Prefer private `[SerializeField]` members unless public exposure is required. Avoid defensive `try/catch` blocks around imports
+  or other boilerplate.
+- Use assembly definition files to isolate systems and tests; hook up references (including package assemblies such as
+  `Unity.AI.Navigation`) explicitly when creating new modules.
+
+## Continuous integration
+- Pull requests must keep the GitHub Actions workflow green. The pipeline contains two jobs:
+  - **Tests** – `game-ci/unity-test-runner@v4` runs EditMode + PlayMode tests against Unity 2022.3.62f1.
+  - **Validation** – executes `TavernSim.Editor.CI.ProjectValidation.Run` via `-executeMethod` to verify packages, required
+    MonoBehaviours, duplicate types, and other guardrails.
+- Expectation: a PR is only mergeable once both jobs pass. Update this document and the workflow together if CI requirements
+  change.
+
+## Local automation
+- Unity automation:
+  - Validation menu: `Tools → TavernSim → Validate Project`.
+  - CLI validation:
+    ```bash
+    <UnityEditorPath>/Unity -quit -batchmode -nographics \
+      -projectPath "<repo>" \
+      -executeMethod TavernSim.Editor.CI.ProjectValidation.Run
+    ```
+  - CLI tests:
+    ```bash
+    <UnityEditorPath>/Unity -quit -batchmode -nographics \
+      -projectPath "<repo>" \
+      -runTests -testResults results.xml
+    ```
+- Offline .NET harness (for environments without Unity):
+  - Use `Tools/OfflineTests/OfflineTests.csproj`, which stubs the minimal Unity APIs required by our logic tests and links the
+    real game code plus EditMode test files.
+  - Run it with `dotnet test Tools/OfflineTests/OfflineTests.csproj`. This is not a substitute for Unity Test Runner but mirrors
+    the critical EditMode coverage so Codex and CI-like environments can execute quick checks.
 
 ## Testing expectations
-- Follow the Unity Test Framework conventions outlined in Codex’s Unity testing overview: organise tests with the Arrange/Act/Assert pattern, use `[SetUp]` to prepare fixtures, and keep tests deterministic (no reliance on `Time.deltaTime`, randomness, or actual scene state).
-- Author **Edit Mode** tests for pure logic, domain models, and utility classes—they execute quickly in headless CI.
-- Use **Play Mode** tests when behaviour depends on scene objects, coroutines, or `MonoBehaviour` lifecycles. Limit scene dependencies by instantiating prefabs in setup methods and cleaning them up in `[TearDown]`.
-- When touching gameplay systems, add or update tests under `Assets/Tests/` and ensure they run locally via the Unity Test Runner (`Test > Run All Tests`) or the command line (`-runTests`) before committing.
-- If a change cannot be validated in-editor (e.g., hardware-specific), clearly document the limitation in your summary.
+- Follow the Arrange/Act/Assert pattern. Use `[SetUp]` for fixture preparation and keep tests deterministic (avoid reliance on
+  real time, randomness, or scene state).
+- Write **EditMode** tests for pure logic, domain models, and utilities—they run fastest in CI.
+- Use **PlayMode** tests when lifecycle behaviour or scenes are involved. Instantiate prefabs in setup and dispose of them in
+  `[TearDown]` to keep tests isolated.
+- Run the Unity Test Runner (or the CLI above) before committing gameplay changes. Document any scenario you could not verify in
+  this environment.
 
 ## Workflow & pull requests
-- Run the project in Play Mode after modifying gameplay code or assets that impact runtime behaviour.
-- Keep the working tree clean (`git status` empty) before finishing a task. Each change set should be committed with a descriptive message.
-- Ensure the project opens without missing packages or compile errors. When adding packages, update both `manifest.json` and `packages-lock.json`.
-- Update documentation (including this file) whenever workflow expectations change so future contributors have accurate guidance.
+- Launch Play Mode after modifying gameplay scripts or assets that impact runtime behaviour.
+- Keep `git status` clean before concluding work. Commit logical chunks with descriptive messages.
+- Ensure the project opens without missing packages or compile errors. Update both `manifest.json` and `packages-lock.json`
+  whenever dependencies change.
+- Sync this handbook whenever workflow expectations evolve so future contributors share the same context.
 
 ## Working with AI assistance
 
 ### When you are the assistant
-- Read the entire prompt and restate the player’s objective (bug fix, warning cleanup, feature, workflow doubt) before proposing code. Clarify any ambiguity instead of guessing.
-- Cross-check every referenced file or symbol exists in this repo. If context is missing, ask for the relevant snippet or explain what information is required.
-- Prefer targeted patches over prose: point to the exact Unity file paths and show only the minimal diff necessary. Call out where conditional compilation symbols like `ENABLE_INPUT_SYSTEM` or `ENABLE_LEGACY_INPUT_MANAGER` change behaviour.
-- Explain why each change helps, referencing Unity patterns (e.g., avoiding reflection, using `PlayerInput`, cleaning up coroutines) so maintainers learn alongside the fix.
-- Highlight limitations of this environment (no Unity Editor or Play Mode) and give concrete follow-up actions the user should run locally—Play Mode run, Test Runner suite, package refresh, etc.
-- When multiple approaches exist (legacy Input Manager vs. Input System, UI Toolkit vs. IMGUI), compare them briefly and recommend the most maintainable option for this project.
-- Capture assumptions about Unity version, packages, or scripting defines so future assistants understand the context baked into the advice.
+- Read the entire prompt and restate the requester’s goal (bugfix, feature, tooling, workflow) before providing code.
+- Confirm referenced files or symbols exist in this repo. Ask for missing snippets or clarify ambiguities instead of guessing.
+- Prefer targeted diffs pointing to exact Unity asset paths. Highlight when scripting defines (`ENABLE_INPUT_SYSTEM`,
+  `ENABLE_LEGACY_INPUT_MANAGER`, etc.) affect behaviour.
+- Explain *why* each change helps, tying guidance to Unity patterns (reflection avoidance, PlayerInput usage, coroutine
+  lifecycles, etc.) so maintainers learn alongside the fix.
+- Call out environment limits (no Unity Editor/Play Mode here) and give concrete local follow-up actions—run Play Mode, refresh
+  packages, regenerate NavMesh, and so on.
+- When multiple solutions exist (Input System vs. legacy input, UI Toolkit vs. IMGUI), compare trade-offs and recommend the most
+  maintainable option for this project.
+- Capture assumptions about Unity version, packages, or scripting defines so future assistants inherit the right context.
 
 ### When you are requesting help
-- Include the relevant file paths and snippets so the assistant can reason about namespaces, symbols, and conditional compilation.
-- State the gameplay or tooling goal you are chasing—fixing warnings, adapting to the new Input System, improving legibility—so suggestions align with Unity best practices.
-- Copy full compiler or console messages (including file, line, and condition) to make it clear where a problem originates.
-- Mention project-wide context that affects the question (Unity version, active packages, input setup, scripting defines) to avoid incorrect assumptions.
-- Summarise previous attempts and partial fixes; this prevents repetitive advice and focuses the assistant on the next viable option.
-- Remember this environment cannot launch the Unity Editor or run its play/edit mode tests. Plan to validate fixes locally and document any unverified behaviour in your summaries.
+- Include relevant file paths and snippets so the assistant can reason about namespaces, symbols, and conditional compilation.
+- State the gameplay or tooling objective to keep suggestions aligned with Unity best practices.
+- Provide full compiler or console messages (file, line, condition) to pinpoint issues quickly.
+- Mention project-wide context (Unity version, active packages, scripting defines) to avoid incorrect assumptions.
+- Summarise previous attempts and partial fixes to prevent repetitive advice and focus on the next viable option.
+- Remember: this environment cannot open the Unity Editor. Plan to validate fixes locally and note any unverified behaviour in
+  your summary.
