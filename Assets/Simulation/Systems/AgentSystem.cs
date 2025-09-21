@@ -16,6 +16,9 @@ namespace TavernSim.Simulation.Systems
     public sealed class AgentSystem : ISimSystem
     {
         private const float DestinationThresholdSqr = 0.04f;
+        private const float TableSearchTimeout = 12f;
+        private const float TableSearchRepathInterval = 1.5f;
+        private const float MealDuration = 8f;
 
         private readonly TableRegistry _tableRegistry;
         private readonly OrderSystem _orderSystem;
@@ -37,6 +40,7 @@ namespace TavernSim.Simulation.Systems
         public event Action<int> ActiveCustomerCountChanged;
         public int ActiveCustomerCount => _customers.Count;
         public event Action<Customer> CustomerReleased;
+        public event Action<Customer> CustomerLeftAngry;
 
         public AgentSystem(TableRegistry tableRegistry, OrderSystem orderSystem, EconomySystem economySystem, CleaningSystem cleaningSystem, Catalog catalog)
         {
@@ -86,6 +90,7 @@ namespace TavernSim.Simulation.Systems
             _despawnQueue.Clear();
             ActiveCustomerCountChanged = null;
             CustomerReleased = null;
+            CustomerLeftAngry = null;
         }
 
         public void RegisterWaiter(Waiter waiter)
@@ -166,7 +171,7 @@ namespace TavernSim.Simulation.Systems
                         HandleEnter(ref data);
                         break;
                     case CustomerState.FindTable:
-                        HandleFindTable(ref data);
+                        HandleFindTable(ref data, deltaTime);
                         break;
                     case CustomerState.Sit:
                         HandleSit(ref data);
@@ -177,8 +182,8 @@ namespace TavernSim.Simulation.Systems
                     case CustomerState.WaitDrink:
                         HandleWaitDrink(ref data, deltaTime);
                         break;
-                    case CustomerState.Drink:
-                        HandleDrink(ref data, deltaTime);
+                    case CustomerState.Eat:
+                        HandleEat(ref data, deltaTime);
                         break;
                     case CustomerState.Pay:
                         HandlePay(ref data);
@@ -226,6 +231,8 @@ namespace TavernSim.Simulation.Systems
         private void HandleEnter(ref CustomerData data)
         {
             data.Agent.SetDestination(_entryPoint);
+            data.LeftAngry = false;
+            data.SearchTimer = 0f;
             if (data.Agent.HasReached(DestinationThresholdSqr) || data.StateTimer >= 1f)
             {
                 data.State = CustomerState.FindTable;
@@ -233,7 +240,7 @@ namespace TavernSim.Simulation.Systems
             }
         }
 
-        private void HandleFindTable(ref CustomerData data)
+        private void HandleFindTable(ref CustomerData data, float deltaTime)
         {
             if (data.Table == null)
             {
@@ -241,7 +248,31 @@ namespace TavernSim.Simulation.Systems
                 {
                     data.Table = table;
                     data.Seat = seat;
+                    data.SearchTimer = 0f;
+                    data.LeftAngry = false;
                     data.Agent.SetDestination(seat.Anchor.position);
+                }
+                else
+                {
+                    data.SearchTimer += deltaTime;
+                    if (data.SearchTimer >= TableSearchRepathInterval)
+                    {
+                        data.SearchTimer = 0f;
+                        var offset = UnityEngine.Random.insideUnitCircle * 1.5f;
+                        var wanderTarget = _entryPoint + new Vector3(offset.x, 0f, Mathf.Abs(offset.y) + 0.5f);
+                        data.Agent.SetDestination(wanderTarget);
+                    }
+
+                    if (data.StateTimer >= TableSearchTimeout)
+                    {
+                        data.LeftAngry = true;
+                        data.Agent.SetDestination(_exitPoint);
+                        data.State = CustomerState.Leave;
+                        data.StateTimer = 0f;
+                        data.SearchTimer = 0f;
+                        CustomerLeftAngry?.Invoke(data.Agent);
+                        return;
+                    }
                 }
             }
 
@@ -250,6 +281,7 @@ namespace TavernSim.Simulation.Systems
                 data.Agent.SitAt(data.Seat.Anchor);
                 data.State = CustomerState.Sit;
                 data.StateTimer = 0f;
+                data.SearchTimer = 0f;
             }
         }
 
@@ -270,43 +302,97 @@ namespace TavernSim.Simulation.Systems
         private void HandleOrder(ref CustomerData data, float deltaTime)
         {
             data.WaitTimer += deltaTime;
+            data.TotalWaitTime += deltaTime;
         }
 
         private void HandleWaitDrink(ref CustomerData data, float deltaTime)
         {
             data.WaitTimer += deltaTime;
+            data.TotalWaitTime += deltaTime;
         }
 
-        private void HandleDrink(ref CustomerData data, float deltaTime)
+        private void HandleEat(ref CustomerData data, float deltaTime)
         {
-            data.DrinkTimer += deltaTime;
-            if (data.DrinkTimer >= 6f)
+            data.ConsumeTimer += deltaTime;
+            if (data.ConsumeTimer < MealDuration)
+            {
+                return;
+            }
+
+            FinalizeCourse(ref data);
+
+            if (data.CompletedCourses < data.DesiredCourses)
+            {
+                data.State = CustomerState.Order;
+                data.StateTimer = 0f;
+                data.WaitTimer = 0f;
+                if (!_customersNeedingOrder.Contains(data.Agent))
+                {
+                    _customersNeedingOrder.Add(data.Agent);
+                }
+            }
+            else
             {
                 data.State = CustomerState.Pay;
                 data.StateTimer = 0f;
             }
         }
 
-        private void HandlePay(ref CustomerData data)
+        private void FinalizeCourse(ref CustomerData data)
         {
-            if (data.OrderedRecipe == null)
+            data.CompletedCourses++;
+            data.ConsumeTimer = 0f;
+
+            var recipe = data.CurrentRecipe ?? _defaultRecipe;
+            if (recipe != null)
             {
-                data.OrderedRecipe = _defaultRecipe;
+                var baseRevenue = recipe.OutputItem != null ? recipe.OutputItem.SellPrice : 6f;
+                var cost = recipe.OutputItem != null ? recipe.OutputItem.UnitCost : 2f;
+                data.BillRevenue += baseRevenue;
+                data.BillCost += cost;
+            }
+            else
+            {
+                data.BillRevenue += 6f;
+                data.BillCost += 2f;
             }
 
-            if (data.OrderedRecipe != null)
+            data.CurrentRecipe = null;
+            data.PendingRecipe = null;
+        }
+
+        private void HandlePay(ref CustomerData data)
+        {
+            if (data.BillRevenue <= 0f && _defaultRecipe != null)
             {
-                var baseRevenue = data.OrderedRecipe.OutputItem != null ? data.OrderedRecipe.OutputItem.SellPrice : 6f;
-                var cost = data.OrderedRecipe.OutputItem != null ? data.OrderedRecipe.OutputItem.UnitCost : 2f;
-                var tip = CalculateTip(data.WaitTimer);
-                _economySystem.TrySpend(cost);
-                _economySystem.AddRevenue(baseRevenue + tip);
+                var fallbackRevenue = _defaultRecipe.OutputItem != null ? _defaultRecipe.OutputItem.SellPrice : 6f;
+                var fallbackCost = _defaultRecipe.OutputItem != null ? _defaultRecipe.OutputItem.UnitCost : 2f;
+                data.BillRevenue += fallbackRevenue;
+                data.BillCost += fallbackCost;
+            }
+
+            if (data.BillRevenue > 0f)
+            {
+                if (data.BillCost > 0f)
+                {
+                    _economySystem.TrySpend(data.BillCost);
+                }
+
+                var tip = CalculateTip(data.TotalWaitTime);
+                _economySystem.AddRevenue(data.BillRevenue + tip);
             }
 
             data.State = CustomerState.Leave;
             data.Agent.StandUp();
             data.Agent.SetDestination(_exitPoint);
             data.StateTimer = 0f;
+            data.LeftAngry = false;
+            data.SearchTimer = 0f;
+            data.BillRevenue = 0f;
+            data.BillCost = 0f;
+            data.TotalWaitTime = 0f;
+            data.PendingRecipe = null;
+            data.CurrentRecipe = null;
             if (data.Table != null)
             {
                 if (!_tablesNeedingClean.Contains(data.Table.Id))
@@ -385,13 +471,13 @@ namespace TavernSim.Simulation.Systems
                 return;
             }
 
-            var recipe = customerData.OrderedRecipe ?? _defaultRecipe;
+            var recipe = customerData.PendingRecipe ?? _defaultRecipe;
             if (recipe != null && customerData.Table != null)
             {
                 _orderSystem.EnqueueOrder(customerData.Table.Id, recipe);
                 customerData.State = CustomerState.WaitDrink;
                 customerData.WaitTimer = 0f;
-                customerData.OrderedRecipe = recipe;
+                customerData.PendingRecipe = recipe;
                 data.Agent.SetDestination(_kitchenPoint);
                 data.State = WaiterState.WaitPrep;
             }
@@ -445,8 +531,11 @@ namespace TavernSim.Simulation.Systems
             var customerData = FindCustomerData(data.TargetCustomer);
             if (customerData != null && customerData.State == CustomerState.WaitDrink)
             {
-                customerData.State = CustomerState.Drink;
-                customerData.DrinkTimer = 0f;
+                customerData.State = CustomerState.Eat;
+                customerData.ConsumeTimer = 0f;
+                customerData.CurrentRecipe = data.CarryingRecipe ?? customerData.PendingRecipe;
+                customerData.PendingRecipe = null;
+                customerData.WaitTimer = 0f;
             }
 
             data.CarryingRecipe = null;
@@ -522,8 +611,8 @@ namespace TavernSim.Simulation.Systems
                     return "Fazendo pedido";
                 case CustomerState.WaitDrink:
                     return "Esperando bebida";
-                case CustomerState.Drink:
-                    return "Bebendo";
+                case CustomerState.Eat:
+                    return "Comendo";
                 case CustomerState.Pay:
                     return "Pagando";
                 case CustomerState.Leave:
@@ -559,7 +648,7 @@ namespace TavernSim.Simulation.Systems
             Sit,
             Order,
             WaitDrink,
-            Drink,
+            Eat,
             Pay,
             Leave
         }
@@ -581,12 +670,24 @@ namespace TavernSim.Simulation.Systems
             public Seat Seat;
             public float StateTimer;
             public float WaitTimer;
-            public float DrinkTimer;
-            public RecipeSO OrderedRecipe;
+            public float ConsumeTimer;
+            public float SearchTimer;
+            public float TotalWaitTime;
+            public bool LeftAngry;
+            public int DesiredCourses;
+            public int CompletedCourses;
+            public float BillRevenue;
+            public float BillCost;
+            public RecipeSO PendingRecipe;
+            public RecipeSO CurrentRecipe;
 
             public CustomerData(Customer agent)
             {
                 Agent = agent;
+                DesiredCourses = UnityEngine.Random.Range(1, 3);
+                CompletedCourses = 0;
+                BillRevenue = 0f;
+                BillCost = 0f;
             }
 
             public void Reset()
@@ -596,8 +697,16 @@ namespace TavernSim.Simulation.Systems
                 Seat = null;
                 StateTimer = 0f;
                 WaitTimer = 0f;
-                DrinkTimer = 0f;
-                OrderedRecipe = null;
+                ConsumeTimer = 0f;
+                SearchTimer = 0f;
+                TotalWaitTime = 0f;
+                LeftAngry = false;
+                CompletedCourses = 0;
+                BillRevenue = 0f;
+                BillCost = 0f;
+                PendingRecipe = null;
+                CurrentRecipe = null;
+                DesiredCourses = UnityEngine.Random.Range(1, 3);
             }
         }
 
