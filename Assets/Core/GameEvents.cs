@@ -84,3 +84,4 @@ namespace TavernSim.Core.Events
     using IEventBus = TavernSim.Core.IEventBus;
     using IEventSink = TavernSim.Core.IEventSink;
 }
+
