@@ -12,6 +12,8 @@ namespace TavernSim.Agents
         [SerializeField] private float fontSize = 2f;
         [SerializeField] private Color textColor = Color.white;
 
+        private static readonly Camera[] CameraSearchBuffer = new Camera[8];
+
         private TextMeshPro _label;
         private Transform _labelTransform;
         private Camera _camera;
@@ -33,30 +35,22 @@ namespace TavernSim.Agents
                 return;
             }
 
-            if (_camera == null || !_camera.isActiveAndEnabled)
+            if (!TryResolveCamera(out var camera))
             {
-                _camera = Camera.main;
-                if (_camera == null)
-                {
-                    return;
-                }
+                return;
             }
 
+            var cameraTransform = camera.transform;
             var worldPosition = transform.position + offset;
             _labelTransform.position = worldPosition;
-            var cameraTransform = _camera.transform;
-            var toCamera = cameraTransform.position - worldPosition;
-            if (toCamera.sqrMagnitude > Mathf.Epsilon)
-            {
-                var rotation = Quaternion.LookRotation(toCamera, cameraTransform.up);
-                _labelTransform.rotation = rotation;
 
-                // If the label ends up aligned with the camera forward we are looking at its back.
-                if (Vector3.Dot(_labelTransform.forward, cameraTransform.forward) > 0f)
-                {
-                    _labelTransform.rotation = rotation * Quaternion.AngleAxis(180f, cameraTransform.up);
-                }
+            var toCamera = cameraTransform.position - worldPosition;
+            if (toCamera.sqrMagnitude <= Mathf.Epsilon)
+            {
+                toCamera = -cameraTransform.forward;
             }
+
+            _labelTransform.rotation = Quaternion.LookRotation(toCamera, cameraTransform.up);
         }
 
         public void SetIntent(string text)
@@ -87,6 +81,40 @@ namespace TavernSim.Agents
             _label.alignment = TextAlignmentOptions.Center;
             _label.enableAutoSizing = false;
             _label.sortingOrder = int.MaxValue;
+        }
+
+        private bool TryResolveCamera(out Camera camera)
+        {
+            if (_camera != null && _camera.isActiveAndEnabled)
+            {
+                camera = _camera;
+                return true;
+            }
+
+            var mainCamera = Camera.main;
+            if (mainCamera != null && mainCamera.isActiveAndEnabled)
+            {
+                _camera = mainCamera;
+                camera = _camera;
+                return true;
+            }
+
+            var count = Camera.GetAllCameras(CameraSearchBuffer);
+            for (var i = 0; i < count; i++)
+            {
+                var candidate = CameraSearchBuffer[i];
+                if (candidate == null || !candidate.isActiveAndEnabled)
+                {
+                    continue;
+                }
+
+                _camera = candidate;
+                camera = _camera;
+                return true;
+            }
+
+            camera = null;
+            return false;
         }
 
         private void OnDestroy()
