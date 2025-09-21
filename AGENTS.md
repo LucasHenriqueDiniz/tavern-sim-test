@@ -1,111 +1,206 @@
-# Unity contributor handbook
+# AGENTS.md
 
-This repository targets **Unity 2022.3.62f1**. The guidance below codifies our workflow expectations so local development, CI,
-and Codex assistance stay aligned.
+> Guia de arquitetura e contratos para os **agentes** do TavernSim (clientes, garçons, bartenders e cozinheiros) e seus sistemas de apoio.
+>
+> Público-alvo: quem implementa/faz review de IA de agentes, fluxo de pedidos e integração com HUD/Inventário/Bootstrap.
 
-## Toolchain & packages
-- Open and author the project with Unity 2022.3 LTS (62f1). If you intentionally upgrade, update this document, bump CI, and
-  confirm the editor launches without compile errors.
-- Keep required packages installed and locked:
-  - AI Navigation (`com.unity.ai.navigation`) for `NavMeshSurface`, `NavMeshAgent`, and NavMesh baking.
-  - Input System (`com.unity.inputsystem`) with the generated input actions checked in.
-  - Any dependency already listed in `Packages/manifest.json`. Coordinate before removing or downgrading items.
-- Never hand-craft `.meta` files—create and delete assets through the editor so GUIDs remain stable. Commit assets together with
-  their matching `.meta` files.
+---
 
-## Project & source layout
-- Runtime scripts belong under `Assets/` and should use the `TavernSim.*` namespace hierarchy. Editor utilities live in
-  `Assets/Editor/` and must be wrapped in `#if UNITY_EDITOR` guards when they reference editor-only APIs.
-- Prefer private `[SerializeField]` members unless public exposure is required. Avoid defensive `try/catch` blocks around imports
-  or other boilerplate.
-- Use assembly definition files to isolate systems and tests; hook up references (including package assemblies such as
-  `Unity.AI.Navigation`) explicitly when creating new modules.
+## Objetivos
 
-### HUD menu & toast system
-- The runtime HUD now instantiates a `MenuController` (UI Toolkit) that exposes a foldout with toggles for every `RecipeSO` in the
-  `Catalog`. The component implements `IMenuPolicy` and persists toggle state via `PlayerPrefs` using the recipe id as the key.
-  `AgentSystem.SetMenuPolicy` must be called during bootstrap (see `DevBootstrap`) so waiters can respect menu restrictions
-  before submitting orders.
-- `HudToastController` subscribes to the shared `GameEventBus` and renders temporary toast notifications at the bottom-left of the
-  HUD. Gameplay systems publish events through the `IEventBus` (either by injecting `GameEventBus` or by calling
-  `HUDController.PublishEvent`). Core events include menu blocks, missing ingredients, customer anger, and order readiness/delivery.
-- When creating new systems that need to notify the player, prefer publishing `GameEvent` instances rather than logging directly.
-  The bootstrap scene wires everything together; other scenes must inject the event bus into `OrderSystem`, `AgentSystem`, and the
-  HUD components to enable the experience.
+- Descrever **papéis, estados e contratos** dos agentes.
+- Garantir **separação de responsabilidades** entre IA (FSM), sistemas determinísticos (`ISimSystem`) e UI.
+- Padronizar **eventos de jogo** (toasts) e **pontos de integração** (cardápio, inventário, pickup).
 
-### Build & staffing controls
-- The build menu in the HUD now exposes toggles for kitchen stations, bar counters, and pickup point markers alongside the table
-  and decoration props. The `GridPlacer` handles these new `PlaceableKind` entries by spawning simple graybox meshes and marking
-  the appropriate NavMesh obstacles so pathing remains valid.
-- Runtime HUD controls include "Contratar garçom" and "Contratar cozinheiro" buttons. Each click spawns a new NavMesh-agent
-  backed capsule; waiters are automatically registered with `AgentSystem`, which keeps customer assignments unique across
-  multiple staffers.
+---
 
-## Continuous integration
-- Pull requests must keep the GitHub Actions workflow green. The pipeline contains two jobs:
-  - **Tests** – `game-ci/unity-test-runner@v4` runs EditMode + PlayMode tests against Unity 2022.3.62f1.
-  - **Validation** – executes `TavernSim.Editor.CI.ProjectValidation.Run` via `-executeMethod` to verify packages, required
-    MonoBehaviours, duplicate types, and other guardrails.
-- Expectation: a PR is only mergeable once both jobs pass. Update this document and the workflow together if CI requirements
-  change.
+## Visão geral
 
-## Local automation
-- Unity automation:
-  - Validation menu: `Tools → TavernSim → Validate Project`.
-  - CLI validation:
-    ```bash
-    <UnityEditorPath>/Unity -quit -batchmode -nographics \
-      -projectPath "<repo>" \
-      -executeMethod TavernSim.Editor.CI.ProjectValidation.Run
-    ```
-  - CLI tests:
-    ```bash
-    <UnityEditorPath>/Unity -quit -batchmode -nographics \
-      -projectPath "<repo>" \
-      -runTests -testResults results.xml
-    ```
-- Offline .NET harness (for environments without Unity):
-  - Use `Tools/OfflineTests/OfflineTests.csproj`, which stubs the minimal Unity APIs required by our logic tests and links the
-    real game code plus EditMode test files.
-  - Run it with `dotnet test Tools/OfflineTests/OfflineTests.csproj`. This is not a substitute for Unity Test Runner but mirrors
-    the critical EditMode coverage so Codex and CI-like environments can execute quick checks.
+### Papéis
 
-## Testing expectations
-- Follow the Arrange/Act/Assert pattern. Use `[SetUp]` for fixture preparation and keep tests deterministic (avoid reliance on
-  real time, randomness, or scene state).
-- Write **EditMode** tests for pure logic, domain models, and utilities—they run fastest in CI.
-- Use **PlayMode** tests when lifecycle behaviour or scenes are involved. Instantiate prefabs in setup and dispose of them in
-  `[TearDown]` to keep tests isolated.
-- Run the Unity Test Runner (or the CLI above) before committing gameplay changes. Document any scenario you could not verify in
-  this environment.
+- **Customer (cliente)**: entra → senta → decide → pede → espera → consome → paga → (chance baixa) repete pedido → sai (ou sai irritado caso falhe na entrega ou encontrar mesa).
+- **Waiter (garçom)**: atende mesas, **coleta pedido** do cliente, **aguarda preparo**, **retira** no pickup correto (Bar ou Kitchen) e **entrega**.
+- **Bartender**: responsável por receitas do **Bar**. Neste MVP as “estações” podem ser **virtuais** no `OrderSystem`.
+- **Cook (cozinheiro)**: responsável por receitas da **Kitchen**. Idem acima.
 
-## Workflow & pull requests
-- Launch Play Mode after modifying gameplay scripts or assets that impact runtime behaviour.
-- Keep `git status` clean before concluding work. Commit logical chunks with descriptive messages.
-- Ensure the project opens without missing packages or compile errors. Update both `manifest.json` and `packages-lock.json`
-  whenever dependencies change.
-- Sync this handbook whenever workflow expectations evolve so future contributors share the same context.
+### Canais de preparo
 
-## Working with AI assistance
+- `OrderSystem` separa os pedidos por **área de preparo**:
+  - `PrepArea.Kitchen`
+  - `PrepArea.Bar`
+- Cada área tem:
+  - fila `_pending*`
+  - em preparo `_inPrep*`
+  - **estações paralelas** configuráveis (`SetKitchenStations`, `SetBarStations`)
 
-### When you are the assistant
-- Read the entire prompt and restate the requester’s goal (bugfix, feature, tooling, workflow) before providing code.
-- Confirm referenced files or symbols exist in this repo. Ask for missing snippets or clarify ambiguities instead of guessing.
-- Prefer targeted diffs pointing to exact Unity asset paths. Highlight when scripting defines (`ENABLE_INPUT_SYSTEM`,
-  `ENABLE_LEGACY_INPUT_MANAGER`, etc.) affect behaviour.
-- Explain *why* each change helps, tying guidance to Unity patterns (reflection avoidance, PlayerInput usage, coroutine
-  lifecycles, etc.) so maintainers learn alongside the fix.
-- Call out environment limits (no Unity Editor/Play Mode here) and give concrete local follow-up actions—run Play Mode, refresh
-  packages, regenerate NavMesh, and so on.
-- When multiple solutions exist (Input System vs. legacy input, UI Toolkit vs. IMGUI), compare trade-offs and recommend the most
-  maintainable option for this project.
-- Capture assumptions about Unity version, packages, or scripting defines so future assistants inherit the right context.
+### Pontos de retirada (pickup)
 
-### When you are requesting help
-- Include relevant file paths and snippets so the assistant can reason about namespaces, symbols, and conditional compilation.
-- State the gameplay or tooling objective to keep suggestions aligned with Unity best practices.
-- Provide full compiler or console messages (file, line, condition) to pinpoint issues quickly.
-- Mention project-wide context (Unity version, active packages, scripting defines) to avoid incorrect assumptions.
-- Summarise previous attempts and partial fixes to prevent repetitive advice and focus on the next viable option.
-- Remember: this environment cannot open the Unity Editor. Plan to validate fixes locally and note any unverified behaviour in
-  your summary.
+- Dois `Vector3` definidos pelo bootstrap:
+  - `_barPickupPoint` (no balcão)
+  - `_kitchenPickupPoint` (no guichê)
+- O **Waiter** busca no pickup **condizente** com a área do pedido pronto.
+
+### Cardápio (menu policy)
+
+- `MenuController` (UI Toolkit) expõe uma `IMenuPolicy` consultada antes de enviar pedidos ao `OrderSystem`.
+- O HUD permite **ativar/desativar** receitas do `Catalog`. Estados podem ser persistidos via `PlayerPrefs`.
+
+### Inventário (gancho)
+
+- `IInventoryService` define:
+  - `CanCraft(RecipeSO recipe)`
+  - `TryConsume(RecipeSO recipe)`
+- No **Dev/MVP**, pode retornar **true** (estoque “infinito”) para validar o fluxo; evoluir depois.
+
+### Eventos (HUD toasts)
+
+- `IEventBus` / `GameEventBus` para publicar eventos do jogo (sem logar direto):
+  - `MenuBlocked(recipe)`
+  - `NoIngredients(recipe)`
+  - `OrderReady(tableId, area)`
+  - `Delivered(tableId, recipe)`
+  - `CustomerAngry(customerId, reason)`
+- `HudToastController` escuta e mostra toasts **temporários** (ex.: “Cliente saiu irritado”, “Sem ingredientes para Ale”).
+
+---
+
+## FSMs (resumo)
+
+### Customer
+
+Estados principais:
+
+1. **Enter** → vai ao `_entryPoint`.
+2. **FindTable** → tenta `TableRegistry.TryReserveSeat`.
+3. **Sit** → animação/warp para o assento (`Seat.Anchor`), inicia **Order**.
+4. **Order** → entra na fila de atendimento de garçom.
+5. **WaitDrink** → aguarda preparo/entrega (acumula `WaitTimer`).
+6. **Drink** → consome (contagem `DrinkTimer`).
+7. **Pay** → paga (Economy), sinaliza limpeza da mesa.
+8. **Leave** → vai ao `_exitPoint`; libera assento.
+
+Regras de paciência/dinheiro:
+
+- Campos por cliente: `Gold`, `Patience` (segundos aceitáveis de espera).
+- Tip calculado por `waitTime` (linear entre 2 e 0).
+- Se **tempo estourar**, publicar `CustomerAngry` e sair.
+
+### Waiter
+
+Estados principais:
+
+1. **Idle** → procura próximo **cliente aguardando pedido**; senão, pega **mesa para limpar**; fallback: fica na cozinha.
+2. **TakeOrder** → vai até a mesa, escolhe receita via `ChooseRecipeFor(CustomerData)` respeitando `IMenuPolicy` e `IInventoryService`.
+3. **WaitPrep** → aguarda pedido ficar pronto no `OrderSystem` (área resolve pickup).
+4. **Deliver** → leva ao assento do cliente; muda estado do cliente para **Drink**.
+5. **Clean** → aciona `CleaningSystem.CleanTable`.
+
+---
+
+## Contratos & dependências
+
+### `OrderSystem`
+
+- `EnqueueOrder(int tableId, RecipeSO recipe)`
+- `TryConsumeReadyOrder(int tableId, out RecipeSO recipe, out PrepArea area)`
+- `GetOrders()` para HUD.
+- Eventos: `OrdersChanged(IReadOnlyList<Order>)`
+- Configuração: `SetKitchenStations(int)`, `SetBarStations(int)`
+
+### `AgentSystem`
+
+- `Configure(entry, exit, kitchen, barPickup, kitchenPickup)`
+- `SetMenuPolicy(IMenuPolicy)`
+- `SetInventory(IInventoryService)`
+- `RegisterWaiter(Waiter)`
+- `SpawnCustomer(Customer)` (via `CustomerSpawner`)
+- Eventos: `ActiveCustomerCountChanged(int)`, `CustomerReleased(Customer)`
+
+### `TableRegistry`
+
+- `RegisterTable(Table)`
+- `TryReserveSeat(out Table, out Seat)`
+- `ReleaseSeat(tableId, seatId)`
+- `GetTable(tableId)`
+
+### `EconomySystem`
+
+- `AddRevenue(float)`, `TrySpend(float)`
+- (Opcional) `CashChanged` para HUD
+
+### `CleaningSystem`
+
+- `RegisterTable(Table)`, `CleanTable(int)`
+
+### UI / HUD
+
+- `HUDController.Initialize(EconomySystem, OrderSystem)`
+- `HUDController.SetCustomers(int)` (assinado em `ActiveCustomerCountChanged`)
+- `MenuController.Initialize(Catalog)` e expõe `IMenuPolicy`
+- `HudToastController.Initialize(IEventBus)`
+
+---
+
+## Bootstrap (DevBootstrap)
+
+Sequência recomendada:
+
+1. **Cenário**: cria chão/bar/mesa/assentos, marca obstáculos (`NavMeshObstacle`), **bake** NavMesh (AI Navigation).
+2. **Pontos**: define `_entryPoint`, `_exitPoint`, `_kitchenPoint`, `_barPickupPoint`, `_kitchenPickupPoint`.
+3. **Sistemas**: instancia `SimulationRunner`, registra `EconomySystem`, `OrderSystem`, `CleaningSystem`, `TableRegistry`, `AgentSystem`, `CustomerSpawner`.
+4. **Agentes**: cria **Waiter** (capsule + `NavMeshAgent`) e registra no `AgentSystem`.
+5. **Mesas**: constrói `Table/Seat` a partir dos anchors e registra em `TableRegistry` e `CleaningSystem`.
+6. **UI**: adiciona `HUDController` (liga a Economy/Orders), `TimeControls`, `MenuController` (passa `Catalog`), `HudToastController`.
+7. **Integrações**:
+   - `AgentSystem.SetMenuPolicy(menu)`
+   - `AgentSystem.SetInventory(devInventoryStub)`
+   - `_orderSystem.SetKitchenStations(2); _orderSystem.SetBarStations(1);`
+8. **Spawner**: configura `CustomerSpawner` com prefab (capsule + `NavMeshAgent`), pré-aquece pool.
+
+---
+
+## Testes
+
+- **EditMode**:
+  - `OrderSystem` (fila, slots paralelos, decremento de tempo, `TryConsumeReadyOrder`)
+  - `EconomySystem` (gastos/receitas, eventos)
+  - **Políticas**: `MenuController` (IsAllowed), `IInventoryService` stub
+- **PlayMode**:
+  - Fluxo cliente → garçom → pedido → entrega (em cena cinza)
+  - Toasts: publicar `GameEvent` e validar render no HUD (pode ser snapshot/headless)
+
+> CI: rodar `game-ci/unity-test-runner@v4` (EditMode + PlayMode). Manter pacotes estáveis no `manifest.json`.
+
+---
+
+## Boas práticas & armadilhas
+
+- **NavMeshAgent**: use `Warp()` para encaixes imediatos (sentar/levantar), **não** setar `transform.position`.
+- **Namespaces**: evitar colisões; agentes vivem em `TavernSim.Agents`, sistemas em `TavernSim.Simulation.Systems`.
+- **Eventos**: publicar via `IEventBus`; HUD mostra toasts. Evitar `Debug.Log` para UX.
+- **Determinismo**: simular por `SimulationRunner` com passo fixo; manter lógicas sem `Time.deltaTime` direto no `Update`.
+- **Cardápio**: sempre checar `IMenuPolicy` antes de `EnqueueOrder`.
+- **Inventário**: checar `CanCraft`/`TryConsume` (no Dev, retornar `true`).
+- **HUD**: construir com UI Toolkit (`UIDocument`), sem dependências de cena frágil.
+
+---
+
+## Roadmap curto
+
+- Implementar `InventorySystem` real (estoque por `ItemSO`, consumo por `RecipeSO`).
+- **Reputação** → deriva `Gold` e `Patience` média dos clientes, afeta `tip` e taxa de “raiva”.
+- Dar função aos **Bartender/Cook** (estações físicas + animações).
+- Melhorar **seleção no HUD**: ficha do cliente (nome/gostos/dinheiro) quando selecionado.
+
+---
+
+## Mapa de arquivos (referência)
+
+- Agentes: `Assets/Agents/Waiter.cs`, `Customer.cs`, (`Bartender.cs`, `Cook.cs` opcionais)
+- Sistemas: `Assets/Simulation/Systems/*` (`AgentSystem`, `OrderSystem`, `TableRegistry`, `CleaningSystem`, `EconomySystem`)
+- Modelos: `Assets/Simulation/Models/*` (`Table`, `Seat`)
+- Domínio: `Assets/Domain/*` (`Catalog`, `ItemSO`, `RecipeSO`)
+- UI: `Assets/UI/*` (`HUDController`, `TimeControls`, `MenuController`, `HudToastController`)
+- Bootstrap: `Assets/Bootstrap/DevBootstrap.cs`
+
+---
