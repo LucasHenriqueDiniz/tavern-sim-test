@@ -3,6 +3,7 @@ using UnityEngine.AI;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UIElements;
+using UnityEngine.TextCore.Text;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem.UI;
 #endif
@@ -28,7 +29,11 @@ namespace TavernSim.Bootstrap
 
         private static PanelSettings _panelSettings;
         private static ThemeStyleSheet _panelTheme;
+        private static PanelTextSettings _panelTextSettings;
+        private static TextSettings _textSettings;
         private static bool _themeLookupAttempted;
+        private static bool _panelTextSettingsLookupAttempted;
+        private static bool _textSettingsLookupAttempted;
 
         private SimulationRunner _runner;
         private EconomySystem _economySystem;
@@ -272,18 +277,34 @@ namespace TavernSim.Bootstrap
                 return _panelSettings;
             }
 
-            _panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
-            _panelSettings.name = "DevBootstrapPanelSettings";
-            _panelSettings.hideFlags = HideFlags.HideAndDontSave;
-            _panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
-            _panelSettings.referenceResolution = new Vector2Int(1920, 1080);
-            _panelSettings.sortingOrder = 100;
-            _panelSettings.targetTexture = null;
+            var asset = Resources.Load<PanelSettings>(PanelSettingsResourcePath);
+            if (asset != null)
+            {
+                _panelSettings = Instantiate(asset);
+                _panelSettings.name = asset.name + " (Runtime)";
+                _panelSettings.hideFlags = HideFlags.HideAndDontSave;
+            }
+            else
+            {
+                _panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+                _panelSettings.name = "DevBootstrapPanelSettings";
+                _panelSettings.hideFlags = HideFlags.HideAndDontSave;
+                _panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+                _panelSettings.referenceResolution = new Vector2Int(1920, 1080);
+                _panelSettings.sortingOrder = 100;
+                _panelSettings.targetTexture = null;
+            }
 
             var theme = GetOrLoadTheme();
             if (theme != null)
             {
                 _panelSettings.themeStyleSheet = theme;
+            }
+
+            var panelTextSettings = GetOrLoadPanelTextSettings();
+            if (panelTextSettings != null)
+            {
+                _panelSettings.textSettings = panelTextSettings;
             }
 
             return _panelSettings;
@@ -298,29 +319,72 @@ namespace TavernSim.Bootstrap
 
             _themeLookupAttempted = true;
 
-            foreach (var path in DefaultThemeResourcePaths)
-            {
-                var theme = Resources.Load<ThemeStyleSheet>(path);
-                if (theme != null)
-                {
-                    _panelTheme = theme;
-                    break;
-                }
-            }
+            _panelTheme = Resources.Load<ThemeStyleSheet>(ThemeResourcePath);
 
             if (_panelTheme == null)
             {
-                Debug.LogWarning("DevBootstrap could not locate a UI Toolkit ThemeStyleSheet. HUD will use default styling.");
+                Debug.LogWarning("DevBootstrap could not locate the runtime UI theme. HUD will use default styling.");
             }
 
             return _panelTheme;
         }
 
-        private static readonly string[] DefaultThemeResourcePaths =
+        private static PanelTextSettings GetOrLoadPanelTextSettings()
         {
-            "ThemeSettings/DefaultCommonLight",
-            "ThemeSettings/DefaultCommonDark",
-            "ThemeSettings/DefaultCommon"
-        };
+            if (_panelTextSettings != null || _panelTextSettingsLookupAttempted)
+            {
+                return _panelTextSettings;
+            }
+
+            _panelTextSettingsLookupAttempted = true;
+
+            var resourceAsset = Resources.Load<PanelTextSettings>(PanelTextSettingsResourcePath);
+            if (resourceAsset != null)
+            {
+                _panelTextSettings = Instantiate(resourceAsset);
+                _panelTextSettings.hideFlags = HideFlags.HideAndDontSave;
+                return _panelTextSettings;
+            }
+
+            var textSettings = GetOrLoadTextSettings();
+            if (textSettings != null)
+            {
+                _panelTextSettings = ScriptableObject.CreateInstance<PanelTextSettings>();
+                _panelTextSettings.name = "DevBootstrapPanelTextSettings";
+                _panelTextSettings.hideFlags = HideFlags.HideAndDontSave;
+                _panelTextSettings.textSettings = textSettings;
+            }
+
+            if (_panelTextSettings == null)
+            {
+                Debug.LogWarning("DevBootstrap could not locate PanelTextSettings. UI text may not use the intended font assets.");
+            }
+
+            return _panelTextSettings;
+        }
+
+        private static TextSettings GetOrLoadTextSettings()
+        {
+            if (_textSettings != null || _textSettingsLookupAttempted)
+            {
+                return _textSettings;
+            }
+
+            _textSettingsLookupAttempted = true;
+
+            _textSettings = Resources.Load<TextSettings>(TextSettingsResourcePath);
+
+            if (_textSettings == null)
+            {
+                Debug.LogWarning("DevBootstrap could not locate default TextSettings. UI text may use fallback fonts.");
+            }
+
+            return _textSettings;
+        }
+
+        private const string PanelSettingsResourcePath = "UI Toolkit/DevBootstrapPanelSettings";
+        private const string ThemeResourcePath = "UI Toolkit/UnityThemes/UnityDefaultRuntimeTheme";
+        private const string PanelTextSettingsResourcePath = "UI Toolkit/DevBootstrapPanelTextSettings";
+        private const string TextSettingsResourcePath = "UI Toolkit/Default UITK Text Settings";
     }
 }
