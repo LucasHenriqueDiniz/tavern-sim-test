@@ -3,6 +3,7 @@ using System.Reflection;
 using NUnit.Framework;
 using TavernSim.Domain;
 using TavernSim.Simulation.Systems;
+using TavernSim.UI;
 using UnityEngine;
 
 public class OrderRequestValidatorTests
@@ -13,11 +14,8 @@ public class OrderRequestValidatorTests
         var recipe = CreateRecipe("drink", "Bebida", 1f);
         var policy = new StubMenuPolicy(false);
         var inventory = new StubInventory(true, true);
-        var validator = new OrderRequestValidator(policy, inventory);
-
-        var result = validator.Validate(recipe);
-        Assert.IsFalse(result.IsAllowed);
-        Assert.AreEqual(OrderBlockReason.MenuPolicy, result.Reason);
+        var result = OrderRequestValidator.IsAllowed(policy, inventory, recipe);
+        Assert.IsFalse(result);
     }
 
     [Test]
@@ -26,11 +24,8 @@ public class OrderRequestValidatorTests
         var recipe = CreateRecipe("soup", "Sopa", 1f);
         var policy = new StubMenuPolicy(true);
         var inventory = new StubInventory(true, true);
-        var validator = new OrderRequestValidator(policy, inventory);
-
-        var result = validator.Validate(recipe);
-        Assert.IsTrue(result.IsAllowed);
-        Assert.AreEqual(OrderBlockReason.None, result.Reason);
+        var result = OrderRequestValidator.IsAllowed(policy, inventory, recipe);
+        Assert.IsTrue(result);
     }
 
     private static RecipeSO CreateRecipe(string id, string name, float prepTime)

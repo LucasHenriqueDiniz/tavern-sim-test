@@ -1,87 +1,48 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
-namespace TavernSim.Core
+namespace TavernSim.Core.Events
 {
-    public enum GameEventSeverity
+    public struct GameEvent
     {
-        Info = 0,
-        Warning = 1,
-        Error = 2
-    }
-
-    public readonly struct GameEvent
-    {
-        public string Code { get; }
-        public string Message { get; }
-        public GameEventSeverity Severity { get; }
-        public IReadOnlyDictionary<string, object> Data { get; }
-        public DateTime Time { get; }
-
-        public GameEvent(string code, string message, GameEventSeverity severity, IReadOnlyDictionary<string, object> data = null)
-        {
-            Code = code ?? string.Empty;
-            Message = message ?? string.Empty;
-            Severity = severity;
-            Data = data ?? EmptyData;
-            Time = DateTime.UtcNow;
-        }
-
-        private static readonly IReadOnlyDictionary<string, object> EmptyData = new Dictionary<string, object>();
-    }
-
-    public interface IEventSink
-    {
-        void Receive(GameEvent gameEvent);
+        public string Type;     // ex: "CustomerAngry", "MenuBlocked", "NoIngredients"
+        public string Message;  // exibição no HUD
+        public int TableId;     // opcional
+        public static GameEvent Info(string type, string msg, int tableId = -1)
+            => new GameEvent { Type = type, Message = msg, TableId = tableId };
     }
 
     public interface IEventBus
     {
-        void Publish(GameEvent gameEvent);
-        void Subscribe(IEventSink sink);
-        void Unsubscribe(IEventSink sink);
+        void Publish(GameEvent e);
+        void Subscribe(Action<GameEvent> handler);
+        void Unsubscribe(Action<GameEvent> handler);
     }
 
+    /// <summary> Implementação simples in-memory; suficiente para runtime e testes. </summary>
     public sealed class GameEventBus : IEventBus
     {
-        private readonly List<IEventSink> _sinks = new List<IEventSink>(8);
+        private readonly List<Action<GameEvent>> _handlers = new List<Action<GameEvent>>(32);
 
-        public void Publish(GameEvent gameEvent)
+        public void Publish(GameEvent e)
         {
-            for (int i = 0; i < _sinks.Count; i++)
+            // evitar modificação durante iteração
+            var snapshot = _handlers.ToArray();
+            for (int i = 0; i < snapshot.Length; i++)
             {
-                _sinks[i]?.Receive(gameEvent);
+                try { snapshot[i]?.Invoke(e); } catch (Exception ex) { Debug.LogException(ex); }
             }
         }
 
-        public void Subscribe(IEventSink sink)
+        public void Subscribe(Action<GameEvent> handler)
         {
-            if (sink == null || _sinks.Contains(sink))
-            {
-                return;
-            }
-
-            _sinks.Add(sink);
+            if (handler != null && !_handlers.Contains(handler)) _handlers.Add(handler);
         }
 
-        public void Unsubscribe(IEventSink sink)
+        public void Unsubscribe(Action<GameEvent> handler)
         {
-            if (sink == null)
-            {
-                return;
-            }
-
-            _sinks.Remove(sink);
+            if (handler != null) _handlers.Remove(handler);
         }
     }
 }
-
-namespace TavernSim.Core.Events
-{
-    using GameEvent = TavernSim.Core.GameEvent;
-    using GameEventBus = TavernSim.Core.GameEventBus;
-    using GameEventSeverity = TavernSim.Core.GameEventSeverity;
-    using IEventBus = TavernSim.Core.IEventBus;
-    using IEventSink = TavernSim.Core.IEventSink;
-}
-
