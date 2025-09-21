@@ -310,6 +310,19 @@ namespace TavernSim.Bootstrap
 
             if (_panelTheme == null)
             {
+                foreach (var path in BuiltInThemeResourcePaths)
+                {
+                    var theme = Resources.GetBuiltinResource<ThemeStyleSheet>(path);
+                    if (theme != null)
+                    {
+                        _panelTheme = theme;
+                        break;
+                    }
+                }
+            }
+
+            if (_panelTheme == null)
+            {
                 Debug.LogWarning("DevBootstrap could not locate a UI Toolkit ThemeStyleSheet. HUD will use default styling.");
             }
 
@@ -321,6 +334,13 @@ namespace TavernSim.Bootstrap
             "ThemeSettings/DefaultCommonLight",
             "ThemeSettings/DefaultCommonDark",
             "ThemeSettings/DefaultCommon"
+        };
+
+        private static readonly string[] BuiltInThemeResourcePaths =
+        {
+            "UIElements/ThemeSettings/DefaultCommonLight.tss",
+            "UIElements/ThemeSettings/DefaultCommonDark.tss",
+            "UIElements/ThemeSettings/DefaultCommon.tss"
         };
     }
 }
