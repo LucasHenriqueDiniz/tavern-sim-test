@@ -3,6 +3,7 @@ using System.Reflection;
 using NUnit.Framework;
 using TavernSim.Domain;
 using TavernSim.Simulation.Systems;
+using TavernSim.UI;
 using UnityEngine;
 
 public class OrderRequestValidatorTests

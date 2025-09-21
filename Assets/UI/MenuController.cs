@@ -12,7 +12,7 @@ namespace TavernSim.UI
     {
         [SerializeField] private Catalog catalog;
         private UIDocument _doc;
-        private readonly HashSet<RecipeSO> _allowed = new();
+        private readonly HashSet<RecipeSO> _allowed = new HashSet<RecipeSO>();
 
         void Awake() => _doc = GetComponent<UIDocument>();
 

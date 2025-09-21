@@ -42,7 +42,7 @@ namespace TavernSim.Core.Events
     /// <summary> Implementação simples in-memory; suficiente para runtime e testes. </summary>
     public sealed class GameEventBus : IEventBus
     {
-        private readonly List<Action<GameEvent>> _handlers = new(32);
+        private readonly List<Action<GameEvent>> _handlers = new List<Action<GameEvent>>(32);
 
         public void Publish(GameEvent e)
         {

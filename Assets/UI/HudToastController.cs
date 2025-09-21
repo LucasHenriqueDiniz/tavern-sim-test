@@ -11,7 +11,7 @@ namespace TavernSim.UI
     public sealed class HudToastController : MonoBehaviour
     {
         [SerializeField] private float toastSeconds = 3f;
-        private readonly Queue<string> _queue = new();
+        private readonly Queue<string> _queue = new Queue<string>();
         private UIDocument _doc;
         private Label _label;
         private Coroutine _runner;
