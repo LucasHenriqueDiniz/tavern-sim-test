@@ -16,13 +16,4 @@ namespace TavernSim.UI
         public bool IsAllowed(RecipeSO recipe) => recipe != null;
     }
 
-    // Stub opcional de toast para futuras integrações; inofensivo se não usado.
-    public sealed class HudToastController : MonoBehaviour
-    {
-        public void Show(string message)
-        {
-            if (!string.IsNullOrEmpty(message))
-                Debug.Log($"[Toast] {message}");
-        }
-    }
 }
