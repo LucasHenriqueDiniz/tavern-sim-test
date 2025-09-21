@@ -1,7 +1,11 @@
 using Unity.AI.Navigation; // Requires installing the AI Navigation package from the Package Manager.
 using UnityEngine.AI;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UIElements;
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+using UnityEngine.InputSystem.UI;
+#endif
 using TavernSim.Agents;
 using TavernSim.Building;
 using TavernSim.Core;
@@ -23,6 +27,8 @@ namespace TavernSim.Bootstrap
         [SerializeField] private Catalog catalog;
 
         private static PanelSettings _panelSettings;
+        private static ThemeStyleSheet _panelTheme;
+        private static bool _themeLookupAttempted;
 
         private SimulationRunner _runner;
         private EconomySystem _economySystem;
@@ -184,17 +190,23 @@ namespace TavernSim.Bootstrap
         {
             var uiGo = new GameObject("HUD");
             uiGo.transform.SetParent(transform, false);
+            uiGo.SetActive(false);
+
             var document = uiGo.AddComponent<UIDocument>();
             document.panelSettings = GetOrCreatePanelSettings();
+
             _hudController = uiGo.AddComponent<HUDController>();
             _hudController.Initialize(_economySystem, _orderSystem);
-
-            _timeControls = uiGo.AddComponent<TimeControls>();
-            _timeControls.Initialize();
-
             _hudController.BindSaveService(_saveService);
             _hudController.BindSelection(_selectionService, _gridPlacer);
-            _hudController.SetCustomers(0);
+
+            _timeControls = uiGo.AddComponent<TimeControls>();
+
+            EnsureEventSystem();
+            uiGo.SetActive(true);
+
+            _timeControls.Initialize();
+            _hudController.SetCustomers(_agentSystem != null ? _agentSystem.ActiveCustomerCount : 0);
         }
 
         private static Customer CreateCustomerPrefab(Transform parent)
@@ -226,20 +238,88 @@ namespace TavernSim.Bootstrap
             return customer;
         }
 
+        private void EnsureEventSystem()
+        {
+            if (EventSystem.current != null)
+            {
+                return;
+            }
+
+            var eventSystemGo = new GameObject("EventSystem");
+            eventSystemGo.transform.SetParent(transform, false);
+            eventSystemGo.hideFlags = HideFlags.HideAndDontSave;
+            var eventSystem = eventSystemGo.AddComponent<EventSystem>();
+            eventSystem.sendNavigationEvents = false;
+
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+            if (!eventSystemGo.TryGetComponent<InputSystemUIInputModule>(out _))
+            {
+                eventSystemGo.AddComponent<InputSystemUIInputModule>();
+            }
+#else
+            if (!eventSystemGo.TryGetComponent<StandaloneInputModule>(out _))
+            {
+                eventSystemGo.AddComponent<StandaloneInputModule>();
+            }
+#endif
+        }
+
         private static PanelSettings GetOrCreatePanelSettings()
         {
-            if (_panelSettings == null)
+            if (_panelSettings != null)
             {
-                _panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
-                _panelSettings.name = "DevBootstrapPanelSettings";
-                _panelSettings.hideFlags = HideFlags.HideAndDontSave;
-                _panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
-                _panelSettings.referenceResolution = new Vector2Int(1920, 1080);
-                _panelSettings.sortingOrder = 100;
-                _panelSettings.targetTexture = null;
+                return _panelSettings;
+            }
+
+            _panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+            _panelSettings.name = "DevBootstrapPanelSettings";
+            _panelSettings.hideFlags = HideFlags.HideAndDontSave;
+            _panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+            _panelSettings.referenceResolution = new Vector2Int(1920, 1080);
+            _panelSettings.sortingOrder = 100;
+            _panelSettings.targetTexture = null;
+
+            var theme = GetOrLoadTheme();
+            if (theme != null)
+            {
+                _panelSettings.themeStyleSheet = theme;
             }
 
             return _panelSettings;
         }
+
+        private static ThemeStyleSheet GetOrLoadTheme()
+        {
+            if (_panelTheme != null || _themeLookupAttempted)
+            {
+                return _panelTheme;
+            }
+
+            _themeLookupAttempted = true;
+
+            foreach (var path in DefaultThemeResourcePaths)
+            {
+                var theme = Resources.Load<ThemeStyleSheet>(path);
+                if (theme != null)
+                {
+                    _panelTheme = theme;
+                    break;
+                }
+            }
+
+            if (_panelTheme == null)
+            {
+                Debug.LogWarning("DevBootstrap could not locate a UI Toolkit ThemeStyleSheet. HUD will use default styling.");
+            }
+
+            return _panelTheme;
+        }
+
+        private static readonly string[] DefaultThemeResourcePaths =
+        {
+            "ThemeSettings/DefaultCommonLight",
+            "ThemeSettings/DefaultCommonDark",
+            "ThemeSettings/DefaultCommon"
+        };
     }
 }
