@@ -6,6 +6,7 @@ using TavernSim.Save;
 using TavernSim.Simulation.Systems;
 using TavernSim.Building;
 using TavernSim.Core;
+using TavernSim.Core.Events;
 
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem;

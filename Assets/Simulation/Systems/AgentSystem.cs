@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 using TavernSim.Agents;
-using TavernSim.Core;
+using TavernSim.Core.Events;
 using TavernSim.Core.Simulation;
 using TavernSim.Domain;
 using TavernSim.Simulation.Models;
