@@ -353,9 +353,9 @@ namespace TavernSim.Bootstrap
 
             return _panelTextSettings;
         }
-        private const string PanelSettingsResourcePath = "UI Toolkit/DevBootstrapPanelSettings";
-        private const string ThemeResourcePath = "UI Toolkit/UnityThemes/UnityDefaultRuntimeTheme";
-        private const string PanelTextSettingsResourcePath = "UI Toolkit/DevBootstrapPanelTextSettings";
+        private const string PanelSettingsResourcePath = "UIToolkit/DevBootstrapPanelSettings";
+        private const string ThemeResourcePath = "UIToolkit/UnityThemes/UnityDefaultRuntimeTheme";
+        private const string PanelTextSettingsResourcePath = "UIToolkit/DevBootstrapPanelTextSettings";
 
     }
 }
