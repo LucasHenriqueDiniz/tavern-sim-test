@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 
 namespace TavernSim.Core.Events
+
 {
     public enum GameEventSeverity
     {

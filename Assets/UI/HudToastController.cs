@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using TavernSim.Core.Events;
 
+
 namespace TavernSim.UI
 {
     [RequireComponent(typeof(UIDocument))]
