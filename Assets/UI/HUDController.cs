@@ -100,12 +100,11 @@ namespace TavernSim.UI
             {
                 visualConfig = Resources.Load<HUDVisualConfig>("UI/HUDVisualConfig");
             }
-
-            ApplyVisualTree();
         }
 
         private void OnEnable()
         {
+            ApplyVisualTree();
             HookEvents();
         }
 
@@ -162,43 +161,49 @@ namespace TavernSim.UI
 
         private void ApplyVisualTree()
         {
-            if (visualConfig != null)
+            if (_document == null)
             {
-                if (visualConfig.VisualTree != null)
-                {
-                    _document.visualTreeAsset = visualConfig.VisualTree;
-                }
-
-                if (visualConfig.StyleSheet != null)
-                {
-                    var root = _document.rootVisualElement;
-                    if (!root.styleSheets.Contains(visualConfig.StyleSheet))
-                    {
-                        root.styleSheets.Add(visualConfig.StyleSheet);
-                    }
-                }
+                Debug.LogWarning("HUDController requires a UIDocument to build the HUD visuals.");
+                return;
             }
 
             var rootElement = _document.rootVisualElement;
-            if (_document.visualTreeAsset == null)
+            if (rootElement == null)
             {
-                rootElement.Clear();
-                var fallbackRoot = new VisualElement { style = { flexDirection = FlexDirection.Column } };
-                rootElement.Add(fallbackRoot);
-                rootElement = fallbackRoot;
+                Debug.LogWarning("HUDController could not access the UIDocument root. UI will be applied once the panel is ready.");
+                return;
             }
 
-            _controlsLabel = rootElement.Q<Label>("controlsLabel") ?? CreateLabel(rootElement, "controlsLabel", string.Empty);
+            rootElement.Clear();
+
+            VisualElement layoutRoot;
+            if (visualConfig != null && visualConfig.VisualTree != null)
+            {
+                layoutRoot = visualConfig.VisualTree.Instantiate();
+                rootElement.Add(layoutRoot);
+            }
+            else
+            {
+                layoutRoot = new VisualElement { style = { flexDirection = FlexDirection.Column } };
+                rootElement.Add(layoutRoot);
+            }
+
+            if (visualConfig != null && visualConfig.StyleSheet != null && !rootElement.styleSheets.Contains(visualConfig.StyleSheet))
+            {
+                rootElement.styleSheets.Add(visualConfig.StyleSheet);
+            }
+
+            _controlsLabel = rootElement.Q<Label>("controlsLabel") ?? CreateLabel(layoutRoot, "controlsLabel", string.Empty);
             _controlsLabel.text = GetControlsSummary();
 
-            _cashLabel = rootElement.Q<Label>("cashLabel") ?? CreateLabel(rootElement, "cashLabel", "Cash: 0");
-            _customerLabel = rootElement.Q<Label>("customerLabel") ?? CreateLabel(rootElement, "customerLabel", "Customers: 0");
-            _ordersScroll = rootElement.Q<ScrollView>("ordersScroll") ?? CreateScroll(rootElement);
-            _saveButton = rootElement.Q<Button>("saveBtn") ?? CreateButton(rootElement, "saveBtn", "Save (F5)");
-            _loadButton = rootElement.Q<Button>("loadBtn") ?? CreateButton(rootElement, "loadBtn", "Load (F9)");
-            _selectionLabel = rootElement.Q<Label>("selectionLabel") ?? CreateLabel(rootElement, "selectionLabel", "Selecionado: Nenhum");
-            _buildToggleButton = rootElement.Q<Button>("buildToggleBtn") ?? CreateButton(rootElement, "buildToggleBtn", "Construir");
-            _buildMenu = rootElement.Q<VisualElement>("buildMenu") ?? CreateBuildMenu(rootElement);
+            _cashLabel = rootElement.Q<Label>("cashLabel") ?? CreateLabel(layoutRoot, "cashLabel", "Cash: 0");
+            _customerLabel = rootElement.Q<Label>("customerLabel") ?? CreateLabel(layoutRoot, "customerLabel", "Customers: 0");
+            _ordersScroll = rootElement.Q<ScrollView>("ordersScroll") ?? CreateScroll(layoutRoot);
+            _saveButton = rootElement.Q<Button>("saveBtn") ?? CreateButton(layoutRoot, "saveBtn", "Save (F5)");
+            _loadButton = rootElement.Q<Button>("loadBtn") ?? CreateButton(layoutRoot, "loadBtn", "Load (F9)");
+            _selectionLabel = rootElement.Q<Label>("selectionLabel") ?? CreateLabel(layoutRoot, "selectionLabel", "Selecionado: Nenhum");
+            _buildToggleButton = rootElement.Q<Button>("buildToggleBtn") ?? CreateButton(layoutRoot, "buildToggleBtn", "Construir");
+            _buildMenu = rootElement.Q<VisualElement>("buildMenu") ?? CreateBuildMenu(layoutRoot);
 
             CreateBuildButtons();
             SetBuildMenuVisible(false);

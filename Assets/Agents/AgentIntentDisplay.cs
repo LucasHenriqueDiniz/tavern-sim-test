@@ -44,10 +44,18 @@ namespace TavernSim.Agents
 
             var worldPosition = transform.position + offset;
             _labelTransform.position = worldPosition;
-            var toCamera = _camera.transform.position - worldPosition;
+            var cameraTransform = _camera.transform;
+            var toCamera = cameraTransform.position - worldPosition;
             if (toCamera.sqrMagnitude > Mathf.Epsilon)
             {
-                _labelTransform.rotation = Quaternion.LookRotation(toCamera, Vector3.up);
+                var rotation = Quaternion.LookRotation(toCamera, cameraTransform.up);
+                _labelTransform.rotation = rotation;
+
+                // If the label ends up aligned with the camera forward we are looking at its back.
+                if (Vector3.Dot(_labelTransform.forward, cameraTransform.forward) > 0f)
+                {
+                    _labelTransform.rotation = rotation * Quaternion.AngleAxis(180f, cameraTransform.up);
+                }
             }
         }
 
