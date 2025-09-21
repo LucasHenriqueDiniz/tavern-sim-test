@@ -76,3 +76,13 @@ namespace TavernSim.Core.Events
         }
     }
 }
+
+namespace TavernSim.Core.Events
+{
+    using GameEvent = TavernSim.Core.GameEvent;
+    using GameEventBus = TavernSim.Core.GameEventBus;
+    using GameEventSeverity = TavernSim.Core.GameEventSeverity;
+    using IEventBus = TavernSim.Core.IEventBus;
+    using IEventSink = TavernSim.Core.IEventSink;
+}
+
