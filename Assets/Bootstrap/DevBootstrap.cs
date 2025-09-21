@@ -11,6 +11,7 @@ using TavernSim.Agents;
 using TavernSim.Building;
 using TavernSim.Core;
 using TavernSim.Core.Simulation;
+using TavernSim.Core.Events;
 using TavernSim.Domain;
 using TavernSim.Debugging;
 using TavernSim.Save;

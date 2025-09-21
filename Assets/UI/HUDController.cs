@@ -6,6 +6,7 @@ using TavernSim.Save;
 using TavernSim.Simulation.Systems;
 using TavernSim.Building;
 using TavernSim.Core;
+using TavernSim.Core.Events;
 
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem;
@@ -245,10 +246,12 @@ namespace TavernSim.UI
             _hireWaiterButton?.AddToClassList("hud-button");
             _hireCookButton?.AddToClassList("hud-button");
             _hireCookButton?.AddToClassList("stacked");
+            
             if (_hireWaiterButton != null)
             {
                 _hireWaiterButton.style.marginTop = 0f;
             }
+
             _buildToggleButton = rootElement.Q<Button>("buildToggleBtn") ?? CreateButton(layoutRoot, "buildToggleBtn", "Construir");
             _buildMenu = rootElement.Q<VisualElement>("buildMenu") ?? CreateBuildMenu(layoutRoot);
 
