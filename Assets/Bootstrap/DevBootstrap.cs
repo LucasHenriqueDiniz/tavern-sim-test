@@ -29,8 +29,10 @@ namespace TavernSim.Bootstrap
 
         private static PanelSettings _panelSettings;
         private static ThemeStyleSheet _panelTheme;
+        private static PanelTextSettings _panelTextSettings;
         private static TextSettings _textSettings;
         private static bool _themeLookupAttempted;
+        private static bool _panelTextSettingsLookupAttempted;
         private static bool _textSettingsLookupAttempted;
 
         private SimulationRunner _runner;
@@ -299,10 +301,10 @@ namespace TavernSim.Bootstrap
                 _panelSettings.themeStyleSheet = theme;
             }
 
-            var textSettings = GetOrLoadTextSettings();
-            if (textSettings != null)
+            var panelTextSettings = GetOrLoadPanelTextSettings();
+            if (panelTextSettings != null)
             {
-                _panelSettings.textSettings = textSettings;
+                _panelSettings.textSettings = panelTextSettings;
             }
 
             return _panelSettings;
@@ -327,6 +329,40 @@ namespace TavernSim.Bootstrap
             return _panelTheme;
         }
 
+        private static PanelTextSettings GetOrLoadPanelTextSettings()
+        {
+            if (_panelTextSettings != null || _panelTextSettingsLookupAttempted)
+            {
+                return _panelTextSettings;
+            }
+
+            _panelTextSettingsLookupAttempted = true;
+
+            var resourceAsset = Resources.Load<PanelTextSettings>(PanelTextSettingsResourcePath);
+            if (resourceAsset != null)
+            {
+                _panelTextSettings = Instantiate(resourceAsset);
+                _panelTextSettings.hideFlags = HideFlags.HideAndDontSave;
+                return _panelTextSettings;
+            }
+
+            var textSettings = GetOrLoadTextSettings();
+            if (textSettings != null)
+            {
+                _panelTextSettings = ScriptableObject.CreateInstance<PanelTextSettings>();
+                _panelTextSettings.name = "DevBootstrapPanelTextSettings";
+                _panelTextSettings.hideFlags = HideFlags.HideAndDontSave;
+                _panelTextSettings.textSettings = textSettings;
+            }
+
+            if (_panelTextSettings == null)
+            {
+                Debug.LogWarning("DevBootstrap could not locate PanelTextSettings. UI text may not use the intended font assets.");
+            }
+
+            return _panelTextSettings;
+        }
+
         private static TextSettings GetOrLoadTextSettings()
         {
             if (_textSettings != null || _textSettingsLookupAttempted)
@@ -348,6 +384,7 @@ namespace TavernSim.Bootstrap
 
         private const string PanelSettingsResourcePath = "UI Toolkit/DevBootstrapPanelSettings";
         private const string ThemeResourcePath = "UI Toolkit/UnityThemes/UnityDefaultRuntimeTheme";
+        private const string PanelTextSettingsResourcePath = "UI Toolkit/DevBootstrapPanelTextSettings";
         private const string TextSettingsResourcePath = "UI Toolkit/Default UITK Text Settings";
     }
 }
