@@ -10,6 +10,7 @@ using UnityEngine.InputSystem.UI;
 using TavernSim.Agents;
 using TavernSim.Building;
 using TavernSim.Core;
+using TavernSim.Core.Events;
 using TavernSim.Core.Simulation;
 using TavernSim.Domain;
 using TavernSim.Debugging;
@@ -162,7 +163,7 @@ namespace TavernSim.Bootstrap
             _runner = gameObject.AddComponent<SimulationRunner>();
 
             _eventBus = new GameEventBus();
-            _inventoryService ??= new DevInventoryService();
+            _inventoryService ??= new DevInfiniteInventory();
 
             _economySystem = new EconomySystem(500f, 1f);
             _orderSystem = new OrderSystem();
@@ -511,12 +512,6 @@ namespace TavernSim.Bootstrap
         private const string PanelSettingsResourcePath = "UIToolkit/DevBootstrapPanelSettings";
         private const string ThemeResourcePath = "UIToolkit/UnityThemes/UnityDefaultRuntimeTheme";
         private const string PanelTextSettingsResourcePath = "UIToolkit/DevBootstrapPanelTextSettings";
-
-        private sealed class DevInventoryService : IInventoryService
-        {
-            public bool CanCraft(RecipeSO recipe) => true;
-            public bool TryConsume(RecipeSO recipe) => true;
-        }
 
     }
 }

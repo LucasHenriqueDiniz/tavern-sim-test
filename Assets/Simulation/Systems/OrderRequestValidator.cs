@@ -1,4 +1,5 @@
 using TavernSim.Domain;
+using TavernSim.UI;
 
 namespace TavernSim.Simulation.Systems
 {
@@ -23,17 +24,6 @@ namespace TavernSim.Simulation.Systems
         public static OrderValidationResult Allowed => new OrderValidationResult(true, OrderBlockReason.None);
         public static OrderValidationResult MenuBlocked => new OrderValidationResult(false, OrderBlockReason.MenuPolicy);
         public static OrderValidationResult InventoryBlocked => new OrderValidationResult(false, OrderBlockReason.InventoryUnavailable);
-    }
-
-    public interface IMenuPolicy
-    {
-        bool IsAllowed(RecipeSO recipe);
-    }
-
-    public interface IInventoryService
-    {
-        bool CanCraft(RecipeSO recipe);
-        bool TryConsume(RecipeSO recipe);
     }
 
     public sealed class OrderRequestValidator
