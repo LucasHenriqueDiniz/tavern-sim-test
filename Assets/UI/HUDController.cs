@@ -45,8 +45,8 @@ namespace TavernSim.UI
 
         private static readonly BuildOption[] BuildOptions =
         {
-            new BuildOption("buildTableBtn", "Mesa", GridPlacer.PlaceableKind.Table),
-            new BuildOption("buildChairBtn", "Cadeira", GridPlacer.PlaceableKind.Chair),
+            new BuildOption("buildSmallTableBtn", "Mesa pequena", GridPlacer.PlaceableKind.SmallTable),
+            new BuildOption("buildLargeTableBtn", "Mesa grande", GridPlacer.PlaceableKind.LargeTable),
             new BuildOption("buildDecorBtn", "Planta", GridPlacer.PlaceableKind.Decoration)
         };
 
