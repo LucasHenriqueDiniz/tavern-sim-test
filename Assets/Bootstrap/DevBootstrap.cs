@@ -11,6 +11,7 @@ using TavernSim.Agents;
 using TavernSim.Building;
 using TavernSim.Core;
 using TavernSim.Core.Simulation;
+using TavernSim.Core.Events;
 using TavernSim.Domain;
 using TavernSim.Debugging;
 using TavernSim.Save;
@@ -47,10 +48,28 @@ namespace TavernSim.Bootstrap
         private TimeControls _timeControls;
         private GridPlacer _gridPlacer;
         private SelectionService _selectionService;
+        private GameEventBus _eventBus;
+        private IInventoryService _inventoryService;
+        private MenuController _menuController;
+        private HudToastController _toastController;
+
+        private Waiter _initialWaiter;
+        private Cook _initialCook;
+        private Bartender _initialBartender;
+        private int _waiterCount;
+        private int _cookCount;
+        private int _bartenderCount;
 
         private Vector3 _entryPoint;
         private Vector3 _exitPoint;
         private Vector3 _kitchenPoint;
+        private Vector3 _kitchenPickupPoint;
+        private Vector3 _barPickupPoint;
+
+        private static readonly Vector3 WaiterSpawnBase = new Vector3(-1f, 0f, 0f);
+        private static readonly Vector3 CookSpawnBase = new Vector3(-1.5f, 0f, 2.6f);
+        private static readonly Vector3 BartenderSpawnBase = new Vector3(-2.5f, 0f, 1.5f);
+        private const float StaffSpawnSpacing = 0.75f;
 
         public EconomySystem Economy => _economySystem;
         public OrderSystem Orders => _orderSystem;
@@ -90,6 +109,16 @@ namespace TavernSim.Bootstrap
             _entryPoint = new Vector3(0f, 0f, -4f);
             _exitPoint = new Vector3(0f, 0f, -5f);
             _kitchenPoint = new Vector3(-2f, 0f, 2f);
+            _kitchenPickupPoint = new Vector3(-1.5f, 0f, 2.25f);
+            _barPickupPoint = new Vector3(-2.5f, 0f, 1.25f);
+
+            var kitchenPickup = new GameObject("Kitchen_Pickup");
+            kitchenPickup.transform.position = _kitchenPickupPoint;
+            kitchenPickup.transform.SetParent(transform, false);
+
+            var barPickup = new GameObject("Bar_Pickup");
+            barPickup.transform.position = _barPickupPoint;
+            barPickup.transform.SetParent(transform, false);
 
             var bar = GameObject.CreatePrimitive(PrimitiveType.Cube);
             bar.name = "Bar";
@@ -115,26 +144,38 @@ namespace TavernSim.Bootstrap
 
             _navMeshSurface?.BuildNavMesh();
 
-            var waiterGo = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            waiterGo.name = "Waiter";
-            waiterGo.transform.position = new Vector3(-1f, 0f, 0f);
-            var waiterAgent = waiterGo.AddComponent<UnityEngine.AI.NavMeshAgent>();
-            waiterAgent.radius = 0.3f;
-            waiterAgent.height = 1.8f;
-            waiterGo.AddComponent<AgentIntentDisplay>();
-            waiterGo.AddComponent<Waiter>();
+            _waiterCount = 0;
+            _cookCount = 0;
+            _bartenderCount = 0;
+
+            _initialWaiter = CreateWaiter(GetWaiterSpawnPosition(_waiterCount));
+            _waiterCount++;
+
+            _initialBartender = CreateBartender(GetBartenderSpawnPosition(_bartenderCount));
+            _bartenderCount++;
+
+            _initialCook = CreateCook(GetCookSpawnPosition(_cookCount));
+            _cookCount++;
         }
 
         private void SetupSimulation()
         {
             _runner = gameObject.AddComponent<SimulationRunner>();
 
+            _eventBus = new GameEventBus();
+            _inventoryService ??= new DevInventoryService();
+
             _economySystem = new EconomySystem(500f, 1f);
             _orderSystem = new OrderSystem();
+            _orderSystem.SetEventBus(_eventBus);
+            _orderSystem.SetKitchenStations(2);
+            _orderSystem.SetBarStations(1);
             _cleaningSystem = new CleaningSystem(0.1f);
             _tableRegistry = new TableRegistry();
             _agentSystem = new AgentSystem(_tableRegistry, _orderSystem, _economySystem, _cleaningSystem, catalog);
-            _agentSystem.Configure(_entryPoint, _exitPoint, _kitchenPoint);
+            _agentSystem.Configure(_entryPoint, _exitPoint, _kitchenPoint, _kitchenPickupPoint, _barPickupPoint);
+            _agentSystem.SetInventory(_inventoryService);
+            _agentSystem.SetEventBus(_eventBus);
             _agentSystem.ActiveCustomerCountChanged += count => _hudController?.SetCustomers(count);
             _agentSystem.CustomerLeftAngry += HandleCustomerLeftAngry;
 
@@ -165,8 +206,10 @@ namespace TavernSim.Bootstrap
             _tableRegistry.RegisterTable(initialTable);
             _cleaningSystem.RegisterTable(initialTable);
 
-            var waiter = FindObjectOfType<Waiter>();
-            _agentSystem.RegisterWaiter(waiter);
+            if (_initialWaiter != null)
+            {
+                _agentSystem.RegisterWaiter(_initialWaiter);
+            }
 
             _debugOverlay.Configure(_agentSystem, _orderSystem);
         }
@@ -184,10 +227,24 @@ namespace TavernSim.Bootstrap
             _hudController.Initialize(_economySystem, _orderSystem);
             _hudController.BindSaveService(_saveService);
             _hudController.BindSelection(_selectionService, _gridPlacer);
+            _hudController.BindEventBus(_eventBus);
+
+            _toastController = uiGo.AddComponent<HudToastController>();
+            _toastController.Initialize(_eventBus);
+
+            _menuController = uiGo.AddComponent<MenuController>();
+            _menuController.Initialize(catalog);
+            _agentSystem.SetMenuPolicy(_menuController);
 
             _timeControls = uiGo.AddComponent<TimeControls>();
 
             EnsureEventSystem();
+
+            if (_hudController != null)
+            {
+                _hudController.HireWaiterRequested += HandleHireWaiterRequested;
+                _hudController.HireCookRequested += HandleHireCookRequested;
+            }
 
             uiGo.SetActive(true);
 
@@ -213,6 +270,105 @@ namespace TavernSim.Bootstrap
             {
                 _agentSystem.CustomerLeftAngry -= HandleCustomerLeftAngry;
             }
+
+            if (_hudController != null)
+            {
+                _hudController.HireWaiterRequested -= HandleHireWaiterRequested;
+                _hudController.HireCookRequested -= HandleHireCookRequested;
+            }
+        }
+
+        private void HandleHireWaiterRequested()
+        {
+            if (_agentSystem == null)
+            {
+                return;
+            }
+
+            var spawn = GetWaiterSpawnPosition(_waiterCount);
+            var waiter = CreateWaiter(spawn);
+            _waiterCount++;
+            _agentSystem.RegisterWaiter(waiter);
+        }
+
+        private void HandleHireCookRequested()
+        {
+            var spawn = GetCookSpawnPosition(_cookCount);
+            CreateCook(spawn);
+            _cookCount++;
+        }
+
+        private Waiter CreateWaiter(Vector3 position)
+        {
+            var index = _waiterCount + 1;
+            var waiterGo = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            waiterGo.name = index == 1 ? "Waiter" : $"Waiter_{index}";
+            waiterGo.transform.SetParent(transform, false);
+            var agent = EnsureNavMeshAgent(waiterGo);
+            if (!agent.Warp(position))
+            {
+                Debug.LogWarning($"Waiter NavMeshAgent.Warp falhou para {waiterGo.name}; verifique o NavMesh.");
+            }
+
+            waiterGo.AddComponent<AgentIntentDisplay>();
+            return waiterGo.AddComponent<Waiter>();
+        }
+
+        private Bartender CreateBartender(Vector3 position)
+        {
+            var index = _bartenderCount + 1;
+            var bartenderGo = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            bartenderGo.name = index == 1 ? "Bartender" : $"Bartender_{index}";
+            bartenderGo.transform.SetParent(transform, false);
+            var agent = EnsureNavMeshAgent(bartenderGo);
+            if (!agent.Warp(position))
+            {
+                Debug.LogWarning($"Bartender NavMeshAgent.Warp falhou para {bartenderGo.name}; verifique o NavMesh.");
+            }
+
+            return bartenderGo.AddComponent<Bartender>();
+        }
+
+        private Cook CreateCook(Vector3 position)
+        {
+            var index = _cookCount + 1;
+            var cookGo = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            cookGo.name = index == 1 ? "Cook" : $"Cook_{index}";
+            cookGo.transform.SetParent(transform, false);
+            var agent = EnsureNavMeshAgent(cookGo);
+            if (!agent.Warp(position))
+            {
+                Debug.LogWarning($"Cook NavMeshAgent.Warp falhou para {cookGo.name}; verifique o NavMesh.");
+            }
+
+            return cookGo.AddComponent<Cook>();
+        }
+
+        private static NavMeshAgent EnsureNavMeshAgent(GameObject go)
+        {
+            if (!go.TryGetComponent(out NavMeshAgent agent))
+            {
+                agent = go.AddComponent<NavMeshAgent>();
+            }
+
+            agent.radius = 0.3f;
+            agent.height = 1.8f;
+            return agent;
+        }
+
+        private static Vector3 GetWaiterSpawnPosition(int index)
+        {
+            return WaiterSpawnBase + new Vector3(-StaffSpawnSpacing * index, 0f, 0f);
+        }
+
+        private static Vector3 GetCookSpawnPosition(int index)
+        {
+            return CookSpawnBase + new Vector3(StaffSpawnSpacing * index, 0f, 0f);
+        }
+
+        private static Vector3 GetBartenderSpawnPosition(int index)
+        {
+            return BartenderSpawnBase + new Vector3(-StaffSpawnSpacing * index, 0f, 0f);
         }
 
         private static Customer CreateCustomerPrefab(Transform parent)
@@ -356,6 +512,12 @@ namespace TavernSim.Bootstrap
         private const string PanelSettingsResourcePath = "UIToolkit/DevBootstrapPanelSettings";
         private const string ThemeResourcePath = "UIToolkit/UnityThemes/UnityDefaultRuntimeTheme";
         private const string PanelTextSettingsResourcePath = "UIToolkit/DevBootstrapPanelTextSettings";
+
+        private sealed class DevInventoryService : IInventoryService
+        {
+            public bool CanCraft(RecipeSO recipe) => true;
+            public bool TryConsume(RecipeSO recipe) => true;
+        }
 
     }
 }

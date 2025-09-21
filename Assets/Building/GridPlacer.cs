@@ -19,13 +19,19 @@ namespace TavernSim.Building
             None = 0,
             SmallTable = 1,
             LargeTable = 2,
-            Decoration = 3
+            Decoration = 3,
+            KitchenStation = 4,
+            BarCounter = 5,
+            PickupPoint = 6
         }
 
         [SerializeField] private float gridSize = 1f;
         [SerializeField] private float smallTableCost = 125f;
         [SerializeField] private float largeTableCost = 220f;
         [SerializeField] private float decorationCost = 30f;
+        [SerializeField] private float kitchenStationCost = 420f;
+        [SerializeField] private float barCounterCost = 360f;
+        [SerializeField] private float pickupPointCost = 0f;
 
         private EconomySystem _economySystem;
         private SelectionService _selectionService;
@@ -154,6 +160,9 @@ namespace TavernSim.Building
                 PlaceableKind.SmallTable => smallTableCost,
                 PlaceableKind.LargeTable => largeTableCost,
                 PlaceableKind.Decoration => decorationCost,
+                PlaceableKind.KitchenStation => kitchenStationCost,
+                PlaceableKind.BarCounter => barCounterCost,
+                PlaceableKind.PickupPoint => pickupPointCost,
                 _ => 0f
             };
         }
@@ -183,6 +192,15 @@ namespace TavernSim.Building
                     break;
                 case PlaceableKind.Decoration:
                     CreateDecoration(position);
+                    break;
+                case PlaceableKind.KitchenStation:
+                    CreateKitchenStation(position);
+                    break;
+                case PlaceableKind.BarCounter:
+                    CreateBarCounter(position);
+                    break;
+                case PlaceableKind.PickupPoint:
+                    CreatePickupMarker(position);
                     break;
             }
         }
@@ -242,6 +260,79 @@ namespace TavernSim.Building
             foliage.transform.SetParent(planter.transform, false);
             foliage.transform.localPosition = new Vector3(0f, 0.9f, 0f);
             foliage.transform.localScale = new Vector3(1.4f, 1.4f, 1.4f);
+        }
+
+        private static void CreateKitchenStation(Vector3 position)
+        {
+            var root = new GameObject("KitchenStation");
+            root.transform.position = position;
+
+            var counter = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            counter.name = "Counter";
+            counter.transform.SetParent(root.transform, false);
+            counter.transform.localPosition = new Vector3(0f, 0.6f, 0f);
+            counter.transform.localScale = new Vector3(2.4f, 1.2f, 1.2f);
+            NavMeshSetup.MarkObstacle(counter);
+
+            var cooktop = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cooktop.name = "Cooktop";
+            cooktop.transform.SetParent(root.transform, false);
+            cooktop.transform.localPosition = new Vector3(0f, 1.25f, 0f);
+            cooktop.transform.localScale = new Vector3(2.4f, 0.2f, 1.2f);
+            NavMeshSetup.MarkObstacle(cooktop, false);
+
+            var hood = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            hood.name = "VentHood";
+            hood.transform.SetParent(root.transform, false);
+            hood.transform.localPosition = new Vector3(0f, 2f, 0f);
+            hood.transform.localScale = new Vector3(2f, 0.2f, 0.8f);
+        }
+
+        private static void CreateBarCounter(Vector3 position)
+        {
+            var root = new GameObject("BarCounter");
+            root.transform.position = position;
+
+            var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            body.name = "BarBody";
+            body.transform.SetParent(root.transform, false);
+            body.transform.localPosition = new Vector3(0f, 0.6f, 0f);
+            body.transform.localScale = new Vector3(2.8f, 1.2f, 0.8f);
+            NavMeshSetup.MarkObstacle(body);
+
+            var top = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            top.name = "BarTop";
+            top.transform.SetParent(root.transform, false);
+            top.transform.localPosition = new Vector3(0f, 1.25f, 0f);
+            top.transform.localScale = new Vector3(2.8f, 0.2f, 1.1f);
+            NavMeshSetup.MarkObstacle(top, false);
+
+            var shelf = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            shelf.name = "BarShelf";
+            shelf.transform.SetParent(root.transform, false);
+            shelf.transform.localPosition = new Vector3(0f, 1.8f, -0.35f);
+            shelf.transform.localScale = new Vector3(2.6f, 0.15f, 0.3f);
+        }
+
+        private static void CreatePickupMarker(Vector3 position)
+        {
+            var root = new GameObject("PickupPoint");
+            root.transform.position = position;
+
+            var baseMarker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            baseMarker.name = "MarkerBase";
+            baseMarker.transform.SetParent(root.transform, false);
+            baseMarker.transform.localPosition = new Vector3(0f, 0.1f, 0f);
+            baseMarker.transform.localScale = new Vector3(0.3f, 0.1f, 0.3f);
+
+            var icon = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            icon.name = "MarkerIcon";
+            icon.transform.SetParent(root.transform, false);
+            icon.transform.localPosition = new Vector3(0f, 1f, 0f);
+            icon.transform.localScale = new Vector3(0.4f, 0.4f, 0.4f);
+
+            Object.Destroy(baseMarker.GetComponent<Collider>());
+            Object.Destroy(icon.GetComponent<Collider>());
         }
     }
 

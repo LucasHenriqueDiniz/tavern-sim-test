@@ -21,6 +21,26 @@ and Codex assistance stay aligned.
 - Use assembly definition files to isolate systems and tests; hook up references (including package assemblies such as
   `Unity.AI.Navigation`) explicitly when creating new modules.
 
+### HUD menu & toast system
+- The runtime HUD now instantiates a `MenuController` (UI Toolkit) that exposes a foldout with toggles for every `RecipeSO` in the
+  `Catalog`. The component implements `IMenuPolicy` and persists toggle state via `PlayerPrefs` using the recipe id as the key.
+  `AgentSystem.SetMenuPolicy` must be called during bootstrap (see `DevBootstrap`) so waiters can respect menu restrictions
+  before submitting orders.
+- `HudToastController` subscribes to the shared `GameEventBus` and renders temporary toast notifications at the bottom-left of the
+  HUD. Gameplay systems publish events through the `IEventBus` (either by injecting `GameEventBus` or by calling
+  `HUDController.PublishEvent`). Core events include menu blocks, missing ingredients, customer anger, and order readiness/delivery.
+- When creating new systems that need to notify the player, prefer publishing `GameEvent` instances rather than logging directly.
+  The bootstrap scene wires everything together; other scenes must inject the event bus into `OrderSystem`, `AgentSystem`, and the
+  HUD components to enable the experience.
+
+### Build & staffing controls
+- The build menu in the HUD now exposes toggles for kitchen stations, bar counters, and pickup point markers alongside the table
+  and decoration props. The `GridPlacer` handles these new `PlaceableKind` entries by spawning simple graybox meshes and marking
+  the appropriate NavMesh obstacles so pathing remains valid.
+- Runtime HUD controls include "Contratar garçom" and "Contratar cozinheiro" buttons. Each click spawns a new NavMesh-agent
+  backed capsule; waiters are automatically registered with `AgentSystem`, which keeps customer assignments unique across
+  multiple staffers.
+
 ## Continuous integration
 - Pull requests must keep the GitHub Actions workflow green. The pipeline contains two jobs:
   - **Tests** – `game-ci/unity-test-runner@v4` runs EditMode + PlayMode tests against Unity 2022.3.62f1.

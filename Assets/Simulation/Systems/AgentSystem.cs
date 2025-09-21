@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 using TavernSim.Agents;
+using TavernSim.Core.Events;
 using TavernSim.Core.Simulation;
 using TavernSim.Domain;
 using TavernSim.Simulation.Models;
@@ -34,8 +36,13 @@ namespace TavernSim.Simulation.Systems
 
         private Vector3 _entryPoint;
         private Vector3 _exitPoint;
-        private Vector3 _kitchenPoint;
+        private Vector3 _kitchenPickupPoint;
+        private Vector3 _barPickupPoint;
         private RecipeSO _defaultRecipe;
+        private IMenuPolicy _menuPolicy;
+        private IInventoryService _inventory;
+        private OrderRequestValidator _orderValidator;
+        private IEventBus _eventBus;
 
         public event Action<int> ActiveCustomerCountChanged;
         public int ActiveCustomerCount => _customers.Count;
@@ -49,13 +56,37 @@ namespace TavernSim.Simulation.Systems
             _economySystem = economySystem;
             _cleaningSystem = cleaningSystem;
             _catalog = catalog;
+            _orderValidator = new OrderRequestValidator(null, null);
         }
 
         public void Configure(Vector3 entryPoint, Vector3 exitPoint, Vector3 kitchenPoint)
         {
+            Configure(entryPoint, exitPoint, kitchenPoint, kitchenPoint, kitchenPoint);
+        }
+
+        public void Configure(Vector3 entryPoint, Vector3 exitPoint, Vector3 kitchenPoint, Vector3 kitchenPickupPoint, Vector3 barPickupPoint)
+        {
             _entryPoint = entryPoint;
             _exitPoint = exitPoint;
-            _kitchenPoint = kitchenPoint;
+            _kitchenPickupPoint = kitchenPickupPoint;
+            _barPickupPoint = barPickupPoint;
+        }
+
+        public void SetMenuPolicy(IMenuPolicy menuPolicy)
+        {
+            _menuPolicy = menuPolicy;
+            _orderValidator = new OrderRequestValidator(_menuPolicy, _inventory);
+        }
+
+        public void SetInventory(IInventoryService inventory)
+        {
+            _inventory = inventory;
+            _orderValidator = new OrderRequestValidator(_menuPolicy, _inventory);
+        }
+
+        public void SetEventBus(IEventBus eventBus)
+        {
+            _eventBus = eventBus;
         }
 
         public void Initialize(Sim simulation)
@@ -118,8 +149,23 @@ namespace TavernSim.Simulation.Systems
                 StateTimer = 0f
             };
             customer.gameObject.SetActive(true);
-            customer.transform.position = _entryPoint;
+            var navAgent = customer.Agent;
+            if (navAgent != null && navAgent.isOnNavMesh)
+            {
+                navAgent.Warp(_entryPoint);
+            }
+            else
+            {
+                customer.transform.position = _entryPoint;
+            }
             customer.SetDestination(_entryPoint);
+            data.Favorite = _defaultRecipe;
+            data.Gold = UnityEngine.Random.Range(8, 24);
+            data.Patience = UnityEngine.Random.Range(10f, 25f);
+            data.Name = $"Cliente {UnityEngine.Random.Range(1000, 9999)}";
+            data.OrderBlocked = false;
+            data.BlockReason = string.Empty;
+            data.WaiterAssigned = false;
             _customers.Add(data);
             ActiveCustomerCountChanged?.Invoke(_customers.Count);
             UpdateCustomerIntent(data);
@@ -270,6 +316,8 @@ namespace TavernSim.Simulation.Systems
                         data.State = CustomerState.Leave;
                         data.StateTimer = 0f;
                         data.SearchTimer = 0f;
+                        data.BlockReason = "Sem mesas disponíveis";
+                        PublishCustomerAngry(data, data.BlockReason, -1);
                         CustomerLeftAngry?.Invoke(data.Agent);
                         return;
                     }
@@ -292,6 +340,9 @@ namespace TavernSim.Simulation.Systems
                 data.State = CustomerState.Order;
                 data.StateTimer = 0f;
                 data.WaitTimer = 0f;
+                data.WaiterAssigned = false;
+                data.OrderBlocked = false;
+                data.BlockReason = string.Empty;
                 if (!_customersNeedingOrder.Contains(data.Agent))
                 {
                     _customersNeedingOrder.Add(data.Agent);
@@ -303,12 +354,36 @@ namespace TavernSim.Simulation.Systems
         {
             data.WaitTimer += deltaTime;
             data.TotalWaitTime += deltaTime;
+            if (data.PendingRecipe == null)
+            {
+                data.PendingRecipe = data.Favorite ?? _defaultRecipe;
+            }
+
+            if (data.OrderBlocked)
+            {
+                if (CanAttemptOrder(data.PendingRecipe))
+                {
+                    data.OrderBlocked = false;
+                    data.BlockReason = string.Empty;
+                    if (!data.WaiterAssigned && !_customersNeedingOrder.Contains(data.Agent))
+                    {
+                        _customersNeedingOrder.Add(data.Agent);
+                    }
+                }
+            }
+            else if (!data.WaiterAssigned && !_customersNeedingOrder.Contains(data.Agent))
+            {
+                _customersNeedingOrder.Add(data.Agent);
+            }
+
+            CheckPatience(ref data);
         }
 
         private void HandleWaitDrink(ref CustomerData data, float deltaTime)
         {
             data.WaitTimer += deltaTime;
             data.TotalWaitTime += deltaTime;
+            CheckPatience(ref data);
         }
 
         private void HandleEat(ref CustomerData data, float deltaTime)
@@ -359,6 +434,9 @@ namespace TavernSim.Simulation.Systems
 
             data.CurrentRecipe = null;
             data.PendingRecipe = null;
+            data.OrderBlocked = false;
+            data.WaiterAssigned = false;
+            data.BlockReason = string.Empty;
         }
 
         private void HandlePay(ref CustomerData data)
@@ -393,6 +471,9 @@ namespace TavernSim.Simulation.Systems
             data.TotalWaitTime = 0f;
             data.PendingRecipe = null;
             data.CurrentRecipe = null;
+            data.OrderBlocked = false;
+            data.WaiterAssigned = false;
+            data.BlockReason = string.Empty;
             if (data.Table != null)
             {
                 if (!_tablesNeedingClean.Contains(data.Table.Id))
@@ -418,20 +499,8 @@ namespace TavernSim.Simulation.Systems
 
         private void HandleWaiterIdle(ref WaiterData data)
         {
-            if (_customersNeedingOrder.Count > 0)
+            if (TryAssignNextCustomer(ref data))
             {
-                var customer = _customersNeedingOrder[0];
-                _customersNeedingOrder.RemoveAt(0);
-                data.TargetCustomer = customer;
-                if (customer != null)
-                {
-                    var customerData = FindCustomerData(customer);
-                    if (customerData != null && customerData.Seat != null)
-                    {
-                        data.Agent.SetDestination(customerData.Seat.Anchor.position);
-                        data.State = WaiterState.TakeOrder;
-                    }
-                }
                 return;
             }
 
@@ -448,7 +517,7 @@ namespace TavernSim.Simulation.Systems
                 return;
             }
 
-            data.Agent.SetDestination(_kitchenPoint);
+            data.Agent.SetDestination(GetPickupPoint(PrepArea.Kitchen));
         }
 
         private void HandleWaiterTakeOrder(ref WaiterData data)
@@ -474,17 +543,45 @@ namespace TavernSim.Simulation.Systems
             var recipe = customerData.PendingRecipe ?? _defaultRecipe;
             if (recipe != null && customerData.Table != null)
             {
-                _orderSystem.EnqueueOrder(customerData.Table.Id, recipe);
+                customerData.PendingRecipe = recipe;
+                var validation = _orderValidator != null ? _orderValidator.Validate(recipe) : OrderValidationResult.Allowed;
+                if (!validation.IsAllowed)
+                {
+                    customerData.OrderBlocked = true;
+                    customerData.WaiterAssigned = false;
+                    switch (validation.Reason)
+                    {
+                        case OrderBlockReason.MenuPolicy:
+                            customerData.BlockReason = "Bloqueado pelo cardápio";
+                            PublishOrderBlockedByMenu(customerData, recipe);
+                            break;
+                        case OrderBlockReason.InventoryUnavailable:
+                            customerData.BlockReason = "Sem ingredientes";
+                            PublishNoIngredients(customerData, recipe);
+                            break;
+                    }
+
+                    data.TargetCustomer = null;
+                    data.State = WaiterState.Idle;
+                    data.Agent.SetDestination(GetPickupPoint(PrepArea.Kitchen));
+                    return;
+                }
+
                 customerData.State = CustomerState.WaitDrink;
                 customerData.WaitTimer = 0f;
                 customerData.PendingRecipe = recipe;
-                data.Agent.SetDestination(_kitchenPoint);
+                customerData.OrderBlocked = false;
+                customerData.WaiterAssigned = false;
+                customerData.BlockReason = string.Empty;
+
+                var area = _orderSystem.EnqueueOrder(customerData.Table.Id, recipe);
+                data.TargetArea = area;
+                data.Agent.SetDestination(GetPickupPoint(area));
                 data.State = WaiterState.WaitPrep;
+                return;
             }
-            else
-            {
-                data.State = WaiterState.Idle;
-            }
+
+            data.State = WaiterState.Idle;
         }
 
         private void HandleWaiterWaitPrep(ref WaiterData data)
@@ -507,9 +604,10 @@ namespace TavernSim.Simulation.Systems
                 return;
             }
 
-            if (_orderSystem.TryConsumeReadyOrder(customerData.Table.Id, out var recipe))
+            if (_orderSystem.TryConsumeReadyOrder(customerData.Table.Id, out var recipe, out var area))
             {
                 data.CarryingRecipe = recipe;
+                data.CarryingArea = area;
                 data.Agent.SetDestination(customerData.Seat.Anchor.position);
                 data.State = WaiterState.Deliver;
             }
@@ -536,10 +634,16 @@ namespace TavernSim.Simulation.Systems
                 customerData.CurrentRecipe = data.CarryingRecipe ?? customerData.PendingRecipe;
                 customerData.PendingRecipe = null;
                 customerData.WaitTimer = 0f;
+                customerData.OrderBlocked = false;
+                customerData.WaiterAssigned = false;
+                customerData.BlockReason = string.Empty;
+                PublishOrderDelivered(customerData, data.CarryingRecipe ?? customerData.CurrentRecipe, data.CarryingArea);
             }
 
             data.CarryingRecipe = null;
+            data.CarryingArea = PrepArea.Kitchen;
             data.TargetCustomer = null;
+            data.TargetArea = PrepArea.Kitchen;
             data.State = WaiterState.Idle;
         }
 
@@ -559,6 +663,54 @@ namespace TavernSim.Simulation.Systems
             data.State = WaiterState.Idle;
         }
 
+        private bool TryAssignNextCustomer(ref WaiterData data)
+        {
+            for (int i = 0; i < _customersNeedingOrder.Count; i++)
+            {
+                var customer = _customersNeedingOrder[i];
+                if (customer == null)
+                {
+                    _customersNeedingOrder.RemoveAt(i);
+                    i--;
+                    continue;
+                }
+
+                var customerData = FindCustomerData(customer);
+                if (customerData == null || customerData.Seat == null)
+                {
+                    _customersNeedingOrder.RemoveAt(i);
+                    i--;
+                    continue;
+                }
+
+                if (customerData.WaiterAssigned)
+                {
+                    _customersNeedingOrder.RemoveAt(i);
+                    i--;
+                    continue;
+                }
+
+                _customersNeedingOrder.RemoveAt(i);
+                data.TargetCustomer = customer;
+                customerData.WaiterAssigned = true;
+                data.Agent.SetDestination(customerData.Seat.Anchor.position);
+                data.State = WaiterState.TakeOrder;
+                return true;
+            }
+
+            return false;
+        }
+
+        private Vector3 GetPickupPoint(PrepArea area)
+        {
+            if (area == PrepArea.Bar)
+            {
+                return _barPickupPoint != Vector3.zero ? _barPickupPoint : _kitchenPickupPoint;
+            }
+
+            return _kitchenPickupPoint != Vector3.zero ? _kitchenPickupPoint : _entryPoint;
+        }
+
         private CustomerData FindCustomerData(Customer customer)
         {
             for (int i = 0; i < _customers.Count; i++)
@@ -570,6 +722,139 @@ namespace TavernSim.Simulation.Systems
             }
 
             return null;
+        }
+
+        private bool CanAttemptOrder(RecipeSO recipe)
+        {
+            if (recipe == null)
+            {
+                return false;
+            }
+
+            if (_menuPolicy != null && !_menuPolicy.IsAllowed(recipe))
+            {
+                return false;
+            }
+
+            if (_inventory != null && !_inventory.CanCraft(recipe))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private void CheckPatience(ref CustomerData data)
+        {
+            if (data.Patience <= 0f)
+            {
+                return;
+            }
+
+            if (data.WaitTimer < data.Patience)
+            {
+                return;
+            }
+
+            data.LeftAngry = true;
+            data.Agent.StandUp();
+            data.Agent.SetDestination(_exitPoint);
+            data.State = CustomerState.Leave;
+            data.StateTimer = 0f;
+            data.WaitTimer = 0f;
+            data.OrderBlocked = false;
+            data.WaiterAssigned = false;
+            var reason = !string.IsNullOrEmpty(data.BlockReason) ? data.BlockReason : "Demorou demais";
+            var tableId = data.Table != null ? data.Table.Id : -1;
+            if (data.Table != null && !_tablesNeedingClean.Contains(data.Table.Id))
+            {
+                _tablesNeedingClean.Add(data.Table.Id);
+            }
+
+            _customersNeedingOrder.Remove(data.Agent);
+            data.PendingRecipe = null;
+            data.CurrentRecipe = null;
+            PublishCustomerAngry(data, reason, tableId);
+            CustomerLeftAngry?.Invoke(data.Agent);
+            data.BlockReason = string.Empty;
+        }
+
+        private void PublishOrderBlockedByMenu(CustomerData data, RecipeSO recipe)
+        {
+            if (_eventBus == null)
+            {
+                return;
+            }
+
+            var tableId = data.Table != null ? data.Table.Id : -1;
+            var recipeName = recipe != null ? recipe.DisplayName : "Desconhecido";
+            var eventData = new Dictionary<string, object>
+            {
+                ["tableId"] = tableId,
+                ["recipeId"] = recipe != null ? recipe.Id : string.Empty
+            };
+
+            var message = $"Pedido da mesa {tableId} bloqueado pelo cardápio: {recipeName}";
+            _eventBus.Publish(new GameEvent("OrderBlockedByMenu", message, GameEventSeverity.Warning, eventData));
+        }
+
+        private void PublishNoIngredients(CustomerData data, RecipeSO recipe)
+        {
+            if (_eventBus == null)
+            {
+                return;
+            }
+
+            var tableId = data.Table != null ? data.Table.Id : -1;
+            var recipeName = recipe != null ? recipe.DisplayName : "Desconhecido";
+            var eventData = new Dictionary<string, object>
+            {
+                ["tableId"] = tableId,
+                ["recipeId"] = recipe != null ? recipe.Id : string.Empty
+            };
+
+            var message = $"Sem ingredientes para {recipeName} na mesa {tableId}";
+            _eventBus.Publish(new GameEvent("NoIngredients", message, GameEventSeverity.Warning, eventData));
+        }
+
+        private void PublishCustomerAngry(CustomerData data, string reason, int tableId)
+        {
+            if (_eventBus == null)
+            {
+                return;
+            }
+
+            var eventData = new Dictionary<string, object>
+            {
+                ["tableId"] = tableId,
+                ["customerName"] = data.Name ?? (data.Agent != null ? data.Agent.name : string.Empty),
+                ["reason"] = reason
+            };
+
+            var displayName = data.Name ?? (data.Agent != null ? data.Agent.name : "Cliente");
+            var message = $"{displayName} deixou a mesa {tableId} irritado: {reason}";
+            _eventBus.Publish(new GameEvent("CustomerAngry", message, GameEventSeverity.Warning, eventData));
+        }
+
+        private void PublishOrderDelivered(CustomerData data, RecipeSO recipe, PrepArea area)
+        {
+            if (_eventBus == null)
+            {
+                return;
+            }
+
+            var tableId = data.Table != null ? data.Table.Id : -1;
+            var recipeName = recipe != null ? recipe.DisplayName : "Pedido";
+            var eventData = new Dictionary<string, object>
+            {
+                ["tableId"] = tableId,
+                ["recipeId"] = recipe != null ? recipe.Id : string.Empty,
+                ["area"] = area.ToString()
+            };
+
+            var areaLabel = area.GetDisplayName();
+            var message = $"Pedido entregue ({areaLabel}) - Mesa {tableId}: {recipeName}";
+            _eventBus.Publish(new GameEvent("OrderDelivered", message, GameEventSeverity.Info, eventData));
         }
 
         private static float CalculateTip(float waitTime)
@@ -680,6 +965,13 @@ namespace TavernSim.Simulation.Systems
             public float BillCost;
             public RecipeSO PendingRecipe;
             public RecipeSO CurrentRecipe;
+            public int Gold;
+            public float Patience;
+            public string Name;
+            public RecipeSO Favorite;
+            public bool WaiterAssigned;
+            public bool OrderBlocked;
+            public string BlockReason;
 
             public CustomerData(Customer agent)
             {
@@ -688,6 +980,13 @@ namespace TavernSim.Simulation.Systems
                 CompletedCourses = 0;
                 BillRevenue = 0f;
                 BillCost = 0f;
+                Gold = UnityEngine.Random.Range(8, 24);
+                Patience = UnityEngine.Random.Range(10f, 25f);
+                Name = $"Cliente {UnityEngine.Random.Range(1000, 9999)}";
+                Favorite = null;
+                WaiterAssigned = false;
+                OrderBlocked = false;
+                BlockReason = string.Empty;
             }
 
             public void Reset()
@@ -707,6 +1006,13 @@ namespace TavernSim.Simulation.Systems
                 PendingRecipe = null;
                 CurrentRecipe = null;
                 DesiredCourses = UnityEngine.Random.Range(1, 3);
+                Gold = UnityEngine.Random.Range(8, 24);
+                Patience = UnityEngine.Random.Range(10f, 25f);
+                Name = $"Cliente {UnityEngine.Random.Range(1000, 9999)}";
+                Favorite = null;
+                WaiterAssigned = false;
+                OrderBlocked = false;
+                BlockReason = string.Empty;
             }
         }
 
@@ -718,11 +1024,15 @@ namespace TavernSim.Simulation.Systems
             public Customer TargetCustomer;
             public int TargetTableId = -1;
             public RecipeSO CarryingRecipe;
+            public PrepArea TargetArea;
+            public PrepArea CarryingArea;
 
             public WaiterData(Waiter agent)
             {
                 Agent = agent;
                 State = WaiterState.Idle;
+                TargetArea = PrepArea.Kitchen;
+                CarryingArea = PrepArea.Kitchen;
             }
         }
     }
