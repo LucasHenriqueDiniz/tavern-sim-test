@@ -5,6 +5,11 @@ using TavernSim.Domain;
 
 namespace TavernSim.UI
 {
+    public interface IMenuPolicy
+    {
+        bool IsAllowed(RecipeSO recipe);
+    }
+
     [RequireComponent(typeof(UIDocument))]
     public sealed class MenuController : MonoBehaviour, IMenuPolicy
     {

@@ -1,5 +1,4 @@
 using TavernSim.Domain;
-using TavernSim.UI;
 
 namespace TavernSim.Simulation.Systems
 {
@@ -19,7 +18,7 @@ namespace TavernSim.Simulation.Systems
     /// <summary>Validador simples de pedido (menu + estoque).</summary>
     public static class OrderRequestValidator
     {
-        public static bool IsAllowed(IMenuPolicy menu, IInventoryService inv, RecipeSO recipe)
+        public static bool IsAllowed(TavernSim.UI.IMenuPolicy menu, IInventoryService inv, RecipeSO recipe)
         {
             if (recipe == null)
             {
