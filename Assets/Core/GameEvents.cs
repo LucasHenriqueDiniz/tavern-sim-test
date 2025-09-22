@@ -1,48 +1,40 @@
 using System;
-using System.Collections.Generic;
-using UnityEngine;
 
 namespace TavernSim.Core.Events
 {
-    public struct GameEvent
+    public enum GameEventSeverity { Info, Warning, Error }
+
+    public readonly struct GameEvent
     {
-        public string Type;     // ex: "CustomerAngry", "MenuBlocked", "NoIngredients"
-        public string Message;  // exibição no HUD
-        public int TableId;     // opcional
-        public static GameEvent Info(string type, string msg, int tableId = -1)
-            => new GameEvent { Type = type, Message = msg, TableId = tableId };
+        public readonly string Message;
+        public readonly GameEventSeverity Severity;
+        public readonly string Source;
+        public readonly object Data;
+
+        // Construtor simples
+        public GameEvent(string message)
+        {
+            Message = message; Severity = GameEventSeverity.Info; Source = null; Data = null;
+        }
+
+        // === Construtor de 4 argumentos exigido pelos chamadores ===
+        public GameEvent(string message, GameEventSeverity severity, string source, object data)
+        {
+            Message = message; Severity = severity; Source = source; Data = data;
+        }
+
+        public override string ToString() => $"[{Severity}] {Source}: {Message}";
     }
 
     public interface IEventBus
     {
-        void Publish(GameEvent e);
-        void Subscribe(Action<GameEvent> handler);
-        void Unsubscribe(Action<GameEvent> handler);
+        void Publish(GameEvent ev);
+        event Action<GameEvent> OnEvent;
     }
 
-    /// <summary> Implementação simples in-memory; suficiente para runtime e testes. </summary>
     public sealed class GameEventBus : IEventBus
     {
-        private readonly List<Action<GameEvent>> _handlers = new List<Action<GameEvent>>(32);
-
-        public void Publish(GameEvent e)
-        {
-            // evitar modificação durante iteração
-            var snapshot = _handlers.ToArray();
-            for (int i = 0; i < snapshot.Length; i++)
-            {
-                try { snapshot[i]?.Invoke(e); } catch (Exception ex) { Debug.LogException(ex); }
-            }
-        }
-
-        public void Subscribe(Action<GameEvent> handler)
-        {
-            if (handler != null && !_handlers.Contains(handler)) _handlers.Add(handler);
-        }
-
-        public void Unsubscribe(Action<GameEvent> handler)
-        {
-            if (handler != null) _handlers.Remove(handler);
-        }
+        public event Action<GameEvent> OnEvent;
+        public void Publish(GameEvent ev) => OnEvent?.Invoke(ev);
     }
 }
