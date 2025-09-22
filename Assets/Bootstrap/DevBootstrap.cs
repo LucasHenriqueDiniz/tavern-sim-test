@@ -40,6 +40,7 @@ namespace TavernSim.Bootstrap
         private AgentSystem _agentSystem;
         private CleaningSystem _cleaningSystem;
         private TableRegistry _tableRegistry;
+        private ReputationSystem _reputationSystem;
         private CustomerSpawner _customerSpawner;
         private SaveService _saveService;
         private NavMeshSurface _navMeshSurface;
@@ -170,10 +171,12 @@ namespace TavernSim.Bootstrap
             _orderSystem.SetBarStations(1);
             _cleaningSystem = new CleaningSystem(0.1f);
             _tableRegistry = new TableRegistry();
+            _reputationSystem = new ReputationSystem();
             _agentSystem = new AgentSystem(_tableRegistry, _orderSystem, _economySystem, _cleaningSystem, catalog);
             _agentSystem.Configure(_entryPoint, _exitPoint, _kitchenPoint, _kitchenPickupPoint, _barPickupPoint);
             _agentSystem.SetInventory(_inventory);
             _agentSystem.SetEventBus(_eventBus);
+            _agentSystem.SetReputationSystem(_reputationSystem);
             _agentSystem.ActiveCustomerCountChanged += count => _hudController?.SetCustomers(count);
             _agentSystem.CustomerLeftAngry += HandleCustomerLeftAngry;
 
@@ -181,6 +184,7 @@ namespace TavernSim.Bootstrap
             _runner.RegisterSystem(_orderSystem);
             _runner.RegisterSystem(_cleaningSystem);
             _runner.RegisterSystem(_tableRegistry);
+            _runner.RegisterSystem(_reputationSystem);
             _runner.RegisterSystem(_agentSystem);
 
             _customerSpawner = new GameObject("CustomerSpawner").AddComponent<CustomerSpawner>();
@@ -226,6 +230,7 @@ namespace TavernSim.Bootstrap
             _hudController.BindSaveService(_saveService);
             _hudController.BindSelection(_selectionService, _gridPlacer);
             _hudController.BindEventBus(_eventBus);
+            _hudController.BindReputation(_reputationSystem);
 
             _toastController = uiGo.AddComponent<HudToastController>();
 
@@ -318,11 +323,13 @@ namespace TavernSim.Bootstrap
             bartenderGo.name = index == 1 ? "Bartender" : $"Bartender_{index}";
             bartenderGo.transform.SetParent(transform, false);
             var agent = EnsureNavMeshAgent(bartenderGo);
+            agent.speed = 1.8f;
             if (!agent.Warp(position))
             {
                 Debug.LogWarning($"Bartender NavMeshAgent.Warp falhou para {bartenderGo.name}; verifique o NavMesh.");
             }
 
+            bartenderGo.AddComponent<AgentIntentDisplay>();
             return bartenderGo.AddComponent<Bartender>();
         }
 
@@ -333,11 +340,13 @@ namespace TavernSim.Bootstrap
             cookGo.name = index == 1 ? "Cook" : $"Cook_{index}";
             cookGo.transform.SetParent(transform, false);
             var agent = EnsureNavMeshAgent(cookGo);
+            agent.speed = 1.6f;
             if (!agent.Warp(position))
             {
                 Debug.LogWarning($"Cook NavMeshAgent.Warp falhou para {cookGo.name}; verifique o NavMesh.");
             }
 
+            cookGo.AddComponent<AgentIntentDisplay>();
             return cookGo.AddComponent<Cook>();
         }
 

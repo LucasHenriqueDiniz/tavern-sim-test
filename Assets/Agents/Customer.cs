@@ -14,11 +14,22 @@ namespace TavernSim.Agents
         [SerializeField] private AgentIntentDisplay intentDisplay;
 
         private NavMeshAgent _agent;
+        private string _assignedName;
+        private int _gold;
+        private float _patience;
 
         public NavMeshAgent Agent => _agent;
         public Animator Animator => animator;
 
         public string DisplayName => "Cliente";
+
+        public string FullName => string.IsNullOrEmpty(_assignedName) ? gameObject.name : _assignedName;
+
+        public int Gold => _gold;
+
+        public float Patience => _patience;
+
+        public string Status => intentDisplay != null ? intentDisplay.CurrentIntent : string.Empty;
 
         public Transform Transform => transform;
 
@@ -102,6 +113,13 @@ namespace TavernSim.Agents
             }
 
             intentDisplay?.SetIntent(text);
+        }
+
+        public void ApplyProfile(string name, int gold, float patience)
+        {
+            _assignedName = name;
+            _gold = gold;
+            _patience = patience;
         }
     }
 }

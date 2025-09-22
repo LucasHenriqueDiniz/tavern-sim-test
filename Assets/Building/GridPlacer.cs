@@ -355,6 +355,8 @@ namespace TavernSim.Building
             AddChair(table, root.transform, tableId, 0, new Vector3(0f, 0f, 0.9f));
             AddChair(table, root.transform, tableId, 1, new Vector3(0f, 0f, -0.9f));
 
+            AttachPresenter(root, table);
+
             return table;
         }
 
@@ -366,6 +368,8 @@ namespace TavernSim.Building
             CreateTableTop(root.transform, new Vector3(2.6f, 0.1f, 1.4f));
             AddBench(table, root.transform, tableId, 0, new Vector3(0f, 0f, 1.15f));
             AddBench(table, root.transform, tableId, 2, new Vector3(0f, 0f, -1.15f));
+
+            AttachPresenter(root, table);
 
             return table;
         }
@@ -468,6 +472,22 @@ namespace TavernSim.Building
             back.transform.SetParent(bench.transform, false);
             back.transform.localPosition = new Vector3(0f, 0.6f, -0.3f);
             back.transform.localScale = new Vector3(BenchLength, 1.2f, 0.2f);
+        }
+
+        private static void AttachPresenter(GameObject root, Table table)
+        {
+            if (root == null || table == null)
+            {
+                return;
+            }
+
+            var presenter = root.GetComponent<TablePresenter>();
+            if (presenter == null)
+            {
+                presenter = root.AddComponent<TablePresenter>();
+            }
+
+            presenter.Initialize(table);
         }
     }
 }

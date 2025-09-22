@@ -11,12 +11,16 @@ namespace TavernSim.Agents
         [SerializeField] private Vector3 offset = new Vector3(0f, 2f, 0f);
         [SerializeField] private float fontSize = 2f;
         [SerializeField] private Color textColor = Color.white;
+        [SerializeField] private bool faceCamera = true;
+        [SerializeField] private bool yawOnly = true;
+        [SerializeField] private Transform pivot;
 
         private static readonly Camera[] CameraSearchBuffer = new Camera[8];
 
         private TextMeshPro _label;
         private Transform _labelTransform;
         private Camera _camera;
+        private string _currentIntent = string.Empty;
 
         private void Awake()
         {
@@ -44,13 +48,39 @@ namespace TavernSim.Agents
             var worldPosition = transform.position + offset;
             _labelTransform.position = worldPosition;
 
-            var toCamera = cameraTransform.position - worldPosition;
+            if (!faceCamera)
+            {
+                return;
+            }
+
+            var target = pivot != null ? pivot : _labelTransform;
+            if (target == null)
+            {
+                return;
+            }
+
+            var toCamera = cameraTransform.position - target.position;
+            if (yawOnly)
+            {
+                toCamera.y = 0f;
+            }
+
             if (toCamera.sqrMagnitude <= Mathf.Epsilon)
             {
                 toCamera = -cameraTransform.forward;
+                if (yawOnly)
+                {
+                    toCamera.y = 0f;
+                }
             }
 
-            _labelTransform.rotation = Quaternion.LookRotation(toCamera, cameraTransform.up);
+            if (toCamera.sqrMagnitude <= Mathf.Epsilon)
+            {
+                return;
+            }
+
+            var up = yawOnly ? Vector3.up : cameraTransform.up;
+            target.rotation = Quaternion.LookRotation(toCamera.normalized, up);
         }
 
         public void SetIntent(string text)
@@ -60,7 +90,11 @@ namespace TavernSim.Agents
             {
                 _label.text = text;
             }
+
+            _currentIntent = text;
         }
+
+        public string CurrentIntent => _currentIntent;
 
         private void EnsureLabel()
         {
@@ -73,6 +107,10 @@ namespace TavernSim.Agents
             go.transform.SetParent(transform, false);
             go.transform.localPosition = offset;
             _labelTransform = go.transform;
+            if (pivot == null)
+            {
+                pivot = _labelTransform;
+            }
 
             _label = go.AddComponent<TextMeshPro>();
             _label.text = string.Empty;
