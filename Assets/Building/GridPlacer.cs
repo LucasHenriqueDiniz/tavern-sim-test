@@ -6,6 +6,7 @@ using TavernSim.Simulation.Systems;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem;
 #endif
+using Object = UnityEngine.Object;
 
 namespace TavernSim.Building
 {

@@ -49,7 +49,7 @@ namespace TavernSim.Bootstrap
         private GridPlacer _gridPlacer;
         private SelectionService _selectionService;
         private GameEventBus _eventBus;
-        private IInventoryService _inventoryService;
+        private IInventoryService _inventory = new InfiniteInventory();
         private MenuController _menuController;
         private HudToastController _toastController;
 
@@ -163,8 +163,6 @@ namespace TavernSim.Bootstrap
             _runner = gameObject.AddComponent<SimulationRunner>();
 
             _eventBus = new GameEventBus();
-            _inventoryService ??= new DevInfiniteInventory();
-
             _economySystem = new EconomySystem(500f, 1f);
             _orderSystem = new OrderSystem();
             _orderSystem.SetEventBus(_eventBus);
@@ -174,7 +172,7 @@ namespace TavernSim.Bootstrap
             _tableRegistry = new TableRegistry();
             _agentSystem = new AgentSystem(_tableRegistry, _orderSystem, _economySystem, _cleaningSystem, catalog);
             _agentSystem.Configure(_entryPoint, _exitPoint, _kitchenPoint, _kitchenPickupPoint, _barPickupPoint);
-            _agentSystem.SetInventory(_inventoryService);
+            _agentSystem.SetInventory(_inventory);
             _agentSystem.SetEventBus(_eventBus);
             _agentSystem.ActiveCustomerCountChanged += count => _hudController?.SetCustomers(count);
             _agentSystem.CustomerLeftAngry += HandleCustomerLeftAngry;
@@ -230,7 +228,6 @@ namespace TavernSim.Bootstrap
             _hudController.BindEventBus(_eventBus);
 
             _toastController = uiGo.AddComponent<HudToastController>();
-            _toastController.Initialize(_eventBus);
 
             _menuController = uiGo.AddComponent<MenuController>();
             _menuController.Initialize(catalog);

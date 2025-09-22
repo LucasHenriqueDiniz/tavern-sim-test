@@ -7,6 +7,6 @@ namespace TavernSim.Agents
     public sealed class Bartender : MonoBehaviour
     {
         public NavMeshAgent Agent { get; private set; }
-        private void Awake() => Agent = GetComponent<NavMeshAgent>();
+        void Awake() => Agent = GetComponent<NavMeshAgent>();
     }
 }
