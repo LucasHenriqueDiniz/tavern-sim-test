@@ -44,6 +44,7 @@ namespace TavernSim.UI
         private VisualElement _hireControls;
         private Button _hireWaiterButton;
         private Button _hireCookButton;
+        private Button _hireBartenderButton;
         private VisualElement _buildMenu;
         private readonly List<Label> _orderEntries = new List<Label>(16);
         private readonly List<Button> _buildOptionButtons = new List<Button>();
@@ -60,6 +61,7 @@ namespace TavernSim.UI
 
         public event Action HireWaiterRequested;
         public event Action HireCookRequested;
+        public event Action HireBartenderRequested;
 
         private static readonly BuildOption[] BuildOptions =
         {
@@ -287,9 +289,12 @@ namespace TavernSim.UI
             _hireControls = rootElement.Q<VisualElement>("hireControls") ?? CreateHireControls(layoutRoot);
             _hireWaiterButton = rootElement.Q<Button>("hireWaiterBtn") ?? CreateButton(_hireControls, "hireWaiterBtn", "Contratar garçom");
             _hireCookButton = rootElement.Q<Button>("hireCookBtn") ?? CreateButton(_hireControls, "hireCookBtn", "Contratar cozinheiro");
+            _hireBartenderButton = rootElement.Q<Button>("hireBartenderBtn") ?? CreateButton(_hireControls, "hireBartenderBtn", "Contratar bartender");
             _hireWaiterButton?.AddToClassList("hud-button");
             _hireCookButton?.AddToClassList("hud-button");
             _hireCookButton?.AddToClassList("stacked");
+            _hireBartenderButton?.AddToClassList("hud-button");
+            _hireBartenderButton?.AddToClassList("stacked");
 
             if (_hireWaiterButton != null)
             {
@@ -357,6 +362,12 @@ namespace TavernSim.UI
                 _hireCookButton.clicked += OnHireCookClicked;
             }
 
+            if (_hireBartenderButton != null)
+            {
+                _hireBartenderButton.clicked -= OnHireBartenderClicked;
+                _hireBartenderButton.clicked += OnHireBartenderClicked;
+            }
+
             if (_selectionService != null)
             {
                 _selectionService.SelectionChanged -= OnSelectionChanged;
@@ -422,6 +433,11 @@ namespace TavernSim.UI
             if (_hireCookButton != null)
             {
                 _hireCookButton.clicked -= OnHireCookClicked;
+            }
+
+            if (_hireBartenderButton != null)
+            {
+                _hireBartenderButton.clicked -= OnHireBartenderClicked;
             }
 
             if (_selectionService != null)
@@ -563,6 +579,11 @@ namespace TavernSim.UI
         private void OnHireCookClicked()
         {
             HireCookRequested?.Invoke();
+        }
+
+        private void OnHireBartenderClicked()
+        {
+            HireBartenderRequested?.Invoke();
         }
 
         private void SetBuildMenuVisible(bool visible, bool triggeredByToggle = false)

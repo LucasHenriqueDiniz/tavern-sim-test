@@ -50,7 +50,7 @@ namespace TavernSim.Simulation.Systems
         public event Action<int> ActiveCustomerCountChanged;
         public int ActiveCustomerCount => _customers.Count;
         public event Action<Customer> CustomerReleased;
-        public event Action<Customer> CustomerLeftAngry;
+        public event Action<Customer, string> CustomerLeftAngry;
 
         public AgentSystem(TableRegistry tableRegistry, OrderSystem orderSystem, EconomySystem economySystem, CleaningSystem cleaningSystem, Catalog catalog)
         {
@@ -92,6 +92,16 @@ namespace TavernSim.Simulation.Systems
         public void SetReputationSystem(ReputationSystem reputationSystem)
         {
             _reputationSystem = reputationSystem;
+        }
+
+        public bool HasAvailableSeating()
+        {
+            return _tableRegistry != null && _tableRegistry.HasAnySeat();
+        }
+
+        public bool HasActiveWaiter()
+        {
+            return _waiters.Count > 0;
         }
 
         public void Initialize(Sim simulation)
@@ -324,7 +334,7 @@ namespace TavernSim.Simulation.Systems
                         data.SearchTimer = 0f;
                         data.BlockReason = "Sem mesas disponíveis";
                         PublishCustomerAngry(data, data.BlockReason, -1);
-                        CustomerLeftAngry?.Invoke(data.Agent);
+                        CustomerLeftAngry?.Invoke(data.Agent, data.BlockReason);
                         _reputationSystem?.Add(-2);
                         return;
                     }
@@ -790,7 +800,7 @@ namespace TavernSim.Simulation.Systems
             data.PendingRecipe = null;
             data.CurrentRecipe = null;
             PublishCustomerAngry(data, reason, tableId);
-            CustomerLeftAngry?.Invoke(data.Agent);
+            CustomerLeftAngry?.Invoke(data.Agent, reason);
             data.BlockReason = string.Empty;
             _reputationSystem?.Add(-2);
 
