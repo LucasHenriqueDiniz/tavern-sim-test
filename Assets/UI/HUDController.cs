@@ -108,7 +108,7 @@ namespace TavernSim.UI
             HighlightActiveOption(_gridPlacer != null ? _gridPlacer.ActiveKind : GridPlacer.PlaceableKind.None);
             UpdateSelectionLabel(_selectionService != null ? _selectionService.Current : null);
             UpdateSelectionDetails(_selectionService != null ? _selectionService.Current : null);
-            SetBuildMenuVisible(false);
+            SetBuildMenuVisible(false, true);
 
             if (isActiveAndEnabled)
             {
@@ -303,7 +303,7 @@ namespace TavernSim.UI
             _buildMenu = rootElement.Q<VisualElement>("buildMenu") ?? CreateBuildMenu(layoutRoot);
 
             CreateBuildButtons();
-            SetBuildMenuVisible(false);
+            SetBuildMenuVisible(false, true);
 
             var menuController = GetComponent<MenuController>();
             menuController?.RebuildMenu();
@@ -555,7 +555,7 @@ namespace TavernSim.UI
 
         private void ToggleBuildMenu()
         {
-            SetBuildMenuVisible(!_buildMenuVisible);
+            SetBuildMenuVisible(!_buildMenuVisible, true);
         }
 
         private void OnHireWaiterClicked()
@@ -568,12 +568,28 @@ namespace TavernSim.UI
             HireCookRequested?.Invoke();
         }
 
-        private void SetBuildMenuVisible(bool visible)
+        private void SetBuildMenuVisible(bool visible, bool triggeredByToggle = false)
         {
             _buildMenuVisible = visible;
             if (_buildMenu != null)
             {
                 _buildMenu.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+
+            if (_gridPlacer != null)
+            {
+                if (visible)
+                {
+                    _gridPlacer.SetBuildMode(true);
+                }
+                else if (triggeredByToggle)
+                {
+                    _gridPlacer.ExitBuildMode();
+                }
+                else if (!_gridPlacer.HasActivePlacement)
+                {
+                    _gridPlacer.SetBuildMode(false);
+                }
             }
         }
 
@@ -614,9 +630,9 @@ namespace TavernSim.UI
 
             if (evt.currentTarget is Button optionButton && optionButton.userData is GridPlacer.PlaceableKind kind)
             {
-                if (_gridPlacer.ActiveKind == kind)
+                if (_gridPlacer.ActiveKind == kind && _gridPlacer.BuildModeActive)
                 {
-                    _gridPlacer.CancelPlacement();
+                    _gridPlacer.ExitBuildMode();
                 }
                 else
                 {
