@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using TavernSim.Core.Simulation;
+using Sim = TavernSim.Core.Simulation.Simulation;
 
 namespace TavernSim.Simulation.Systems
 {
@@ -20,7 +21,7 @@ namespace TavernSim.Simulation.Systems
 
         public int Reputation => _reputation;
 
-        public void Initialize(Simulation simulation)
+        public void Initialize(Sim simulation)
         {
         }
 
