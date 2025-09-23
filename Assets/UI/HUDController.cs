@@ -33,7 +33,6 @@ namespace TavernSim.UI
         private Label _controlsLabel;
         private Label _cashLabel;
         private Label _customerLabel;
-        private Label _selectionLabel;
         private VisualElement _selectionDetailsPanel;
         private Label _selectionDetailsTitle;
         private Label _selectionDetailsBody;
@@ -106,7 +105,6 @@ namespace TavernSim.UI
 
             RefreshBuildOptionLabels();
             HighlightActiveOption(_gridPlacer != null ? _gridPlacer.ActiveKind : GridPlacer.PlaceableKind.None);
-            UpdateSelectionLabel(_selectionService != null ? _selectionService.Current : null);
             UpdateSelectionDetails(_selectionService != null ? _selectionService.Current : null);
             SetBuildMenuVisible(false, true);
 
@@ -286,7 +284,6 @@ namespace TavernSim.UI
             _ordersScroll = rootElement.Q<ScrollView>("ordersScroll") ?? CreateScroll(layoutRoot);
             _saveButton = rootElement.Q<Button>("saveBtn") ?? CreateButton(layoutRoot, "saveBtn", "Save (F5)");
             _loadButton = rootElement.Q<Button>("loadBtn") ?? CreateButton(layoutRoot, "loadBtn", "Load (F9)");
-            _selectionLabel = rootElement.Q<Label>("selectionLabel") ?? CreateLabel(layoutRoot, "selectionLabel", "Selecionado: Nenhum");
             _hireControls = rootElement.Q<VisualElement>("hireControls") ?? CreateHireControls(layoutRoot);
             _hireWaiterButton = rootElement.Q<Button>("hireWaiterBtn") ?? CreateButton(_hireControls, "hireWaiterBtn", "Contratar garçom");
             _hireCookButton = rootElement.Q<Button>("hireCookBtn") ?? CreateButton(_hireControls, "hireCookBtn", "Contratar cozinheiro");
@@ -646,36 +643,25 @@ namespace TavernSim.UI
 
         private void OnSelectionChanged(ISelectable selectable)
         {
-            UpdateSelectionLabel(selectable);
             UpdateSelectionDetails(selectable);
-        }
-
-        private void UpdateSelectionLabel(ISelectable selectable)
-        {
-            if (_selectionLabel == null)
-            {
-                return;
-            }
-
-            _selectionLabel.text = selectable != null
-                ? $"Selecionado: {selectable.DisplayName}"
-                : "Selecionado: Nenhum";
         }
 
         private void UpdateSelectionDetails(ISelectable selectable)
         {
-            if (_selectionDetailsTitle == null || _selectionDetailsBody == null)
+            if (_selectionDetailsPanel == null || _selectionDetailsTitle == null || _selectionDetailsBody == null)
             {
                 return;
             }
 
             if (selectable == null)
             {
-                _selectionDetailsTitle.text = "Sem seleção";
-                _selectionDetailsBody.text = "Clique em um cliente, funcionário ou mesa para ver detalhes.";
+                _selectionDetailsPanel.style.display = DisplayStyle.None;
+                _selectionDetailsTitle.text = string.Empty;
+                _selectionDetailsBody.text = string.Empty;
                 return;
             }
 
+            _selectionDetailsPanel.style.display = DisplayStyle.Flex;
             _selectionDetailsTitle.text = selectable.DisplayName ?? "Selecionado";
             _selectionDetailsBuilder.Clear();
 
@@ -877,6 +863,7 @@ namespace TavernSim.UI
                 _selectionDetailsPanel.style.borderBottomLeftRadius = 8f;
                 _selectionDetailsPanel.style.borderBottomRightRadius = 8f;
                 _selectionDetailsPanel.style.flexDirection = FlexDirection.Column;
+                _selectionDetailsPanel.style.display = DisplayStyle.None;
                 rootElement.Add(_selectionDetailsPanel);
             }
 

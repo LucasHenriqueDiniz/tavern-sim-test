@@ -38,6 +38,7 @@ namespace TavernSim.Building
         [Header("Build Mode")]
         [SerializeField] private BuildGridVisualizer gridVisualizer;
         [SerializeField] private LayerMask placementMask = ~0;
+        [SerializeField] private LayerMask blockingMask = ~0;
         [SerializeField] private float previewHeight = 0.05f;
         [SerializeField] private Color previewValidColor = new Color(0.25f, 0.8f, 0.25f, 0.35f);
         [SerializeField] private Color previewInvalidColor = new Color(0.85f, 0.3f, 0.3f, 0.35f);
@@ -55,6 +56,8 @@ namespace TavernSim.Building
         private Vector3 _currentPreviewPosition;
         private bool _hasValidPreview;
         private bool _canAffordPreview = true;
+        private Collider _lastSurfaceCollider;
+        private readonly Collider[] _overlapResults = new Collider[32];
 
         public event Action<PlaceableKind> PlacementModeChanged;
 
@@ -363,32 +366,37 @@ namespace TavernSim.Building
                     _previewObject.transform.position = _currentPreviewPosition + Vector3.up * previewHeight;
                 }
 
+                _lastSurfaceCollider = hit.collider;
                 UpdatePreviewState(true);
             }
             else
             {
+                _lastSurfaceCollider = null;
                 UpdatePreviewState(false);
             }
         }
 
         private void UpdatePreviewState(bool hasValidPosition)
         {
-            _hasValidPreview = hasValidPosition;
-
             if (_previewObject == null)
             {
+                _hasValidPreview = false;
                 return;
             }
 
             if (!hasValidPosition)
             {
                 _previewObject.SetActive(false);
+                _hasValidPreview = false;
+                _canAffordPreview = true;
                 return;
             }
 
             _previewObject.SetActive(true);
+            var blocked = IsPlacementBlocked(_currentPreviewPosition, _activeKind);
+            _hasValidPreview = !blocked;
             _canAffordPreview = IsPlacementAffordable(_activeKind);
-            UpdatePreviewColor(_canAffordPreview);
+            UpdatePreviewColor(_hasValidPreview && _canAffordPreview);
         }
 
         private bool IsPlacementAffordable(PlaceableKind kind)
@@ -524,6 +532,7 @@ namespace TavernSim.Building
         private void HidePreview()
         {
             _hasValidPreview = false;
+            _lastSurfaceCollider = null;
             if (_previewObject != null)
             {
                 _previewObject.SetActive(false);
@@ -549,6 +558,7 @@ namespace TavernSim.Building
             _previewKind = PlaceableKind.None;
             _hasValidPreview = false;
             _canAffordPreview = true;
+            _lastSurfaceCollider = null;
         }
 
         private void CancelPlacementInternal()
@@ -560,6 +570,57 @@ namespace TavernSim.Building
 
             _activeKind = PlaceableKind.None;
             DestroyPreview();
+        }
+
+        private bool IsPlacementBlocked(Vector3 position, PlaceableKind kind)
+        {
+            if (kind == PlaceableKind.None)
+            {
+                return true;
+            }
+
+            var scale = GetPreviewScale(kind);
+            var halfExtents = new Vector3(
+                Mathf.Max(0.1f, scale.x * 0.5f * 0.95f),
+                0.6f,
+                Mathf.Max(0.1f, scale.z * 0.5f * 0.95f));
+            var center = position + new Vector3(0f, halfExtents.y, 0f);
+
+            var rotation = Quaternion.identity;
+            var hitCount = Physics.OverlapBoxNonAlloc(center, halfExtents, _overlapResults, rotation, blockingMask, QueryTriggerInteraction.Ignore);
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                var collider = _overlapResults[i];
+                if (collider == null)
+                {
+                    continue;
+                }
+
+                if (!collider.enabled || collider.isTrigger)
+                {
+                    continue;
+                }
+
+                if (_previewObject != null && collider.transform.IsChildOf(_previewObject.transform))
+                {
+                    continue;
+                }
+
+                if (_lastSurfaceCollider != null && collider == _lastSurfaceCollider)
+                {
+                    continue;
+                }
+
+                if (gridVisualizer != null && collider.transform.IsChildOf(gridVisualizer.transform))
+                {
+                    continue;
+                }
+
+                return true;
+            }
+
+            return false;
         }
 
         private void ApplyGridSizeToVisualizer()

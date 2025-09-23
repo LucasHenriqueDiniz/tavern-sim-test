@@ -58,5 +58,15 @@ namespace TavernSim.Simulation.Systems
 
             Set(_reputation + delta);
         }
+
+        public void Remove(int delta)
+        {
+            if (delta <= 0)
+            {
+                return;
+            }
+
+            Set(_reputation - delta);
+        }
     }
 }
