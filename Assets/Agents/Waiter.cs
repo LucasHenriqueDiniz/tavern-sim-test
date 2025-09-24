@@ -27,7 +27,7 @@ namespace TavernSim.Agents
             _agent = GetComponent<NavMeshAgent>();
             _agent.angularSpeed = 720f;
             _agent.acceleration = 36f;
-            _agent.stoppingDistance = 0.05f;
+            _agent.stoppingDistance = 0.35f;
 
             if (intentDisplay == null)
             {

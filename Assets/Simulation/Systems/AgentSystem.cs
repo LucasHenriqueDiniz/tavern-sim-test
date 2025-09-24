@@ -24,6 +24,7 @@ namespace TavernSim.Simulation.Systems
         private const float TableSearchTimeout = 12f;
         private const float TableSearchRepathInterval = 1.5f;
         private const float MealDuration = 8f;
+        private const float WaiterServiceOffset = 0.55f;
 
         private readonly TableRegistry _tableRegistry;
         private readonly OrderSystem _orderSystem;
@@ -545,6 +546,8 @@ namespace TavernSim.Simulation.Systems
             if (data.TargetCustomer == null)
             {
                 data.State = WaiterState.Idle;
+                data.ServicePosition = Vector3.zero;
+                data.StateTimer = 0f;
                 return;
             }
 
@@ -557,6 +560,8 @@ namespace TavernSim.Simulation.Systems
             if (customerData == null)
             {
                 data.State = WaiterState.Idle;
+                data.ServicePosition = Vector3.zero;
+                data.StateTimer = 0f;
                 return;
             }
 
@@ -587,25 +592,34 @@ namespace TavernSim.Simulation.Systems
 
                     data.TargetCustomer = null;
                     data.State = WaiterState.Idle;
+                    data.ServicePosition = Vector3.zero;
                     data.Agent.SetDestination(GetPickupPoint(PrepArea.Kitchen));
+                    data.StateTimer = 0f;
                     return;
                 }
 
                 customerData.State = CustomerState.WaitDrink;
+                customerData.StateTimer = 0f;
                 customerData.WaitTimer = 0f;
                 customerData.PendingRecipe = recipe;
                 customerData.OrderBlocked = false;
                 customerData.WaiterAssigned = false;
                 customerData.BlockReason = string.Empty;
+                UpdateCustomerIntent(customerData);
 
                 var area = _orderSystem.EnqueueOrder(customerData.Table.Id, recipe);
                 data.TargetArea = area;
                 data.Agent.SetDestination(GetPickupPoint(area));
                 data.State = WaiterState.WaitPrep;
+                data.StateTimer = 0f;
                 return;
             }
 
             data.State = WaiterState.Idle;
+            data.TargetCustomer = null;
+            data.ServicePosition = Vector3.zero;
+            data.Agent.SetDestination(GetPickupPoint(PrepArea.Kitchen));
+            data.StateTimer = 0f;
         }
 
         private void HandleWaiterWaitPrep(ref WaiterData data)
@@ -618,6 +632,8 @@ namespace TavernSim.Simulation.Systems
             if (data.TargetCustomer == null)
             {
                 data.State = WaiterState.Idle;
+                data.ServicePosition = Vector3.zero;
+                data.StateTimer = 0f;
                 return;
             }
 
@@ -625,6 +641,8 @@ namespace TavernSim.Simulation.Systems
             if (customerData == null || customerData.Table == null)
             {
                 data.State = WaiterState.Idle;
+                data.ServicePosition = Vector3.zero;
+                data.StateTimer = 0f;
                 return;
             }
 
@@ -632,8 +650,10 @@ namespace TavernSim.Simulation.Systems
             {
                 data.CarryingRecipe = recipe;
                 data.CarryingArea = area;
-                data.Agent.SetDestination(customerData.Seat.Anchor.position);
+                data.ServicePosition = GetSeatServicePosition(customerData.Seat);
+                data.Agent.SetDestination(data.ServicePosition);
                 data.State = WaiterState.Deliver;
+                data.StateTimer = 0f;
             }
         }
 
@@ -642,6 +662,8 @@ namespace TavernSim.Simulation.Systems
             if (data.TargetCustomer == null)
             {
                 data.State = WaiterState.Idle;
+                data.ServicePosition = Vector3.zero;
+                data.StateTimer = 0f;
                 return;
             }
 
@@ -654,6 +676,7 @@ namespace TavernSim.Simulation.Systems
             if (customerData != null && customerData.State == CustomerState.WaitDrink)
             {
                 customerData.State = CustomerState.Eat;
+                customerData.StateTimer = 0f;
                 customerData.ConsumeTimer = 0f;
                 customerData.CurrentRecipe = data.CarryingRecipe ?? customerData.PendingRecipe;
                 customerData.PendingRecipe = null;
@@ -663,6 +686,7 @@ namespace TavernSim.Simulation.Systems
                 customerData.BlockReason = string.Empty;
                 PublishOrderDelivered(customerData, data.CarryingRecipe ?? customerData.CurrentRecipe, data.CarryingArea);
                 _reputationSystem?.Add(1);
+                UpdateCustomerIntent(customerData);
             }
 
             data.CarryingRecipe = null;
@@ -670,6 +694,8 @@ namespace TavernSim.Simulation.Systems
             data.TargetCustomer = null;
             data.TargetArea = PrepArea.Kitchen;
             data.State = WaiterState.Idle;
+            data.StateTimer = 0f;
+            data.ServicePosition = Vector3.zero;
         }
 
         private void HandleWaiterClean(ref WaiterData data)
@@ -718,8 +744,10 @@ namespace TavernSim.Simulation.Systems
                 _customersNeedingOrder.RemoveAt(i);
                 data.TargetCustomer = customer;
                 customerData.WaiterAssigned = true;
-                data.Agent.SetDestination(customerData.Seat.Anchor.position);
+                data.ServicePosition = GetSeatServicePosition(customerData.Seat);
+                data.Agent.SetDestination(data.ServicePosition);
                 data.State = WaiterState.TakeOrder;
+                data.StateTimer = 0f;
                 return true;
             }
 
@@ -734,6 +762,34 @@ namespace TavernSim.Simulation.Systems
             }
 
             return _kitchenPickupPoint != Vector3.zero ? _kitchenPickupPoint : _entryPoint;
+        }
+
+        private Vector3 GetSeatServicePosition(Seat seat)
+        {
+            if (seat == null || seat.Anchor == null)
+            {
+                return GetPickupPoint(PrepArea.Kitchen);
+            }
+
+            var anchor = seat.Anchor;
+            var forward = anchor.forward;
+            if (forward.sqrMagnitude <= Mathf.Epsilon)
+            {
+                forward = Vector3.forward;
+            }
+
+            var desired = anchor.position - forward.normalized * WaiterServiceOffset;
+            if (NavMesh.SamplePosition(desired, out var hit, 0.75f, NavMesh.AllAreas))
+            {
+                return hit.position;
+            }
+
+            if (NavMesh.SamplePosition(anchor.position, out hit, 0.75f, NavMesh.AllAreas))
+            {
+                return hit.position;
+            }
+
+            return anchor.position;
         }
 
         private CustomerData FindCustomerData(Customer customer)
@@ -1060,6 +1116,7 @@ namespace TavernSim.Simulation.Systems
             public RecipeSO CarryingRecipe;
             public PrepArea TargetArea;
             public PrepArea CarryingArea;
+            public Vector3 ServicePosition;
 
             public WaiterData(Waiter agent)
             {
@@ -1067,6 +1124,7 @@ namespace TavernSim.Simulation.Systems
                 State = WaiterState.Idle;
                 TargetArea = PrepArea.Kitchen;
                 CarryingArea = PrepArea.Kitchen;
+                ServicePosition = Vector3.zero;
             }
         }
     }
