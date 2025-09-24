@@ -15,8 +15,6 @@ namespace TavernSim.Agents
         [SerializeField] private bool yawOnly = true;
         [SerializeField] private Transform pivot;
 
-        private static readonly Camera[] CameraSearchBuffer = new Camera[8];
-
         private TextMeshPro _label;
         private Transform _labelTransform;
         private Camera _camera;
@@ -39,7 +37,8 @@ namespace TavernSim.Agents
                 return;
             }
 
-            if (!TryResolveCamera(out var camera))
+            var camera = ResolveCamera();
+            if (camera == null)
             {
                 return;
             }
@@ -59,28 +58,21 @@ namespace TavernSim.Agents
                 return;
             }
 
-            var toCamera = cameraTransform.position - target.position;
             if (yawOnly)
             {
+                var toCamera = cameraTransform.position - target.position;
                 toCamera.y = 0f;
-            }
-
-            if (toCamera.sqrMagnitude <= Mathf.Epsilon)
-            {
-                toCamera = -cameraTransform.forward;
-                if (yawOnly)
+                if (toCamera.sqrMagnitude <= 0.0001f)
                 {
-                    toCamera.y = 0f;
+                    return;
                 }
-            }
 
-            if (toCamera.sqrMagnitude <= Mathf.Epsilon)
+                target.rotation = Quaternion.LookRotation(toCamera, Vector3.up);
+            }
+            else
             {
-                return;
+                target.rotation = cameraTransform.rotation;
             }
-
-            var up = yawOnly ? Vector3.up : cameraTransform.up;
-            target.rotation = Quaternion.LookRotation(toCamera.normalized, up);
         }
 
         public void SetIntent(string text)
@@ -121,38 +113,15 @@ namespace TavernSim.Agents
             _label.sortingOrder = int.MaxValue;
         }
 
-        private bool TryResolveCamera(out Camera camera)
+        private Camera ResolveCamera()
         {
             if (_camera != null && _camera.isActiveAndEnabled)
             {
-                camera = _camera;
-                return true;
+                return _camera;
             }
 
-            var mainCamera = Camera.main;
-            if (mainCamera != null && mainCamera.isActiveAndEnabled)
-            {
-                _camera = mainCamera;
-                camera = _camera;
-                return true;
-            }
-
-            var count = Camera.GetAllCameras(CameraSearchBuffer);
-            for (var i = 0; i < count; i++)
-            {
-                var candidate = CameraSearchBuffer[i];
-                if (candidate == null || !candidate.isActiveAndEnabled)
-                {
-                    continue;
-                }
-
-                _camera = candidate;
-                camera = _camera;
-                return true;
-            }
-
-            camera = null;
-            return false;
+            _camera = Camera.main;
+            return _camera != null && _camera.isActiveAndEnabled ? _camera : null;
         }
 
         private void OnDestroy()
