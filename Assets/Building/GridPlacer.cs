@@ -58,6 +58,7 @@ namespace TavernSim.Building
         private bool _canAffordPreview = true;
         private Collider _lastSurfaceCollider;
         private readonly Collider[] _overlapResults = new Collider[32];
+        private bool _pointerOverUI;
 
         public event Action<PlaceableKind> PlacementModeChanged;
 
@@ -123,6 +124,12 @@ namespace TavernSim.Building
             if (!TryGetPointerData(out var screenPoint, out var leftClick, out var rightClick, out var cancelPressed))
             {
                 return;
+            }
+
+            if (_pointerOverUI)
+            {
+                leftClick = false;
+                rightClick = false;
             }
 
             if (HasActivePlacement)
@@ -209,6 +216,11 @@ namespace TavernSim.Building
         public void ExitBuildMode()
         {
             SetBuildMode(false);
+        }
+
+        public void SetPointerOverUI(bool isOverUI)
+        {
+            _pointerOverUI = isOverUI;
         }
 
         public float GetPlacementCost(PlaceableKind kind)

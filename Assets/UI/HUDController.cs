@@ -58,6 +58,8 @@ namespace TavernSim.UI
         private HudToastController _toastController;
         private ReputationSystem _reputationSystem;
         private readonly StringBuilder _selectionDetailsBuilder = new StringBuilder(256);
+        private bool _pointerGuardsRegistered;
+        private bool _isPointerOverHud;
 
         public event Action HireWaiterRequested;
         public event Action HireCookRequested;
@@ -109,6 +111,7 @@ namespace TavernSim.UI
             HighlightActiveOption(_gridPlacer != null ? _gridPlacer.ActiveKind : GridPlacer.PlaceableKind.None);
             UpdateSelectionDetails(_selectionService != null ? _selectionService.Current : null);
             SetBuildMenuVisible(false, true);
+            UpdatePointerOverHud();
 
             if (isActiveAndEnabled)
             {
@@ -196,6 +199,8 @@ namespace TavernSim.UI
         private void OnDisable()
         {
             UnhookEvents();
+            _isPointerOverHud = false;
+            UpdatePointerOverHud();
         }
 
         private void Update()
@@ -314,6 +319,7 @@ namespace TavernSim.UI
 
             EnsureSelectionDetailsPanel(rootElement);
             EnsureReputationLabel(rootElement);
+            RegisterHudPointerGuards(rootElement);
         }
 
         private void HookEvents()
@@ -878,7 +884,7 @@ namespace TavernSim.UI
                 _selectionDetailsPanel.style.paddingRight = 12f;
                 _selectionDetailsPanel.style.paddingTop = 12f;
                 _selectionDetailsPanel.style.paddingBottom = 12f;
-                _selectionDetailsPanel.style.backgroundColor = new Color(0f, 0f, 0f, 0.6f);
+                _selectionDetailsPanel.style.backgroundColor = new Color(0.18f, 0.15f, 0.12f, 0.85f);
                 _selectionDetailsPanel.style.borderTopLeftRadius = 8f;
                 _selectionDetailsPanel.style.borderTopRightRadius = 8f;
                 _selectionDetailsPanel.style.borderBottomLeftRadius = 8f;
@@ -933,7 +939,7 @@ namespace TavernSim.UI
                 _reputationLabel.style.position = Position.Absolute;
                 _reputationLabel.style.left = 16f;
                 _reputationLabel.style.top = 16f;
-                _reputationLabel.style.backgroundColor = new Color(0f, 0f, 0f, 0.6f);
+                _reputationLabel.style.backgroundColor = new Color(0.18f, 0.15f, 0.12f, 0.85f);
                 _reputationLabel.style.paddingLeft = 8f;
                 _reputationLabel.style.paddingRight = 8f;
                 _reputationLabel.style.paddingTop = 6f;
@@ -958,6 +964,59 @@ namespace TavernSim.UI
             }
 
             _reputationLabel.text = $"Reputação: {value}";
+        }
+
+        private void RegisterHudPointerGuards(VisualElement rootElement)
+        {
+            if (_pointerGuardsRegistered || rootElement == null)
+            {
+                return;
+            }
+
+            rootElement.RegisterCallback<PointerEnterEvent>(OnHudPointerEnter, TrickleDown.TrickleDown);
+            rootElement.RegisterCallback<PointerLeaveEvent>(OnHudPointerLeave, TrickleDown.TrickleDown);
+            _pointerGuardsRegistered = true;
+        }
+
+        private void OnHudPointerEnter(PointerEnterEvent evt)
+        {
+            if (evt == null)
+            {
+                return;
+            }
+
+            var targetElement = evt.target as VisualElement;
+            var relatedElement = evt.relatedTarget as VisualElement;
+            if (targetElement != null && relatedElement != null && relatedElement.panel == targetElement.panel)
+            {
+                return;
+            }
+
+            _isPointerOverHud = true;
+            UpdatePointerOverHud();
+        }
+
+        private void OnHudPointerLeave(PointerLeaveEvent evt)
+        {
+            if (evt == null)
+            {
+                return;
+            }
+
+            var targetElement = evt.target as VisualElement;
+            var relatedElement = evt.relatedTarget as VisualElement;
+            if (targetElement != null && relatedElement != null && relatedElement.panel == targetElement.panel)
+            {
+                return;
+            }
+
+            _isPointerOverHud = false;
+            UpdatePointerOverHud();
+        }
+
+        private void UpdatePointerOverHud()
+        {
+            _gridPlacer?.SetPointerOverUI(_isPointerOverHud);
         }
 
         private void OnReputationChanged(int value)
