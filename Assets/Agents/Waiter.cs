@@ -8,10 +8,17 @@ namespace TavernSim.Agents
     public sealed class Waiter : MonoBehaviour, ISelectable
     {
         [SerializeField] private AgentIntentDisplay intentDisplay;
+        [SerializeField] private float salary = 25f;
 
         private NavMeshAgent _agent;
 
         public string DisplayName => "Garçom";
+
+        public string Status => intentDisplay != null ? intentDisplay.CurrentIntent : string.Empty;
+
+        public float Salary => salary;
+
+        public float MovementSpeed => _agent != null ? _agent.speed : 0f;
 
         public Transform Transform => transform;
 
@@ -20,7 +27,7 @@ namespace TavernSim.Agents
             _agent = GetComponent<NavMeshAgent>();
             _agent.angularSpeed = 720f;
             _agent.acceleration = 36f;
-            _agent.stoppingDistance = 0.05f;
+            _agent.stoppingDistance = 0.35f;
 
             if (intentDisplay == null)
             {
