@@ -131,6 +131,7 @@
         <ui:Button name="decoToggleBtn" class="tool-button" text="Decoração" />
         <ui:Button name="beautyToggleBtn" class="tool-button" text="Beleza" />
         <ui:Button name="staffBtn" class="tool-button" text="Equipe" />
+        <ui:Button name="menuBtn" class="tool-button" text="Cardápio" />
       </ui:VisualElement>
       <ui:VisualElement class="toolbar-separator" />
       <ui:VisualElement name="buildMenu" class="toolbar-options" />

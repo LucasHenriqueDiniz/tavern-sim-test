@@ -18,6 +18,7 @@ namespace TavernSim.UI
         public const string BeautyToggle = "Beleza";
         public const string LogButton = "Log";
         public const string StaffButton = "Equipe";
+        public const string MenuButton = "Cardápio";
         public const string StaffTitle = "Equipe";
         public const string FireAction = "Demitir";
         public const string MoveAction = "Mover";

@@ -51,6 +51,7 @@ namespace TavernSim.UI
         private VisualElement _contextActions;
         private ScrollView _ordersScroll;
         private ScrollView _logScroll;
+        private ScrollView _sidePanelScroll;
         private VisualElement _logBlock;
         private VisualElement _logFilters;
         private Button _saveButton;
@@ -59,6 +60,7 @@ namespace TavernSim.UI
         private Button _decoToggleButton;
         private Button _beautyToggleButton;
         private Button _staffToggleButton;
+        private Button _menuToggleButton;
         private Button _panelToggleButton;
         private Button _panelPinButton;
         private Button _staffCloseButton;
@@ -67,6 +69,7 @@ namespace TavernSim.UI
         private Button _devLogButton;
         private VisualElement _sidePanel;
         private VisualElement _staffPanel;
+        private VisualElement _menuBlock;
         private Label _currentModeLabel;
         private VisualElement _hireControls;
         private Button _hireWaiterButton;
@@ -82,6 +85,7 @@ namespace TavernSim.UI
         private bool _logVisible;
         private bool _panelPinned;
         private bool _staffOpen;
+        private bool _menuOpen;
         private bool _beautyOverlayEnabled;
         private BuildCategory _activeBuildCategory = BuildCategory.Build;
 
@@ -455,6 +459,7 @@ namespace TavernSim.UI
             _decoToggleButton = rootElement.Q<Button>("decoToggleBtn") ?? CreateButton(layoutRoot, "decoToggleBtn", HUDStrings.DecoToggle);
             _beautyToggleButton = rootElement.Q<Button>("beautyToggleBtn") ?? CreateButton(layoutRoot, "beautyToggleBtn", HUDStrings.BeautyToggle);
             _staffToggleButton = rootElement.Q<Button>("staffBtn") ?? CreateButton(layoutRoot, "staffBtn", HUDStrings.StaffButton);
+            _menuToggleButton = rootElement.Q<Button>("menuBtn") ?? CreateButton(layoutRoot, "menuBtn", HUDStrings.MenuButton);
             _panelToggleButton = rootElement.Q<Button>("panelToggleBtn") ?? CreateButton(layoutRoot, "panelToggleBtn", "Painel");
             _panelPinButton = rootElement.Q<Button>("panelPinBtn") ?? CreateButton(layoutRoot, "panelPinBtn", "Fixar");
             _staffCloseButton = rootElement.Q<Button>("staffCloseBtn");
@@ -464,6 +469,11 @@ namespace TavernSim.UI
 
             _sidePanel = rootElement.Q<VisualElement>("sidePanel");
             _staffPanel = rootElement.Q<VisualElement>("staffPanel");
+            if (_sidePanel != null)
+            {
+                _sidePanelScroll = _sidePanel.Q<ScrollView>(className: "panel-content");
+                _menuBlock = _sidePanel.Q<VisualElement>("menuBlock");
+            }
             _currentModeLabel = rootElement.Q<Label>("currentModeLabel");
             _buildMenu = rootElement.Q<VisualElement>("buildMenu") ?? CreateBuildMenu(layoutRoot);
             _hireControls = rootElement.Q<VisualElement>("hireControls");
@@ -498,6 +508,7 @@ namespace TavernSim.UI
             _decoToggleButton?.AddToClassList("tool-button");
             _beautyToggleButton?.AddToClassList("tool-button");
             _staffToggleButton?.AddToClassList("tool-button");
+            _menuToggleButton?.AddToClassList("tool-button");
             _panelToggleButton?.AddToClassList("panel-toggle");
             _panelPinButton?.AddToClassList("panel-pin");
             _logToggleButton?.AddToClassList("hud-button");
@@ -520,6 +531,11 @@ namespace TavernSim.UI
             if (_staffToggleButton != null)
             {
                 _staffToggleButton.text = HUDStrings.StaffButton;
+            }
+
+            if (_menuToggleButton != null)
+            {
+                _menuToggleButton.text = HUDStrings.MenuButton;
             }
 
             if (_staffPanel != null)
@@ -614,6 +630,12 @@ namespace TavernSim.UI
             {
                 _panelPinButton.clicked -= TogglePanelPin;
                 _panelPinButton.clicked += TogglePanelPin;
+            }
+
+            if (_menuToggleButton != null)
+            {
+                _menuToggleButton.clicked -= ToggleMenuPanel;
+                _menuToggleButton.clicked += ToggleMenuPanel;
             }
 
             if (_staffToggleButton != null)
@@ -752,6 +774,11 @@ namespace TavernSim.UI
             if (_panelPinButton != null)
             {
                 _panelPinButton.clicked -= TogglePanelPin;
+            }
+
+            if (_menuToggleButton != null)
+            {
+                _menuToggleButton.clicked -= ToggleMenuPanel;
             }
 
             if (_staffToggleButton != null)
@@ -1026,6 +1053,13 @@ namespace TavernSim.UI
 
             UpdateCategoryButtons();
 
+            if (visible)
+            {
+                _menuOpen = false;
+            }
+
+            UpdateMenuButtonState();
+
             if (_gridPlacer != null)
             {
                 if (visible)
@@ -1050,6 +1084,11 @@ namespace TavernSim.UI
             _buildToggleButton?.EnableInClassList("tool-button--active", buildActive);
             _decoToggleButton?.EnableInClassList("tool-button--active", decoActive);
             _beautyToggleButton?.EnableInClassList("tool-button--active", _beautyOverlayEnabled);
+        }
+
+        private void UpdateMenuButtonState()
+        {
+            _menuToggleButton?.EnableInClassList("tool-button--active", _menuOpen && _sidePanelOpen);
         }
 
         private void RebuildBuildButtons()
@@ -1282,6 +1321,8 @@ namespace TavernSim.UI
 
             if (open)
             {
+                _menuOpen = false;
+                UpdateMenuButtonState();
                 SetBuildMenuVisible(false, true);
                 var wasPinned = _panelPinned;
                 if (_panelPinned)
@@ -1299,6 +1340,37 @@ namespace TavernSim.UI
 
                 RefreshStaffList();
             }
+        }
+
+        private void ToggleMenuPanel()
+        {
+            if (_menuOpen && _sidePanelOpen && !_panelPinned)
+            {
+                SetSidePanelOpen(false);
+                return;
+            }
+
+            OpenMenuPanel();
+        }
+
+        private void OpenMenuPanel()
+        {
+            _menuOpen = true;
+            SetBuildMenuVisible(false, true);
+            SetStaffPanelOpen(false);
+            SetSidePanelOpen(true);
+            ScrollMenuIntoView();
+            UpdateMenuButtonState();
+        }
+
+        private void ScrollMenuIntoView()
+        {
+            if (_sidePanelScroll == null || _menuBlock == null)
+            {
+                return;
+            }
+
+            _sidePanelScroll.ScrollTo(_menuBlock);
         }
 
         private void RefreshStaffList()
@@ -1365,6 +1437,12 @@ namespace TavernSim.UI
 
             _logToggleButton?.EnableInClassList("hud-button--active", visible);
             _devLogButton?.EnableInClassList("hud-button--active", visible);
+
+            if (visible)
+            {
+                _menuOpen = false;
+                UpdateMenuButtonState();
+            }
         }
 
         private void CloseLogOverlay()
@@ -1915,6 +1993,13 @@ namespace TavernSim.UI
             _sidePanel?.EnableInClassList("open", open);
             _panelToggleButton?.EnableInClassList("panel-toggle--active", open);
             _panelPinButton?.EnableInClassList("panel-pin--active", _panelPinned);
+
+            if (!open)
+            {
+                _menuOpen = false;
+            }
+
+            UpdateMenuButtonState();
         }
 
         private static float GetNavAgentSpeed(GameObject go)
