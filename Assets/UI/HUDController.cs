@@ -367,6 +367,18 @@ namespace TavernSim.UI
             {
                 layoutRoot = visualConfig.VisualTree.Instantiate();
                 rootElement.Add(layoutRoot);
+
+                // Garante que o elemento principal ocupe toda a tela mesmo sem USS carregado
+                var hudRoot = layoutRoot.Q<VisualElement>("hudRoot");
+                if (hudRoot != null)
+                {
+                    hudRoot.style.position = Position.Absolute;
+                    hudRoot.style.top = 0;
+                    hudRoot.style.left = 0;
+                    hudRoot.style.right = 0;
+                    hudRoot.style.bottom = 0;
+                    hudRoot.style.flexGrow = 1f;
+                }
             }
             else
             {
