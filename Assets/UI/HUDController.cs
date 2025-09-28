@@ -824,11 +824,6 @@ namespace TavernSim.UI
             UpdateSaveButtons();
         }
 
-        private void ToggleBuildMenu()
-        {
-            SetBuildMenuVisible(!_buildMenuVisible, true);
-        }
-
         private void OnHireWaiterClicked()
         {
             HireWaiterRequested?.Invoke();
@@ -1673,6 +1668,30 @@ namespace TavernSim.UI
             var hint = GetPlacementHint(kind);
             var issues = !_lastPreviewValid ? " — posição inválida" : (!_lastPreviewAffordable ? " — saldo insuficiente" : string.Empty);
             _currentModeLabel.text = string.Format(CultureInfo.InvariantCulture, "⚒️ {0}{1}\n{2}", label, issues, hint);
+        }
+
+        private enum EventCategory
+        {
+            Orders,
+            Economy,
+            Reputation,
+            System
+        }
+
+        private readonly struct LogEntry
+        {
+            public readonly string Message;
+            public readonly GameEventSeverity Severity;
+            public readonly EventCategory Category;
+            public readonly string Timestamp;
+
+            public LogEntry(string message, GameEventSeverity severity, EventCategory category, string timestamp)
+            {
+                Message = message;
+                Severity = severity;
+                Category = category;
+                Timestamp = timestamp;
+            }
         }
     }
 }
