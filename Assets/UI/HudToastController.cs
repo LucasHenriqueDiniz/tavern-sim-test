@@ -42,6 +42,8 @@ namespace TavernSim.UI
                 _container.AddToClassList("toast-layer");
                 root.Add(_container);
             }
+
+            _container.pickingMode = PickingMode.Ignore;
         }
 
         public void Show(string message, float seconds = 2.5f)
@@ -77,9 +79,11 @@ namespace TavernSim.UI
             toast.AddToClassList("toast");
             toast.AddToClassList(GetSeverityClass(request.Severity));
             toast.style.opacity = 0f;
+            toast.pickingMode = PickingMode.Ignore;
 
             var label = new Label(request.Message);
             label.AddToClassList("toast__text");
+            label.pickingMode = PickingMode.Ignore;
             toast.Add(label);
 
             _container.Add(toast);

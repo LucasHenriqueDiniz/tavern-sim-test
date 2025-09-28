@@ -335,7 +335,6 @@
     right: 0;
     flex-direction: column;
     align-items: center;
-    -unity-picking-mode: ignore;
 }
 
 .toast {
@@ -350,7 +349,6 @@
     background-color: #2c1810;
     color: #f8e1a0;
     -unity-text-align: middle-center;
-    -unity-picking-mode: ignore;
 }
 
 .toast__text {
