@@ -14,8 +14,11 @@ namespace TavernSim.UI
         public const string SaveLabel = "Salvar (F5)";
         public const string LoadLabel = "Carregar (F9)";
         public const string BuildToggle = "🛠️ Construir";
+        public const string DecoToggle = "🧱 Decoração";
         public const string BeautyToggle = "✨ Beleza";
         public const string LogButton = "📜 Log";
+        public const string StaffButton = "👥 Equipe";
+        public const string StaffTitle = "Equipe";
         public const string FireAction = "Demitir";
         public const string MoveAction = "Mover";
         public const string SellAction = "Vender item";

@@ -70,15 +70,6 @@
           <ui:Label class="group-title" text="Ações" />
         </ui:VisualElement>
 
-        <ui:VisualElement class="stat-group">
-          <ui:Label class="group-title" text="Equipe" />
-          <ui:VisualElement name="hireControls" class="group-body hire-controls">
-            <ui:Button name="hireWaiterBtn" class="hud-button" text="Contratar garçom" />
-            <ui:Button name="hireCookBtn" class="hud-button" text="Contratar cozinheiro" />
-            <ui:Button name="hireBartenderBtn" class="hud-button" text="Contratar bartender" />
-          </ui:VisualElement>
-        </ui:VisualElement>
-
         <ui:VisualElement name="menuBlock" class="stat-group">
           <ui:Label class="group-title" text="Cardápio" />
           <ui:VisualElement name="menuAnchor" class="group-body" />
@@ -125,11 +116,28 @@
       </ui:VisualElement>
     </ui:VisualElement>
 
+    <ui:VisualElement name="staffPanel" class="modal-panel">
+      <ui:VisualElement class="panel-header">
+        <ui:Label name="staffTitleLabel" class="panel-title" text="Equipe" />
+        <ui:Button name="staffCloseBtn" class="panel-pin" text="Fechar" />
+      </ui:VisualElement>
+      <ui:ScrollView name="staffList" class="panel-content" />
+      <ui:VisualElement class="panel-content">
+        <ui:Label class="group-title" text="Contratação" />
+        <ui:VisualElement class="group-body hire-controls">
+          <ui:Button name="hireWaiterBtn" class="hud-button" text="Contratar garçom" />
+          <ui:Button name="hireCookBtn" class="hud-button" text="Contratar cozinheiro" />
+          <ui:Button name="hireBartenderBtn" class="hud-button" text="Contratar bartender" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+    </ui:VisualElement>
+
     <ui:VisualElement class="toolbar">
       <ui:VisualElement class="toolbar-group">
         <ui:Button name="buildToggleBtn" class="tool-button" text="Construir" />
         <ui:Button name="decoToggleBtn" class="tool-button" text="Decoração" />
         <ui:Button name="beautyToggleBtn" class="tool-button" text="Beleza" />
+        <ui:Button name="staffBtn" class="tool-button" text="Equipe" />
       </ui:VisualElement>
       <ui:VisualElement class="toolbar-separator" />
       <ui:VisualElement name="buildMenu" class="toolbar-options" />

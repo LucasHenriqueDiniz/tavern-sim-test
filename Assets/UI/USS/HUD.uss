@@ -489,6 +489,25 @@
 .dev-fab { z-index: 30; }
 .toast-layer { z-index: 40; }
 
+.modal-panel {
+    position: absolute;
+    top: 72px;
+    bottom: 110px;
+    left: 50px;
+    right: 50px;
+    display: none;
+    flex-direction: column;
+    background-color: #24130b;
+    border-width: 2px;
+    border-color: #8b6f47;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+    z-index: 26;
+}
+
+.modal-panel.open {
+    display: flex;
+}
+
 .selection-popup {
     position: absolute;
     min-width: 260px;
