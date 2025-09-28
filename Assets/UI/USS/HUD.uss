@@ -577,3 +577,58 @@
     padding: 6px 0;
     -unity-font-style: italic;
 }
+
+.menu-button-panel {
+    position: absolute;
+    left: 24px;
+    bottom: 120px;
+    min-width: 200px;
+    padding: 12px;
+    background-color: rgba(44, 24, 16, 0.92);
+    border-width: 2px;
+    border-color: #8b6f47;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.menu-button-panel__title {
+    color: #d4af37;
+    -unity-font-style: bold;
+    -unity-text-align: middle-left;
+    font-size: 14px;
+}
+
+.menu-button-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.menu-button {
+    min-width: 160px;
+    padding: 8px 12px;
+    background-color: #3b2214;
+    border-width: 2px;
+    border-color: #6d5131;
+    color: #f0d390;
+    -unity-text-align: middle-left;
+}
+
+.menu-button:hover {
+    background-color: #4a2c1a;
+}
+
+.menu-button:active,
+.menu-button--active {
+    background-color: #d4af37;
+    border-color: #f0d27e;
+    color: #2c1810;
+}
+
+.menu-button:disabled {
+    background-color: #2b160c;
+    border-color: #5e4a32;
+    color: #9c8560;
+}

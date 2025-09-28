@@ -73,12 +73,7 @@ namespace TavernSim.UI
                 return;
             }
 
-            var old = anchor.Q<VisualElement>("__MenuContainer");
-            old?.RemoveFromHierarchy();
-
-            var container = new VisualElement { name = "__MenuContainer" };
-            container.AddToClassList("group-body");
-            anchor.Add(container);
+            anchor.Clear();
 
             if (catalog.Recipes == null)
             {
@@ -93,15 +88,21 @@ namespace TavernSim.UI
                     continue;
                 }
 
-                var toggle = new Toggle(recipe.DisplayName ?? recipe.name)
+                var isAllowed = _allowed.Contains(recipe);
+                var button = new Button
                 {
-                    value = _allowed.Contains(recipe)
+                    text = recipe.DisplayName ?? recipe.name
                 };
 
-                toggle.RegisterValueChangedCallback(ev =>
+                button.AddToClassList("menu-button");
+                button.EnableInClassList("menu-button--active", isAllowed);
+
+                button.clicked += () =>
                 {
+                    var nowAllowed = !_allowed.Contains(recipe);
                     _hasUserInteracted = true;
-                    if (ev.newValue)
+
+                    if (nowAllowed)
                     {
                         _allowed.Add(recipe);
                     }
@@ -109,9 +110,11 @@ namespace TavernSim.UI
                     {
                         _allowed.Remove(recipe);
                     }
-                });
 
-                container.Add(toggle);
+                    button.EnableInClassList("menu-button--active", nowAllowed);
+                };
+
+                anchor.Add(button);
             }
         }
 

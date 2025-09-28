@@ -79,10 +79,6 @@
           <ui:VisualElement name="contextActionsBody" class="group-body" />
         </ui:VisualElement>
 
-        <ui:VisualElement name="menuBlock" class="stat-group">
-          <ui:Label class="group-title" text="Cardápio" />
-          <ui:VisualElement name="menuAnchor" class="group-body" />
-        </ui:VisualElement>
       </ui:ScrollView>
     </ui:VisualElement>
 
@@ -135,6 +131,11 @@
       </ui:VisualElement>
       <ui:VisualElement class="toolbar-separator" />
       <ui:VisualElement name="buildMenu" class="toolbar-options" />
+    </ui:VisualElement>
+
+    <ui:VisualElement name="menuButtonPanel" class="menu-button-panel">
+      <ui:Label class="menu-button-panel__title" text="Cardápio" />
+      <ui:VisualElement name="menuAnchor" class="menu-button-list" />
     </ui:VisualElement>
 
     <ui:Button name="devLogBtn" class="dev-fab" text="Log" />

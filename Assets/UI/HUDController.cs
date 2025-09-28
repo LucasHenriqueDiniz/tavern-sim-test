@@ -472,8 +472,8 @@ namespace TavernSim.UI
             if (_sidePanel != null)
             {
                 _sidePanelScroll = _sidePanel.Q<ScrollView>(className: "panel-content");
-                _menuBlock = _sidePanel.Q<VisualElement>("menuBlock");
             }
+            _menuBlock = rootElement.Q<VisualElement>("menuButtonPanel");
             _currentModeLabel = rootElement.Q<Label>("currentModeLabel");
             _buildMenu = rootElement.Q<VisualElement>("buildMenu") ?? CreateBuildMenu(layoutRoot);
             _hireControls = rootElement.Q<VisualElement>("hireControls");
@@ -1365,12 +1365,15 @@ namespace TavernSim.UI
 
         private void ScrollMenuIntoView()
         {
-            if (_sidePanelScroll == null || _menuBlock == null)
+            if (_menuBlock == null)
             {
                 return;
             }
 
-            _sidePanelScroll.ScrollTo(_menuBlock);
+            if (_sidePanelScroll != null && _sidePanelScroll.Contains(_menuBlock))
+            {
+                _sidePanelScroll.ScrollTo(_menuBlock);
+            }
         }
 
         private void RefreshStaffList()
