@@ -47,6 +47,7 @@ namespace TavernSim.UI
         private Label _selectionTypeLabel;
         private Label _selectionStatusLabel;
         private Label _selectionSpeedLabel;
+        private VisualElement _contextActionsGroup;
         private VisualElement _contextActions;
         private ScrollView _ordersScroll;
         private ScrollView _logScroll;
@@ -445,7 +446,8 @@ namespace TavernSim.UI
             _logBlock = rootElement.Q<VisualElement>("logBlock");
             _logFilters = rootElement.Q<VisualElement>("logFilters") ?? new VisualElement();
             _logScroll = rootElement.Q<ScrollView>("logScroll") ?? CreateScroll(layoutRoot, "logScroll");
-            _contextActions = rootElement.Q<VisualElement>("contextActions") ?? layoutRoot;
+            _contextActionsGroup = rootElement.Q<VisualElement>("contextActions");
+            _contextActions = rootElement.Q<VisualElement>("contextActionsBody") ?? _contextActionsGroup ?? layoutRoot;
 
             _saveButton = rootElement.Q<Button>("saveBtn") ?? CreateButton(layoutRoot, "saveBtn", HUDStrings.SaveLabel);
             _loadButton = rootElement.Q<Button>("loadBtn") ?? CreateButton(layoutRoot, "loadBtn", HUDStrings.LoadLabel);
@@ -1525,11 +1527,13 @@ namespace TavernSim.UI
 
             _contextActions.Clear();
 
+            if (_contextActionsGroup != null)
+            {
+                _contextActionsGroup.style.display = selectable != null ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+
             if (selectable == null)
             {
-                var hint = new Label(HUDStrings.NoSelection);
-                hint.AddToClassList("group-body");
-                _contextActions.Add(hint);
                 return;
             }
 
@@ -1551,15 +1555,22 @@ namespace TavernSim.UI
                 case Bartender bartender:
                     AddAction(HUDStrings.FireAction, () => ShowActionToast(bartender.DisplayName ?? bartender.name + " será removido em breve."));
                     break;
-                case TablePresenter:
-                    AddAction(HUDStrings.MoveAction, () => ShowActionToast("Movimentar mesa ainda não implementado."));
-                    AddAction(HUDStrings.SellAction, () => ShowActionToast("Venda rápida disponível futuramente."));
+                case TablePresenter tablePresenter:
+                    AddAction(HUDStrings.MoveAction, () => ShowActionToast(tablePresenter.name + " será reposicionada."));
+                    if (tablePresenter.SeatCount > 0)
+                    {
+                        AddAction(HUDStrings.SellAction, () => ShowActionToast(tablePresenter.name + " será vendida."));
+                    }
                     break;
                 default:
-                    var placeholder = new Label("Sem ações disponíveis");
-                    placeholder.AddToClassList("group-body");
-                    _contextActions.Add(placeholder);
                     break;
+            }
+
+            if (_contextActions.childCount == 0)
+            {
+                var placeholder = new Label(HUDStrings.NoActions);
+                placeholder.AddToClassList("context-actions__empty");
+                _contextActions.Add(placeholder);
             }
         }
 

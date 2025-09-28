@@ -76,6 +76,7 @@
 
         <ui:VisualElement name="contextActions" class="stat-group context-actions">
           <ui:Label class="group-title" text="Ações" />
+          <ui:VisualElement name="contextActionsBody" class="group-body" />
         </ui:VisualElement>
 
         <ui:VisualElement name="menuBlock" class="stat-group">
@@ -98,7 +99,7 @@
       <ui:Label class="group-title" text="Seleção atual" />
       <ui:VisualElement class="summary-grid">
         <ui:Label class="summary-label" text="Nome" />
-        <ui:Label name="selectionName" class="summary-value" text="Nenhum item selecionado." />
+        <ui:Label name="selectionName" class="summary-value" text="" />
         <ui:Label class="summary-label" text="Tipo" />
         <ui:Label name="selectionType" class="summary-value" text="-" />
         <ui:Label class="summary-label" text="Status" />

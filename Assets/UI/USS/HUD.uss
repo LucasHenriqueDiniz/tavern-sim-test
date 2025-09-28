@@ -571,3 +571,9 @@
 .selection-popup.open {
     display: flex;
 }
+
+.context-actions__empty {
+    color: #c8ab7c;
+    padding: 6px 0;
+    -unity-font-style: italic;
+}
