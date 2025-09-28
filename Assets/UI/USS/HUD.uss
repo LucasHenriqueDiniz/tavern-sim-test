@@ -163,6 +163,7 @@
     padding-right: 16px;
     padding-top: 12px;
     padding-bottom: 12px;
+    background-color: #24130b;
 }
 
 .stat-group {
@@ -440,3 +441,11 @@
 .build-menu-hidden {
     display: none;
 }
+
+/* camadas explícitas para evitar sobreposição errada */
+.top-bar { z-index: 10; }
+.toolbar { z-index: 10; }
+.side-panel { z-index: 20; }
+.panel-toggle,
+.dev-fab { z-index: 30; }
+.toast-layer { z-index: 40; }

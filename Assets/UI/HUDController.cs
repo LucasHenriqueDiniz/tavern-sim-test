@@ -249,6 +249,11 @@ namespace TavernSim.UI
         private void Awake()
         {
             _document = GetComponent<UIDocument>();
+            if (_document != null)
+            {
+                // garante que o HUD fique acima de outros UIDocument legados
+                _document.sortingOrder = 100;
+            }
             _toastController = GetComponent<HudToastController>();
             if (visualConfig == null)
             {
@@ -437,7 +442,11 @@ namespace TavernSim.UI
             UpdateSaveButtons();
 
             var menuController = GetComponent<MenuController>();
-            menuController?.RebuildMenu();
+            if (menuController != null)
+            {
+                menuController.SetDocument(_document);
+                menuController.RebuildMenu();
+            }
 
             _toastController?.AttachTo(rootElement);
 

@@ -18,6 +18,11 @@ namespace TavernSim.UI
         private bool _hasUserInteracted;
 
         // === métodos esperados pelos chamadores ===
+        public void SetDocument(UIDocument doc)
+        {
+            document = doc;
+        }
+
         public void Initialize(Catalog cat)
         {
             catalog = cat != null ? cat : catalog;
@@ -68,11 +73,12 @@ namespace TavernSim.UI
                 return;
             }
 
-            var old = anchor.Q<Foldout>("__MenuFoldout");
+            var old = anchor.Q<VisualElement>("__MenuContainer");
             old?.RemoveFromHierarchy();
 
-            var fold = new Foldout { name = "__MenuFoldout", text = "Menu", value = false };
-            anchor.Add(fold);
+            var container = new VisualElement { name = "__MenuContainer" };
+            container.AddToClassList("group-body");
+            anchor.Add(container);
 
             if (catalog.Recipes == null)
             {
@@ -105,7 +111,7 @@ namespace TavernSim.UI
                     }
                 });
 
-                fold.Add(toggle);
+                container.Add(toggle);
             }
         }
 
