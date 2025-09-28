@@ -3,7 +3,6 @@ using UnityEngine.AI;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UIElements;
-using UnityEngine.TextCore.Text;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem.UI;
 #endif
@@ -461,10 +460,17 @@ namespace TavernSim.Bootstrap
 
             if (_panelSettings.textSettings == null)
             {
-                var textSettings = Resources.Load<TextSettings>(PanelTextSettingsResourcePath);
-                if (textSettings != null)
+                var panelTextSettings = Resources.Load<PanelTextSettings>(PanelTextSettingsResourcePath);
+                if (panelTextSettings != null)
                 {
-                    _panelSettings.textSettings = textSettings;
+                    _panelSettings.textSettings = panelTextSettings;
+                }
+                else
+                {
+                    var runtimeTextSettings = ScriptableObject.CreateInstance<PanelTextSettings>();
+                    runtimeTextSettings.name = "DevBootstrapPanelTextSettings_Runtime";
+                    runtimeTextSettings.hideFlags = HideFlags.HideAndDontSave;
+                    _panelSettings.textSettings = runtimeTextSettings;
                 }
             }
 
