@@ -30,6 +30,7 @@ namespace TavernSim.Bootstrap
 
         private static PanelSettings _panelSettings;
         private static ThemeStyleSheet _panelTheme;
+        private static ThemeStyleSheet _fallbackTheme;
         private static bool _themeLookupAttempted;
 
         private SimulationRunner _runner;
@@ -440,13 +441,31 @@ namespace TavernSim.Bootstrap
                 return _panelSettings;
             }
 
+            var resourceSettings = Resources.Load<PanelSettings>(PanelSettingsResourcePath);
+            if (resourceSettings != null)
+            {
+                _panelSettings = ScriptableObject.Instantiate(resourceSettings);
+                _panelSettings.name = resourceSettings.name + "_Runtime";
+                _panelSettings.hideFlags = HideFlags.HideAndDontSave;
+                return _panelSettings;
+            }
+
             _panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
-            _panelSettings.name = "DevBootstrapPanelSettings";
+            _panelSettings.name = "DevBootstrapPanelSettings_Runtime";
             _panelSettings.hideFlags = HideFlags.HideAndDontSave;
             _panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
             _panelSettings.referenceResolution = new Vector2Int(1920, 1080);
             _panelSettings.sortingOrder = 100;
             _panelSettings.targetTexture = null;
+
+            if (_panelSettings.textSettings == null)
+            {
+                var textSettings = Resources.Load<TextSettings>(PanelTextSettingsResourcePath);
+                if (textSettings != null)
+                {
+                    _panelSettings.textSettings = textSettings;
+                }
+            }
 
             var theme = GetOrLoadTheme();
             if (theme != null)
@@ -455,13 +474,22 @@ namespace TavernSim.Bootstrap
             }
             else if (_panelSettings.themeStyleSheet == null)
             {
-                var fallbackTheme = ScriptableObject.CreateInstance<ThemeStyleSheet>();
-                fallbackTheme.name = "DevBootstrapFallbackTheme";
-                fallbackTheme.hideFlags = HideFlags.HideAndDontSave;
-                _panelSettings.themeStyleSheet = fallbackTheme;
+                _panelSettings.themeStyleSheet = GetOrCreateFallbackTheme();
             }
 
             return _panelSettings;
+        }
+
+        private static ThemeStyleSheet GetOrCreateFallbackTheme()
+        {
+            if (_fallbackTheme == null)
+            {
+                _fallbackTheme = ScriptableObject.CreateInstance<ThemeStyleSheet>();
+                _fallbackTheme.name = "DevBootstrapFallbackTheme";
+                _fallbackTheme.hideFlags = HideFlags.HideAndDontSave;
+            }
+
+            return _fallbackTheme;
         }
 
         private static ThemeStyleSheet GetOrLoadTheme()
@@ -484,6 +512,8 @@ namespace TavernSim.Bootstrap
         }
 
         private const string ThemeResourcePath = "UIToolkit/UnityThemes/UnityDefaultRuntimeTheme";
+        private const string PanelSettingsResourcePath = "UIToolkit/DevBootstrapPanelSettings";
+        private const string PanelTextSettingsResourcePath = "UIToolkit/DevBootstrapPanelTextSettings";
 
     }
 }

@@ -104,11 +104,16 @@
     color: #d4af37;
     unity-text-align: middle-center;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .panel-toggle:hover {
     background-image: linear-gradient(135deg, #6d4a3a, #5a3c2a);
     border-color: #d4af37;
+    transform: scale(1.05);
 }
 
 .panel-toggle:active,
@@ -116,6 +121,13 @@
     background-image: linear-gradient(135deg, #d4af37, #b8860b);
     color: #2c1810;
     border-color: #ffd700;
+    transform: scale(1.02);
+}
+
+.panel-toggle:focus {
+    outline-color: #ffd700;
+    outline-width: 2px;
+    outline-style: solid;
 }
 
 .panel-pin {
@@ -414,6 +426,13 @@
 
 .hud-button:hover {
     border-color: #d4af37;
+}
+
+.hud-button:active,
+.hud-button.hud-button--active {
+    background-image: linear-gradient(135deg, #d4af37, #b8860b);
+    color: #2c1810;
+    border-color: #ffd700;
 }
 
 .hud-button--active {

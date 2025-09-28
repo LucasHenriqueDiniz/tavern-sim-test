@@ -22,9 +22,10 @@
       <ui:VisualElement class="top-bar-right">
         <ui:Label name="timeLabel" class="time-label" text="Dia 1 – 08:00" />
         <ui:Button name="logToggleBtn" class="hud-button top-bar-button" text="📜 Log" />
-        <ui:Button name="panelToggleBtn" class="hud-button top-bar-button" text="📊 Painel" />
       </ui:VisualElement>
     </ui:VisualElement>
+
+    <ui:Button name="panelToggleBtn" class="panel-toggle" text="📊" />
 
     <ui:Label name="currentModeLabel" class="current-mode" text="⚡ Pronto" />
 

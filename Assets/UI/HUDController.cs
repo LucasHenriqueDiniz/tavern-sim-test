@@ -395,7 +395,7 @@ namespace TavernSim.UI
             _buildToggleButton = rootElement.Q<Button>("buildToggleBtn") ?? CreateButton(layoutRoot, "buildToggleBtn", HUDStrings.BuildToggle);
             _decoToggleButton = rootElement.Q<Button>("decoToggleBtn") ?? CreateButton(layoutRoot, "decoToggleBtn", "Decoração");
             _beautyToggleButton = rootElement.Q<Button>("beautyToggleBtn") ?? CreateButton(layoutRoot, "beautyToggleBtn", HUDStrings.BeautyToggle);
-            _panelToggleButton = rootElement.Q<Button>("panelToggleBtn") ?? CreateButton(layoutRoot, "panelToggleBtn", "Painel");
+            _panelToggleButton = rootElement.Q<Button>("panelToggleBtn") ?? CreateButton(layoutRoot, "panelToggleBtn", "📊");
             _panelPinButton = rootElement.Q<Button>("panelPinBtn") ?? CreateButton(layoutRoot, "panelPinBtn", "📌");
             _logToggleButton = rootElement.Q<Button>("logToggleBtn") ?? CreateButton(layoutRoot, "logToggleBtn", HUDStrings.LogButton);
 
@@ -415,8 +415,8 @@ namespace TavernSim.UI
             _buildToggleButton?.AddToClassList("tool-button");
             _decoToggleButton?.AddToClassList("tool-button");
             _beautyToggleButton?.AddToClassList("tool-button");
-            _panelToggleButton?.AddToClassList("hud-button");
-            _panelPinButton?.AddToClassList("hud-button");
+            _panelToggleButton?.AddToClassList("panel-toggle");
+            _panelPinButton?.AddToClassList("panel-pin");
             _logToggleButton?.AddToClassList("hud-button");
 
             RebuildBuildButtons();
