@@ -4,18 +4,15 @@
     <ui:VisualElement class="top-bar">
       <ui:VisualElement class="resource-display">
         <ui:VisualElement class="resource">
-          <ui:Label class="resource-icon" text="🪙" />
-          <ui:Label class="resource-label" text="Ouro" />
+          <ui:Label class="resource-label" text="Ouro:" />
           <ui:Label name="cashLabel" class="resource-value" text="0" />
         </ui:VisualElement>
         <ui:VisualElement class="resource">
-          <ui:Label class="resource-icon" text="⭐" />
-          <ui:Label class="resource-label" text="Reputação" />
+          <ui:Label class="resource-label" text="Reputação:" />
           <ui:Label name="reputationLabel" class="resource-value" text="0" />
         </ui:VisualElement>
         <ui:VisualElement class="resource">
-          <ui:Label class="resource-icon" text="👥" />
-          <ui:Label class="resource-label" text="Clientes" />
+          <ui:Label class="resource-label" text="Clientes:" />
           <ui:Label name="customerLabel" class="resource-value" text="0" />
         </ui:VisualElement>
       </ui:VisualElement>
@@ -24,12 +21,12 @@
       </ui:VisualElement>
     </ui:VisualElement>
 
-    <ui:Button name="panelToggleBtn" class="panel-toggle" text="📊" />
+    <ui:Button name="panelToggleBtn" class="panel-toggle" text="Painel" />
 
     <ui:VisualElement name="sidePanel" class="side-panel">
       <ui:VisualElement class="panel-header">
-        <ui:Label class="panel-title" text="🍺 Informações da Taverna 🍺" />
-        <ui:Button name="panelPinBtn" class="panel-pin" text="📌" />
+        <ui:Label class="panel-title" text="Informações da Taverna" />
+        <ui:Button name="panelPinBtn" class="panel-pin" text="Fixar" />
       </ui:VisualElement>
       <ui:ScrollView class="panel-content">
         <ui:VisualElement name="selectionSummary" class="stat-group selection-summary">
@@ -130,15 +127,15 @@
 
     <ui:VisualElement class="toolbar">
       <ui:VisualElement class="toolbar-group">
-        <ui:Button name="buildToggleBtn" class="tool-button" text="🛠️ Construir" />
-        <ui:Button name="decoToggleBtn" class="tool-button" text="🎀 Decoração" />
-        <ui:Button name="beautyToggleBtn" class="tool-button" text="✨ Beleza" />
+        <ui:Button name="buildToggleBtn" class="tool-button" text="Construir" />
+        <ui:Button name="decoToggleBtn" class="tool-button" text="Decoração" />
+        <ui:Button name="beautyToggleBtn" class="tool-button" text="Beleza" />
       </ui:VisualElement>
       <ui:VisualElement class="toolbar-separator" />
       <ui:VisualElement name="buildMenu" class="toolbar-options" />
     </ui:VisualElement>
 
-    <ui:Button name="devLogBtn" class="dev-fab" text="🐛 Log" />
+    <ui:Button name="devLogBtn" class="dev-fab" text="Log" />
 
     <ui:VisualElement name="toastLayer" class="toast-layer" />
   </ui:VisualElement>

@@ -353,6 +353,13 @@ namespace TavernSim.UI
                 return;
             }
 
+            // ocupa a tela toda de forma explícita (cura casos de tema/panel)
+            rootElement.style.position = Position.Absolute;
+            rootElement.style.top = 0;
+            rootElement.style.left = 0;
+            rootElement.style.right = 0;
+            rootElement.style.bottom = 0;
+
             rootElement.Clear();
 
             VisualElement layoutRoot;
@@ -403,8 +410,8 @@ namespace TavernSim.UI
             _buildToggleButton = rootElement.Q<Button>("buildToggleBtn") ?? CreateButton(layoutRoot, "buildToggleBtn", HUDStrings.BuildToggle);
             _decoToggleButton = rootElement.Q<Button>("decoToggleBtn") ?? CreateButton(layoutRoot, "decoToggleBtn", "Decoração");
             _beautyToggleButton = rootElement.Q<Button>("beautyToggleBtn") ?? CreateButton(layoutRoot, "beautyToggleBtn", HUDStrings.BeautyToggle);
-            _panelToggleButton = rootElement.Q<Button>("panelToggleBtn") ?? CreateButton(layoutRoot, "panelToggleBtn", "📊");
-            _panelPinButton = rootElement.Q<Button>("panelPinBtn") ?? CreateButton(layoutRoot, "panelPinBtn", "📌");
+            _panelToggleButton = rootElement.Q<Button>("panelToggleBtn") ?? CreateButton(layoutRoot, "panelToggleBtn", "Painel");
+            _panelPinButton = rootElement.Q<Button>("panelPinBtn") ?? CreateButton(layoutRoot, "panelPinBtn", "Fixar");
             _logToggleButton = rootElement.Q<Button>("logToggleBtn");
             _devLogButton = rootElement.Q<Button>("devLogBtn");
 
@@ -444,6 +451,7 @@ namespace TavernSim.UI
             var menuController = GetComponent<MenuController>();
             if (menuController != null)
             {
+                // garante que ele use o mesmo UIDocument do HUD
                 menuController.SetDocument(_document);
                 menuController.RebuildMenu();
             }

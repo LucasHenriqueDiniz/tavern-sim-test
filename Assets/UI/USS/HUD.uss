@@ -42,7 +42,8 @@
 
 .resource-label {
     color: #d4b37c;
-    -unity-font-style: italic;
+    /* tirar itálico na top bar */
+    -unity-font-style: normal;
     margin-right: 4px;
 }
 
@@ -163,6 +164,7 @@
     padding-right: 16px;
     padding-top: 12px;
     padding-bottom: 12px;
+    /* garante fundo do painel para não “mostrar” a cena atrás */
     background-color: #24130b;
 }
 
@@ -258,6 +260,8 @@
     left: 0;
     right: 0;
     height: 110px;
+    /* evita casos raros de display:none herdado por tema */
+    display: flex;
     flex-direction: row;
     align-items: center;
     background-color: #2c1810;
@@ -442,9 +446,26 @@
     display: none;
 }
 
+/* --- ScrollView/Scrollbar temas para não ficar “bugado” --- */
+.unity-scroller__low-button,
+.unity-scroller__high-button {
+    display: none;
+}
+.unity-scroll-view__vertical-scroller,
+.unity-scroll-view__horizontal-scroller {
+    background-color: #5f4431;
+}
+.unity-slider__dragger {
+    background-color: #d4af37;
+}
+.unity-scroll-view__content-and-vertical-scrollbar,
+.unity-scroll-view__content-and-horizontal-scrollbar {
+    background-color: transparent;
+}
+
 /* camadas explícitas para evitar sobreposição errada */
-.top-bar { z-index: 10; }
-.toolbar { z-index: 10; }
+.top-bar   { z-index: 10; }
+.toolbar   { z-index: 15; }   /* garante aparecer sempre */
 .side-panel { z-index: 20; }
 .panel-toggle,
 .dev-fab { z-index: 30; }
