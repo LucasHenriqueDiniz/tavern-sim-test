@@ -21,13 +21,10 @@
       </ui:VisualElement>
       <ui:VisualElement class="top-bar-right">
         <ui:Label name="timeLabel" class="time-label" text="Dia 1 – 08:00" />
-        <ui:Button name="logToggleBtn" class="hud-button top-bar-button" text="📜 Log" />
       </ui:VisualElement>
     </ui:VisualElement>
 
     <ui:Button name="panelToggleBtn" class="panel-toggle" text="📊" />
-
-    <ui:Label name="currentModeLabel" class="current-mode" text="⚡ Pronto" />
 
     <ui:VisualElement name="sidePanel" class="side-panel">
       <ui:VisualElement class="panel-header">
@@ -99,6 +96,11 @@
           </ui:VisualElement>
         </ui:VisualElement>
 
+        <ui:VisualElement name="menuBlock" class="stat-group">
+          <ui:Label class="group-title" text="Cardápio" />
+          <ui:VisualElement name="menuAnchor" class="group-body" />
+        </ui:VisualElement>
+
         <ui:VisualElement class="stat-group">
           <ui:Label class="group-title" text="Sistema" />
           <ui:VisualElement class="group-body time-controls">
@@ -135,6 +137,8 @@
       <ui:VisualElement class="toolbar-separator" />
       <ui:VisualElement name="buildMenu" class="toolbar-options" />
     </ui:VisualElement>
+
+    <ui:Button name="devLogBtn" class="dev-fab" text="🐛 Log" />
 
     <ui:VisualElement name="toastLayer" class="toast-layer" />
   </ui:VisualElement>

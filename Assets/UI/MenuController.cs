@@ -57,11 +57,22 @@ namespace TavernSim.UI
             EnsureAllowedSeeded();
 
             // limpa seção anterior do menu, se existir
-            var old = root.Q<Foldout>("__MenuFoldout");
+            var anchor = root.Q<VisualElement>("menuAnchor");
+            if (anchor == null)
+            {
+                anchor = root.Q<VisualElement>("sidePanel")?.Q<VisualElement>(className: "panel-content");
+            }
+
+            if (anchor == null)
+            {
+                return;
+            }
+
+            var old = anchor.Q<Foldout>("__MenuFoldout");
             old?.RemoveFromHierarchy();
 
             var fold = new Foldout { name = "__MenuFoldout", text = "Menu", value = false };
-            root.Add(fold);
+            anchor.Add(fold);
 
             if (catalog.Recipes == null)
             {

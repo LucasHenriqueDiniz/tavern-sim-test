@@ -35,6 +35,7 @@ namespace TavernSim.UI
         private Label _cashLabel;
         private Label _customerLabel;
         private Label _timeLabel;
+        private Label _reputationTopLabel;
         private Label _reputationScoreLabel;
         private Label _reputationTrendLabel;
         private Label _ordersQueueLabel;
@@ -59,6 +60,7 @@ namespace TavernSim.UI
         private Button _panelToggleButton;
         private Button _panelPinButton;
         private Button _logToggleButton;
+        private Button _devLogButton;
         private VisualElement _sidePanel;
         private Label _currentModeLabel;
         private VisualElement _hireControls;
@@ -371,6 +373,7 @@ namespace TavernSim.UI
             _cashLabel = rootElement.Q<Label>("cashLabel") ?? CreateLabel(layoutRoot, "cashLabel", "0");
             _customerLabel = rootElement.Q<Label>("customerLabel") ?? CreateLabel(layoutRoot, "customerLabel", "0");
             _timeLabel = rootElement.Q<Label>("timeLabel") ?? CreateLabel(layoutRoot, "timeLabel", "Dia 1 – 08:00");
+            _reputationTopLabel = rootElement.Q<Label>("reputationLabel");
             _reputationScoreLabel = rootElement.Q<Label>("reputationScore") ?? CreateLabel(layoutRoot, "reputationScore", "0");
             _reputationTrendLabel = rootElement.Q<Label>("reputationTrend") ?? CreateLabel(layoutRoot, "reputationTrend", "0");
             _ordersQueueLabel = rootElement.Q<Label>("ordersQueue") ?? CreateLabel(layoutRoot, "ordersQueue", "0");
@@ -397,10 +400,11 @@ namespace TavernSim.UI
             _beautyToggleButton = rootElement.Q<Button>("beautyToggleBtn") ?? CreateButton(layoutRoot, "beautyToggleBtn", HUDStrings.BeautyToggle);
             _panelToggleButton = rootElement.Q<Button>("panelToggleBtn") ?? CreateButton(layoutRoot, "panelToggleBtn", "📊");
             _panelPinButton = rootElement.Q<Button>("panelPinBtn") ?? CreateButton(layoutRoot, "panelPinBtn", "📌");
-            _logToggleButton = rootElement.Q<Button>("logToggleBtn") ?? CreateButton(layoutRoot, "logToggleBtn", HUDStrings.LogButton);
+            _logToggleButton = rootElement.Q<Button>("logToggleBtn");
+            _devLogButton = rootElement.Q<Button>("devLogBtn");
 
             _sidePanel = rootElement.Q<VisualElement>("sidePanel");
-            _currentModeLabel = rootElement.Q<Label>("currentModeLabel") ?? CreateLabel(layoutRoot, "currentModeLabel", HUDStrings.Ready);
+            _currentModeLabel = rootElement.Q<Label>("currentModeLabel");
             _buildMenu = rootElement.Q<VisualElement>("buildMenu") ?? CreateBuildMenu(layoutRoot);
             _hireControls = rootElement.Q<VisualElement>("hireControls") ?? CreateHireControls(layoutRoot);
             _hireWaiterButton = rootElement.Q<Button>("hireWaiterBtn") ?? CreateButton(_hireControls, "hireWaiterBtn", HUDStrings.HireWaiter);
@@ -418,6 +422,14 @@ namespace TavernSim.UI
             _panelToggleButton?.AddToClassList("panel-toggle");
             _panelPinButton?.AddToClassList("panel-pin");
             _logToggleButton?.AddToClassList("hud-button");
+
+#if !UNITY_EDITOR
+            if (_devLogButton != null)
+            {
+                _devLogButton.RemoveFromHierarchy();
+                _devLogButton = null;
+            }
+#endif
 
             RebuildBuildButtons();
             SetBuildMenuVisible(false, true);
@@ -487,6 +499,12 @@ namespace TavernSim.UI
             {
                 _logToggleButton.clicked -= ToggleLog;
                 _logToggleButton.clicked += ToggleLog;
+            }
+
+            if (_devLogButton != null)
+            {
+                _devLogButton.clicked -= ToggleLog;
+                _devLogButton.clicked += ToggleLog;
             }
 
             if (_decoToggleButton != null)
@@ -600,6 +618,11 @@ namespace TavernSim.UI
             if (_logToggleButton != null)
             {
                 _logToggleButton.clicked -= ToggleLog;
+            }
+
+            if (_devLogButton != null)
+            {
+                _devLogButton.clicked -= ToggleLog;
             }
 
             if (_decoToggleButton != null)
@@ -960,6 +983,11 @@ namespace TavernSim.UI
 
         private void UpdateReputation(int value)
         {
+            if (_reputationTopLabel != null)
+            {
+                _reputationTopLabel.text = value.ToString(CultureInfo.InvariantCulture);
+            }
+
             if (_reputationScoreLabel != null)
             {
                 _reputationScoreLabel.text = value.ToString(CultureInfo.InvariantCulture);
@@ -1082,6 +1110,10 @@ namespace TavernSim.UI
             {
                 SetSidePanelOpen(true);
             }
+            else if (!_panelPinned)
+            {
+                SetSidePanelOpen(false);
+            }
         }
 
         private void SetLogVisible(bool visible)
@@ -1093,6 +1125,7 @@ namespace TavernSim.UI
             }
 
             _logToggleButton?.EnableInClassList("hud-button--active", visible);
+            _devLogButton?.EnableInClassList("hud-button--active", visible);
         }
 
         private void TogglePanelPin()
