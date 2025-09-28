@@ -1,28 +1,140 @@
 <?xml version="1.0" encoding="utf-8"?>
 <engine:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xmlns:engine="UnityEngine.UIElements">
-  <ui:VisualElement class="root">
-    <ui:Label name="cashLabel" class="stat" text="Cash: 0" />
-    <ui:Label name="customerLabel" class="stat stacked" text="Customers: 0" />
-    <ui:Label name="ordersLabel" class="stat stacked" text="Orders" />
-    <ui:ScrollView name="ordersScroll" class="orders stacked" />
-    <ui:VisualElement class="time-controls stacked">
-      <ui:Button name="pauseBtn" class="hud-button" text="Pause" />
-      <ui:Button name="play1Btn" class="hud-button hud-button--spaced" text="1x" />
-      <ui:Button name="play2Btn" class="hud-button hud-button--spaced" text="2x" />
-      <ui:Button name="play4Btn" class="hud-button hud-button--spaced" text="4x" />
+  <ui:VisualElement name="hudRoot" class="hud-root">
+    <ui:VisualElement class="top-bar">
+      <ui:VisualElement class="resource-display">
+        <ui:VisualElement class="resource">
+          <ui:Label class="resource-icon" text="🪙" />
+          <ui:Label class="resource-label" text="Ouro" />
+          <ui:Label name="cashLabel" class="resource-value" text="0" />
+        </ui:VisualElement>
+        <ui:VisualElement class="resource">
+          <ui:Label class="resource-icon" text="⭐" />
+          <ui:Label class="resource-label" text="Reputação" />
+          <ui:Label name="reputationLabel" class="resource-value" text="0" />
+        </ui:VisualElement>
+        <ui:VisualElement class="resource">
+          <ui:Label class="resource-icon" text="👥" />
+          <ui:Label class="resource-label" text="Clientes" />
+          <ui:Label name="customerLabel" class="resource-value" text="0" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+      <ui:VisualElement class="top-bar-right">
+        <ui:Label name="timeLabel" class="time-label" text="Dia 1 – 08:00" />
+        <ui:Button name="logToggleBtn" class="hud-button top-bar-button" text="📜 Log" />
+        <ui:Button name="panelToggleBtn" class="hud-button top-bar-button" text="📊 Painel" />
+      </ui:VisualElement>
     </ui:VisualElement>
-    <ui:VisualElement class="save-controls stacked">
-      <ui:Button name="saveBtn" class="hud-button" text="Save (F5)" />
-      <ui:Button name="loadBtn" class="hud-button hud-button--spaced" text="Load (F9)" />
+
+    <ui:Label name="currentModeLabel" class="current-mode" text="⚡ Pronto" />
+
+    <ui:VisualElement name="sidePanel" class="side-panel">
+      <ui:VisualElement class="panel-header">
+        <ui:Label class="panel-title" text="🍺 Informações da Taverna 🍺" />
+        <ui:Button name="panelPinBtn" class="panel-pin" text="📌" />
+      </ui:VisualElement>
+      <ui:ScrollView class="panel-content">
+        <ui:VisualElement name="selectionSummary" class="stat-group selection-summary">
+          <ui:Label class="group-title" text="Seleção atual" />
+          <ui:VisualElement class="summary-grid">
+            <ui:Label class="summary-label" text="Nome" />
+            <ui:Label name="selectionName" class="summary-value" text="Nenhum item selecionado." />
+            <ui:Label class="summary-label" text="Tipo" />
+            <ui:Label name="selectionType" class="summary-value" text="-" />
+            <ui:Label class="summary-label" text="Status" />
+            <ui:Label name="selectionStatus" class="summary-value" text="-" />
+            <ui:Label class="summary-label" text="Velocidade" />
+            <ui:Label name="selectionSpeed" class="summary-value" text="-" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="statsBlock" class="stat-group">
+          <ui:Label class="group-title" text="Reputação" />
+          <ui:VisualElement class="stat-line">
+            <ui:Label class="stat-label" text="Pontuação" />
+            <ui:Label name="reputationScore" class="stat-value" text="0" />
+          </ui:VisualElement>
+          <ui:VisualElement class="stat-line">
+            <ui:Label class="stat-label" text="Variação/min" />
+            <ui:Label name="reputationTrend" class="stat-value" text="0" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="ordersBlock" class="stat-group">
+          <ui:Label class="group-title" text="Pedidos" />
+          <ui:VisualElement class="stat-line">
+            <ui:Label class="stat-label" text="Fila" />
+            <ui:Label name="ordersQueue" class="stat-value" text="0" />
+          </ui:VisualElement>
+          <ui:VisualElement class="stat-line">
+            <ui:Label class="stat-label" text="Tempo médio" />
+            <ui:Label name="ordersAverage" class="stat-value" text="0s" />
+          </ui:VisualElement>
+          <ui:ScrollView name="ordersScroll" class="order-list" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="tipsBlock" class="stat-group">
+          <ui:Label class="group-title" text="Gorjetas" />
+          <ui:VisualElement class="stat-line">
+            <ui:Label class="stat-label" text="Última" />
+            <ui:Label name="tipsLast" class="stat-value" text="0" />
+          </ui:VisualElement>
+          <ui:VisualElement class="stat-line">
+            <ui:Label class="stat-label" text="Média" />
+            <ui:Label name="tipsAverage" class="stat-value" text="0" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="contextActions" class="stat-group context-actions">
+          <ui:Label class="group-title" text="Ações" />
+        </ui:VisualElement>
+
+        <ui:VisualElement class="stat-group">
+          <ui:Label class="group-title" text="Equipe" />
+          <ui:VisualElement name="hireControls" class="group-body hire-controls">
+            <ui:Button name="hireWaiterBtn" class="hud-button" text="Contratar garçom" />
+            <ui:Button name="hireCookBtn" class="hud-button" text="Contratar cozinheiro" />
+            <ui:Button name="hireBartenderBtn" class="hud-button" text="Contratar bartender" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement class="stat-group">
+          <ui:Label class="group-title" text="Sistema" />
+          <ui:VisualElement class="group-body time-controls">
+            <ui:Button name="pauseBtn" class="hud-button" text="Pausar" />
+            <ui:Button name="play1Btn" class="hud-button" text="1x" />
+            <ui:Button name="play2Btn" class="hud-button" text="2x" />
+            <ui:Button name="play4Btn" class="hud-button" text="4x" />
+          </ui:VisualElement>
+          <ui:VisualElement class="group-body save-controls">
+            <ui:Button name="saveBtn" class="hud-button" text="Salvar (F5)" />
+            <ui:Button name="loadBtn" class="hud-button" text="Carregar (F9)" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="logBlock" class="stat-group log-block">
+          <ui:Label class="group-title" text="Registro de eventos" />
+          <ui:VisualElement name="logFilters" class="log-filters" />
+          <ui:ScrollView name="logScroll" class="log-scroll" />
+        </ui:VisualElement>
+
+        <ui:VisualElement class="stat-group">
+          <ui:Label class="group-title" text="Controles" />
+          <ui:Label name="controlsLabel" class="group-body controls-summary" text="" />
+        </ui:VisualElement>
+      </ui:ScrollView>
     </ui:VisualElement>
-    <ui:Label name="selectionLabel" class="stat selection stacked" text="Selecionado: Nenhum" />
-    <ui:VisualElement name="hireControls" class="hire-controls stacked">
-      <ui:Button name="hireWaiterBtn" class="hud-button" text="Contratar garçom" />
-      <ui:Button name="hireCookBtn" class="hud-button stacked" text="Contratar cozinheiro" />
+
+    <ui:VisualElement class="toolbar">
+      <ui:VisualElement class="toolbar-group">
+        <ui:Button name="buildToggleBtn" class="tool-button" text="🛠️ Construir" />
+        <ui:Button name="decoToggleBtn" class="tool-button" text="🎀 Decoração" />
+        <ui:Button name="beautyToggleBtn" class="tool-button" text="✨ Beleza" />
+      </ui:VisualElement>
+      <ui:VisualElement class="toolbar-separator" />
+      <ui:VisualElement name="buildMenu" class="toolbar-options" />
     </ui:VisualElement>
-    <ui:VisualElement name="buildControls" class="build-controls stacked">
-      <ui:Button name="buildToggleBtn" text="Construir" />
-      <ui:VisualElement name="buildMenu" class="build-menu stacked" />
-    </ui:VisualElement>
+
+    <ui:VisualElement name="toastLayer" class="toast-layer" />
   </ui:VisualElement>
 </engine:UXML>

@@ -2,7 +2,7 @@ using System;
 
 namespace TavernSim.Core.Events
 {
-    public enum GameEventSeverity { Info, Warning, Error }
+    public enum GameEventSeverity { Info, Success, Warning, Error }
 
     public readonly struct GameEvent
     {

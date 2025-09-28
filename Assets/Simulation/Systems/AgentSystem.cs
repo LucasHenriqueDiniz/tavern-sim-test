@@ -476,6 +476,24 @@ namespace TavernSim.Simulation.Systems
 
                 var tip = CalculateTip(data.TotalWaitTime);
                 _economySystem.AddRevenue(data.BillRevenue + tip);
+
+                if (_eventBus != null)
+                {
+                    var tableId = data.Table != null ? data.Table.Id : -1;
+                    var eventData = new Dictionary<string, object>
+                    {
+                        ["tableId"] = tableId,
+                        ["tip"] = tip,
+                        ["revenue"] = data.BillRevenue
+                    };
+
+                    var severity = tip > 0.01f ? GameEventSeverity.Success : GameEventSeverity.Info;
+                    var tipText = tip > 0.01f ? $" + gorjeta {tip:0.##}" : string.Empty;
+                    var message = tableId >= 0
+                        ? $"Mesa {tableId} pagou {data.BillRevenue:0.##}{tipText}"
+                        : $"Conta paga{tipText}";
+                    _eventBus.Publish(new GameEvent(message, severity, "TipReceived", eventData));
+                }
             }
 
             data.State = CustomerState.Leave;

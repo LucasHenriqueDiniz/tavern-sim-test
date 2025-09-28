@@ -26,6 +26,7 @@ namespace TavernSim.Bootstrap
     public sealed class DevBootstrap : MonoBehaviour
     {
         [SerializeField] private Catalog catalog;
+        [SerializeField] private BuildCatalog buildCatalog;
 
         private static PanelSettings _panelSettings;
         private static ThemeStyleSheet _panelTheme;
@@ -38,6 +39,7 @@ namespace TavernSim.Bootstrap
         private CleaningSystem _cleaningSystem;
         private TableRegistry _tableRegistry;
         private ReputationSystem _reputationSystem;
+        private GameClockSystem _gameClock;
         private CustomerSpawner _customerSpawner;
         private SaveService _saveService;
         private NavMeshSurface _navMeshSurface;
@@ -87,6 +89,16 @@ namespace TavernSim.Bootstrap
             {
                 Debug.LogWarning("DevBootstrap could not locate a Catalog asset in Resources. Assign one in the inspector to enable recipes and menu items.");
                 catalog = ScriptableObject.CreateInstance<Catalog>();
+            }
+
+            if (buildCatalog == null)
+            {
+                buildCatalog = Resources.Load<BuildCatalog>("Build/BuildCatalog");
+            }
+
+            if (buildCatalog == null)
+            {
+                buildCatalog = BuildCatalog.CreateDefault();
             }
 
             SetupScene();
@@ -151,6 +163,7 @@ namespace TavernSim.Bootstrap
             _cleaningSystem = new CleaningSystem(0.1f);
             _tableRegistry = new TableRegistry();
             _reputationSystem = new ReputationSystem();
+            _gameClock = new GameClockSystem();
             _agentSystem = new AgentSystem(_tableRegistry, _orderSystem, _economySystem, _cleaningSystem, catalog);
             _agentSystem.Configure(_entryPoint, _exitPoint, _kitchenPoint, _kitchenPickupPoint, _barPickupPoint);
             _agentSystem.SetInventory(_inventory);
@@ -164,6 +177,7 @@ namespace TavernSim.Bootstrap
             _runner.RegisterSystem(_cleaningSystem);
             _runner.RegisterSystem(_tableRegistry);
             _runner.RegisterSystem(_reputationSystem);
+            _runner.RegisterSystem(_gameClock);
             _runner.RegisterSystem(_agentSystem);
 
             _customerSpawner = new GameObject("CustomerSpawner").AddComponent<CustomerSpawner>();
@@ -182,6 +196,7 @@ namespace TavernSim.Bootstrap
 
             _saveService = new SaveService(_economySystem);
             _gridPlacer?.Configure(_economySystem, _selectionService, _tableRegistry, _cleaningSystem);
+            _gridPlacer?.SetCatalog(buildCatalog);
 
             _debugOverlay.Configure(_agentSystem, _orderSystem);
         }
@@ -201,6 +216,8 @@ namespace TavernSim.Bootstrap
             _hudController.BindSelection(_selectionService, _gridPlacer);
             _hudController.BindEventBus(_eventBus);
             _hudController.BindReputation(_reputationSystem);
+            _hudController.BindBuildCatalog(buildCatalog);
+            _hudController.BindClock(_gameClock);
 
             _toastController = uiGo.AddComponent<HudToastController>();
 
@@ -221,7 +238,7 @@ namespace TavernSim.Bootstrap
 
             uiGo.SetActive(true);
 
-            _timeControls.Initialize();
+            _timeControls.Initialize(_gameClock);
             _hudController.SetCustomers(_agentSystem != null ? _agentSystem.ActiveCustomerCount : 0);
         }
 
