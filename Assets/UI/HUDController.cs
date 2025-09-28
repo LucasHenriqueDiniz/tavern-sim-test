@@ -966,6 +966,8 @@ namespace TavernSim.UI
             _reputationLabel.text = $"Reputação: {value}";
         }
 
+        private int _hudPointerDepth;
+
         private void RegisterHudPointerGuards(VisualElement rootElement)
         {
             if (_pointerGuardsRegistered || rootElement == null)
@@ -985,15 +987,13 @@ namespace TavernSim.UI
                 return;
             }
 
-            var targetElement = evt.target as VisualElement;
-            var relatedElement = evt.relatedTarget as VisualElement;
-            if (targetElement != null && relatedElement != null && relatedElement.panel == targetElement.panel)
-            {
-                return;
-            }
+            _hudPointerDepth++;
 
-            _isPointerOverHud = true;
-            UpdatePointerOverHud();
+            if (_hudPointerDepth == 1)
+            {
+                _isPointerOverHud = true;
+                UpdatePointerOverHud();
+            }
         }
 
         private void OnHudPointerLeave(PointerLeaveEvent evt)
@@ -1003,15 +1003,16 @@ namespace TavernSim.UI
                 return;
             }
 
-            var targetElement = evt.target as VisualElement;
-            var relatedElement = evt.relatedTarget as VisualElement;
-            if (targetElement != null && relatedElement != null && relatedElement.panel == targetElement.panel)
+            if (_hudPointerDepth > 0)
             {
-                return;
+                _hudPointerDepth--;
             }
 
-            _isPointerOverHud = false;
-            UpdatePointerOverHud();
+            if (_hudPointerDepth == 0)
+            {
+                _isPointerOverHud = false;
+                UpdatePointerOverHud();
+            }
         }
 
         private void UpdatePointerOverHud()
