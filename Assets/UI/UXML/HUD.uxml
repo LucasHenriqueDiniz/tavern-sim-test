@@ -29,20 +29,6 @@
         <ui:Button name="panelPinBtn" class="panel-pin" text="Fixar" />
       </ui:VisualElement>
       <ui:ScrollView class="panel-content">
-        <ui:VisualElement name="selectionSummary" class="stat-group selection-summary">
-          <ui:Label class="group-title" text="Seleção atual" />
-          <ui:VisualElement class="summary-grid">
-            <ui:Label class="summary-label" text="Nome" />
-            <ui:Label name="selectionName" class="summary-value" text="Nenhum item selecionado." />
-            <ui:Label class="summary-label" text="Tipo" />
-            <ui:Label name="selectionType" class="summary-value" text="-" />
-            <ui:Label class="summary-label" text="Status" />
-            <ui:Label name="selectionStatus" class="summary-value" text="-" />
-            <ui:Label class="summary-label" text="Velocidade" />
-            <ui:Label name="selectionSpeed" class="summary-value" text="-" />
-          </ui:VisualElement>
-        </ui:VisualElement>
-
         <ui:VisualElement name="statsBlock" class="stat-group">
           <ui:Label class="group-title" text="Reputação" />
           <ui:VisualElement class="stat-line">
@@ -123,6 +109,20 @@
           <ui:Label name="controlsLabel" class="group-body controls-summary" text="" />
         </ui:VisualElement>
       </ui:ScrollView>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="selectionPopup" class="selection-popup">
+      <ui:Label class="group-title" text="Seleção atual" />
+      <ui:VisualElement class="summary-grid">
+        <ui:Label class="summary-label" text="Nome" />
+        <ui:Label name="selectionName" class="summary-value" text="Nenhum item selecionado." />
+        <ui:Label class="summary-label" text="Tipo" />
+        <ui:Label name="selectionType" class="summary-value" text="-" />
+        <ui:Label class="summary-label" text="Status" />
+        <ui:Label name="selectionStatus" class="summary-value" text="-" />
+        <ui:Label class="summary-label" text="Velocidade" />
+        <ui:Label name="selectionSpeed" class="summary-value" text="-" />
+      </ui:VisualElement>
     </ui:VisualElement>
 
     <ui:VisualElement class="toolbar">

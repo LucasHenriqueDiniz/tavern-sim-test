@@ -42,7 +42,7 @@ namespace TavernSim.UI
         private Label _ordersAverageLabel;
         private Label _tipsLastLabel;
         private Label _tipsAverageLabel;
-        private VisualElement _selectionSummary;
+        private VisualElement _selectionPopup;
         private Label _selectionNameLabel;
         private Label _selectionTypeLabel;
         private Label _selectionStatusLabel;
@@ -391,6 +391,17 @@ namespace TavernSim.UI
                 rootElement.styleSheets.Add(visualConfig.StyleSheet);
             }
 
+            var toolbarElement = layoutRoot.Q<VisualElement>(className: "toolbar");
+            if (toolbarElement != null)
+            {
+                toolbarElement.style.position = Position.Absolute;
+                toolbarElement.style.left = 0f;
+                toolbarElement.style.right = 0f;
+                toolbarElement.style.bottom = 0f;
+                toolbarElement.style.height = 110f;
+                toolbarElement.style.display = DisplayStyle.Flex;
+            }
+
             _controlsLabel = rootElement.Q<Label>("controlsLabel") ?? CreateLabel(layoutRoot, "controlsLabel", string.Empty);
             _controlsLabel.text = GetControlsSummary();
 
@@ -405,7 +416,7 @@ namespace TavernSim.UI
             _tipsLastLabel = rootElement.Q<Label>("tipsLast") ?? CreateLabel(layoutRoot, "tipsLast", "0");
             _tipsAverageLabel = rootElement.Q<Label>("tipsAverage") ?? CreateLabel(layoutRoot, "tipsAverage", "0");
 
-            _selectionSummary = rootElement.Q<VisualElement>("selectionSummary") ?? layoutRoot;
+            _selectionPopup = rootElement.Q<VisualElement>("selectionPopup");
             _selectionNameLabel = rootElement.Q<Label>("selectionName") ?? CreateLabel(layoutRoot, "selectionName", HUDStrings.NoSelection);
             _selectionTypeLabel = rootElement.Q<Label>("selectionType") ?? CreateLabel(layoutRoot, "selectionType", "-");
             _selectionStatusLabel = rootElement.Q<Label>("selectionStatus") ?? CreateLabel(layoutRoot, "selectionStatus", "-");
@@ -473,6 +484,13 @@ namespace TavernSim.UI
             RegisterHudPointerGuards(rootElement);
             SetSidePanelOpen(false);
             SetLogVisible(false);
+            if (_selectionPopup != null)
+            {
+                _selectionPopup.RemoveFromClassList("open");
+                _selectionPopup.style.left = StyleKeyword.Null;
+                _selectionPopup.style.right = 24f;
+                _selectionPopup.style.top = 96f;
+            }
             UpdateCurrentModeLabel(_gridPlacer != null ? _gridPlacer.ActiveKind : GridPlacer.PlaceableKind.None);
             RefreshEventLog();
             RefreshLogFilters();
@@ -1452,6 +1470,126 @@ namespace TavernSim.UI
         private void OnSelectionChanged(ISelectable selectable)
         {
             UpdateSelectionDetails(selectable);
+
+            if (_selectionPopup == null)
+            {
+                return;
+            }
+
+            var hasSelection = selectable != null;
+            _selectionPopup.EnableInClassList("open", hasSelection);
+
+            if (!hasSelection)
+            {
+                _selectionPopup.style.left = StyleKeyword.Null;
+                _selectionPopup.style.right = 24f;
+                _selectionPopup.style.top = 96f;
+                return;
+            }
+
+            var targetTransform = selectable.Transform;
+            if (targetTransform == null)
+            {
+                _selectionPopup.style.left = StyleKeyword.Null;
+                _selectionPopup.style.right = 24f;
+                _selectionPopup.style.top = 96f;
+                return;
+            }
+
+            ScheduleSelectionPopupPosition(targetTransform);
+        }
+
+        private void ScheduleSelectionPopupPosition(Transform target)
+        {
+            if (_selectionPopup == null || target == null)
+            {
+                return;
+            }
+
+            void Perform()
+            {
+                if (target != null)
+                {
+                    PositionSelectionPopup(target);
+                }
+            }
+
+            PositionSelectionPopup(target);
+
+            var scheduler = _selectionPopup.schedule;
+            if (scheduler == null)
+            {
+                return;
+            }
+
+            scheduler.Execute(Perform).ExecuteLater(0);
+        }
+
+        private void PositionSelectionPopup(Transform target)
+        {
+            if (_selectionPopup == null || target == null || _document == null)
+            {
+                return;
+            }
+
+            var camera = Camera.main;
+            if (camera == null)
+            {
+                return;
+            }
+
+            var screenPoint = camera.WorldToScreenPoint(target.position);
+            if (screenPoint.z <= 0f)
+            {
+                _selectionPopup.style.left = StyleKeyword.Null;
+                _selectionPopup.style.right = 24f;
+                _selectionPopup.style.top = 96f;
+                return;
+            }
+
+            var panel = _document.rootVisualElement?.panel;
+            if (panel == null)
+            {
+                return;
+            }
+
+            var panelPosition = RuntimePanelUtils.ScreenToPanel(panel, new Vector2(screenPoint.x, screenPoint.y));
+            float desiredLeft = panelPosition.x + 12f;
+            float popupHeight = _selectionPopup.resolvedStyle.height;
+            if (float.IsNaN(popupHeight) || float.IsInfinity(popupHeight) || popupHeight <= 0f)
+            {
+                popupHeight = 120f;
+            }
+
+            float desiredTop = panelPosition.y - popupHeight - 12f;
+            var rootStyle = _document.rootVisualElement.resolvedStyle;
+            float popupWidth = _selectionPopup.resolvedStyle.width;
+            if (float.IsNaN(popupWidth) || float.IsInfinity(popupWidth) || popupWidth <= 0f)
+            {
+                popupWidth = 300f;
+            }
+
+            float maxLeft = rootStyle.width - popupWidth - 24f;
+            if (float.IsNaN(maxLeft) || float.IsInfinity(maxLeft))
+            {
+                maxLeft = desiredLeft;
+            }
+
+            maxLeft = Mathf.Max(24f, maxLeft);
+            desiredLeft = Mathf.Clamp(desiredLeft, 24f, maxLeft);
+
+            float maxTop = rootStyle.height - 140f;
+            if (float.IsNaN(maxTop) || float.IsInfinity(maxTop))
+            {
+                maxTop = desiredTop;
+            }
+
+            maxTop = Mathf.Max(72f, maxTop);
+            desiredTop = Mathf.Clamp(desiredTop, 72f, maxTop);
+
+            _selectionPopup.style.right = StyleKeyword.Null;
+            _selectionPopup.style.left = desiredLeft;
+            _selectionPopup.style.top = desiredTop;
         }
 
         private void UpdateSelectionDetails(ISelectable selectable)

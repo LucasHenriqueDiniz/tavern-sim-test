@@ -27,6 +27,8 @@
 .resource-display {
     flex-direction: row;
     align-items: center;
+    flex-wrap: wrap;
+    row-gap: 4px;
 }
 
 .resource {
@@ -133,6 +135,8 @@
     bottom: 110px;
     right: 24px;
     width: 340px;
+    min-width: 320px;
+    min-height: 300px;
     background-color: #24130b;
     border-left-width: 2px;
     border-left-color: #8b6f47;
@@ -264,6 +268,7 @@
     display: flex;
     flex-direction: row;
     align-items: center;
+    flex-wrap: wrap;
     background-color: #2c1810;
     border-top-width: 2px;
     border-top-color: #8b6f47;
@@ -299,6 +304,11 @@
     color: #2c1810;
     border-color: #f0d27e;
 }
+.tool-button:disabled {
+    background-color: #2b160c;
+    color: #9c8560;
+    border-color: #5e4a32;
+}
 
 .toolbar-separator {
     width: 3px;
@@ -308,10 +318,13 @@
 }
 
 .toolbar-options {
+    display: flex;
     flex-grow: 1;
     flex-direction: row;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: flex-start;
+    row-gap: 6px;
 }
 
 .build-option {
@@ -337,6 +350,11 @@
     background-color: #d4af37;
     color: #2c1810;
     border-color: #f0d27e;
+}
+.build-option:disabled {
+    background-color: #26160d;
+    color: #8f7756;
+    border-color: #4d3824;
 }
 
 .order-list {
@@ -470,3 +488,23 @@
 .panel-toggle,
 .dev-fab { z-index: 30; }
 .toast-layer { z-index: 40; }
+
+.selection-popup {
+    position: absolute;
+    min-width: 260px;
+    max-width: 360px;
+    padding: 12px;
+    right: 24px;
+    top: 96px;
+    display: none;
+    flex-direction: column;
+    background-color: #322016;
+    border-width: 1px;
+    border-color: #5f4431;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+    z-index: 25;
+}
+
+.selection-popup.open {
+    display: flex;
+}
