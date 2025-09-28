@@ -62,6 +62,7 @@ namespace TavernSim.UI
         private Button _panelPinButton;
         private Button _staffCloseButton;
         private Button _logToggleButton;
+        private Button _logCloseButton;
         private Button _devLogButton;
         private VisualElement _sidePanel;
         private VisualElement _staffPanel;
@@ -417,8 +418,11 @@ namespace TavernSim.UI
                 toolbarElement.style.display = DisplayStyle.Flex;
             }
 
-            _controlsLabel = rootElement.Q<Label>("controlsLabel") ?? CreateLabel(layoutRoot, "controlsLabel", string.Empty);
-            _controlsLabel.text = GetControlsSummary();
+            _controlsLabel = rootElement.Q<Label>("controlsLabel");
+            if (_controlsLabel != null)
+            {
+                _controlsLabel.text = GetControlsSummary();
+            }
 
             _cashLabel = rootElement.Q<Label>("cashLabel") ?? CreateLabel(layoutRoot, "cashLabel", "0");
             _customerLabel = rootElement.Q<Label>("customerLabel") ?? CreateLabel(layoutRoot, "customerLabel", "0");
@@ -437,10 +441,10 @@ namespace TavernSim.UI
             _selectionStatusLabel = rootElement.Q<Label>("selectionStatus") ?? CreateLabel(layoutRoot, "selectionStatus", "-");
             _selectionSpeedLabel = rootElement.Q<Label>("selectionSpeed") ?? CreateLabel(layoutRoot, "selectionSpeed", "-");
 
-            _ordersScroll = rootElement.Q<ScrollView>("ordersScroll") ?? CreateScroll(layoutRoot);
+            _ordersScroll = rootElement.Q<ScrollView>("ordersScroll") ?? CreateScroll(layoutRoot, "ordersScroll");
             _logBlock = rootElement.Q<VisualElement>("logBlock");
             _logFilters = rootElement.Q<VisualElement>("logFilters") ?? new VisualElement();
-            _logScroll = rootElement.Q<ScrollView>("logScroll") ?? CreateScroll(layoutRoot);
+            _logScroll = rootElement.Q<ScrollView>("logScroll") ?? CreateScroll(layoutRoot, "logScroll");
             _contextActions = rootElement.Q<VisualElement>("contextActions") ?? layoutRoot;
 
             _saveButton = rootElement.Q<Button>("saveBtn") ?? CreateButton(layoutRoot, "saveBtn", HUDStrings.SaveLabel);
@@ -453,6 +457,7 @@ namespace TavernSim.UI
             _panelPinButton = rootElement.Q<Button>("panelPinBtn") ?? CreateButton(layoutRoot, "panelPinBtn", "Fixar");
             _staffCloseButton = rootElement.Q<Button>("staffCloseBtn");
             _logToggleButton = rootElement.Q<Button>("logToggleBtn");
+            _logCloseButton = rootElement.Q<Button>("logCloseBtn");
             _devLogButton = rootElement.Q<Button>("devLogBtn");
 
             _sidePanel = rootElement.Q<VisualElement>("sidePanel");
@@ -633,6 +638,12 @@ namespace TavernSim.UI
                 _devLogButton.clicked += ToggleLog;
             }
 
+            if (_logCloseButton != null)
+            {
+                _logCloseButton.clicked -= CloseLogOverlay;
+                _logCloseButton.clicked += CloseLogOverlay;
+            }
+
             if (_decoToggleButton != null)
             {
                 _decoToggleButton.clicked -= OnDecoToggleClicked;
@@ -759,6 +770,11 @@ namespace TavernSim.UI
             if (_devLogButton != null)
             {
                 _devLogButton.clicked -= ToggleLog;
+            }
+
+            if (_logCloseButton != null)
+            {
+                _logCloseButton.clicked -= CloseLogOverlay;
             }
 
             if (_decoToggleButton != null)
@@ -1334,14 +1350,6 @@ namespace TavernSim.UI
         {
             var visible = !_logVisible;
             SetLogVisible(visible);
-            if (visible)
-            {
-                SetSidePanelOpen(true);
-            }
-            else if (!_panelPinned)
-            {
-                SetSidePanelOpen(false);
-            }
         }
 
         private void SetLogVisible(bool visible)
@@ -1349,11 +1357,17 @@ namespace TavernSim.UI
             _logVisible = visible;
             if (_logBlock != null)
             {
+                _logBlock.EnableInClassList("open", visible);
                 _logBlock.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
             }
 
             _logToggleButton?.EnableInClassList("hud-button--active", visible);
             _devLogButton?.EnableInClassList("hud-button--active", visible);
+        }
+
+        private void CloseLogOverlay()
+        {
+            SetLogVisible(false);
         }
 
         private void TogglePanelPin()
@@ -2002,9 +2016,9 @@ namespace TavernSim.UI
             return label;
         }
 
-        private static ScrollView CreateScroll(VisualElement root)
+        private static ScrollView CreateScroll(VisualElement root, string name)
         {
-            var scroll = new ScrollView { name = "ordersScroll" };
+            var scroll = new ScrollView { name = name };
             root.Add(scroll);
             return scroll;
         }

@@ -18,6 +18,14 @@
       </ui:VisualElement>
       <ui:VisualElement class="top-bar-right">
         <ui:Label name="timeLabel" class="time-label" text="Dia 1 – 08:00" />
+        <ui:VisualElement class="top-bar-controls">
+          <ui:Button name="pauseBtn" class="hud-button" text="Pausar" />
+          <ui:Button name="play1Btn" class="hud-button" text="1x" />
+          <ui:Button name="play2Btn" class="hud-button" text="2x" />
+          <ui:Button name="play4Btn" class="hud-button" text="4x" />
+          <ui:Button name="saveBtn" class="hud-button" text="Salvar (F5)" />
+          <ui:Button name="loadBtn" class="hud-button" text="Carregar (F9)" />
+        </ui:VisualElement>
       </ui:VisualElement>
     </ui:VisualElement>
 
@@ -74,32 +82,16 @@
           <ui:Label class="group-title" text="Cardápio" />
           <ui:VisualElement name="menuAnchor" class="group-body" />
         </ui:VisualElement>
-
-        <ui:VisualElement class="stat-group">
-          <ui:Label class="group-title" text="Sistema" />
-          <ui:VisualElement class="group-body time-controls">
-            <ui:Button name="pauseBtn" class="hud-button" text="Pausar" />
-            <ui:Button name="play1Btn" class="hud-button" text="1x" />
-            <ui:Button name="play2Btn" class="hud-button" text="2x" />
-            <ui:Button name="play4Btn" class="hud-button" text="4x" />
-          </ui:VisualElement>
-          <ui:VisualElement class="group-body save-controls">
-            <ui:Button name="saveBtn" class="hud-button" text="Salvar (F5)" />
-            <ui:Button name="loadBtn" class="hud-button" text="Carregar (F9)" />
-          </ui:VisualElement>
-        </ui:VisualElement>
-
-        <ui:VisualElement name="logBlock" class="stat-group log-block">
-          <ui:Label class="group-title" text="Registro de eventos" />
-          <ui:VisualElement name="logFilters" class="log-filters" />
-          <ui:ScrollView name="logScroll" class="log-scroll" />
-        </ui:VisualElement>
-
-        <ui:VisualElement class="stat-group">
-          <ui:Label class="group-title" text="Controles" />
-          <ui:Label name="controlsLabel" class="group-body controls-summary" text="" />
-        </ui:VisualElement>
       </ui:ScrollView>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="logBlock" class="log-overlay">
+      <ui:VisualElement class="log-overlay__header">
+        <ui:Label class="log-overlay__title" text="Registro de eventos" />
+        <ui:Button name="logCloseBtn" class="hud-button" text="Fechar" />
+      </ui:VisualElement>
+      <ui:VisualElement name="logFilters" class="log-filters" />
+      <ui:ScrollView name="logScroll" class="log-scroll" />
     </ui:VisualElement>
 
     <ui:VisualElement name="selectionPopup" class="selection-popup">
