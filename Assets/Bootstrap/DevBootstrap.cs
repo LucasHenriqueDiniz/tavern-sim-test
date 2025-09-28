@@ -210,7 +210,17 @@ namespace TavernSim.Bootstrap
             var document = uiGo.AddComponent<UIDocument>();
             document.panelSettings = GetOrCreatePanelSettings();
 
+            var hudConfig = Resources.Load<HUDVisualConfig>("UI/HUDVisualConfig");
+            if (hudConfig == null)
+            {
+                Debug.LogWarning("DevBootstrap could not locate HUDVisualConfig in Resources/UI. HUD will fall back to minimal layout.");
+            }
+
             _hudController = uiGo.AddComponent<HUDController>();
+            if (hudConfig != null)
+            {
+                _hudController.SetVisualConfig(hudConfig);
+            }
             _hudController.Initialize(_economySystem, _orderSystem);
             _hudController.BindSaveService(_saveService);
             _hudController.BindSelection(_selectionService, _gridPlacer);
@@ -442,6 +452,13 @@ namespace TavernSim.Bootstrap
             if (theme != null)
             {
                 _panelSettings.themeStyleSheet = theme;
+            }
+            else if (_panelSettings.themeStyleSheet == null)
+            {
+                var fallbackTheme = ScriptableObject.CreateInstance<ThemeStyleSheet>();
+                fallbackTheme.name = "DevBootstrapFallbackTheme";
+                fallbackTheme.hideFlags = HideFlags.HideAndDontSave;
+                _panelSettings.themeStyleSheet = fallbackTheme;
             }
 
             return _panelSettings;
