@@ -74,6 +74,11 @@
           </ui:VisualElement>
         </ui:VisualElement>
 
+        <ui:VisualElement name="menuBlock" class="stat-group">
+          <ui:Label class="group-title" text="Cardápio" />
+          <ui:VisualElement name="menuAnchor" class="group-body" />
+        </ui:VisualElement>
+
         <ui:VisualElement name="contextActions" class="stat-group context-actions">
           <ui:Label class="group-title" text="Ações" />
           <ui:VisualElement name="contextActionsBody" class="group-body" />
@@ -121,21 +126,21 @@
       </ui:VisualElement>
     </ui:VisualElement>
 
-    <ui:VisualElement class="toolbar">
-      <ui:VisualElement class="toolbar-group">
+    <ui:VisualElement name="toolbarRoot" class="toolbar">
+      <ui:VisualElement name="toolbarButtons" class="toolbar-group">
         <ui:Button name="buildToggleBtn" class="tool-button" text="Construir" />
         <ui:Button name="decoToggleBtn" class="tool-button" text="Decoração" />
         <ui:Button name="beautyToggleBtn" class="tool-button" text="Beleza" />
         <ui:Button name="staffBtn" class="tool-button" text="Equipe" />
         <ui:Button name="menuBtn" class="tool-button" text="Cardápio" />
       </ui:VisualElement>
-      <ui:VisualElement class="toolbar-separator" />
+      <ui:VisualElement name="toolbarSeparator" class="toolbar-separator" />
       <ui:VisualElement name="buildMenu" class="toolbar-options" />
     </ui:VisualElement>
 
     <ui:VisualElement name="menuButtonPanel" class="menu-button-panel">
       <ui:Label class="menu-button-panel__title" text="Cardápio" />
-      <ui:VisualElement name="menuAnchor" class="menu-button-list" />
+      <ui:VisualElement name="menuButtonAnchor" class="menu-button-list" />
     </ui:VisualElement>
 
     <ui:Button name="devLogBtn" class="dev-fab" text="Log" />

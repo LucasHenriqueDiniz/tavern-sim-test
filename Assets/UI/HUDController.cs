@@ -70,6 +70,8 @@ namespace TavernSim.UI
         private VisualElement _sidePanel;
         private VisualElement _staffPanel;
         private VisualElement _menuBlock;
+        private VisualElement _menuButtonPanel;
+        private VisualElement _toolbarGroup;
         private Label _currentModeLabel;
         private VisualElement _hireControls;
         private Button _hireWaiterButton;
@@ -412,16 +414,7 @@ namespace TavernSim.UI
                 rootElement.styleSheets.Add(visualConfig.StyleSheet);
             }
 
-            var toolbarElement = layoutRoot.Q<VisualElement>(className: "toolbar");
-            if (toolbarElement != null)
-            {
-                toolbarElement.style.position = Position.Absolute;
-                toolbarElement.style.left = 0f;
-                toolbarElement.style.right = 0f;
-                toolbarElement.style.bottom = 0f;
-                toolbarElement.style.height = 110f;
-                toolbarElement.style.display = DisplayStyle.Flex;
-            }
+            EnsureToolbarStructure(layoutRoot);
 
             _controlsLabel = rootElement.Q<Label>("controlsLabel");
             if (_controlsLabel != null)
@@ -455,11 +448,11 @@ namespace TavernSim.UI
 
             _saveButton = rootElement.Q<Button>("saveBtn") ?? CreateButton(layoutRoot, "saveBtn", HUDStrings.SaveLabel);
             _loadButton = rootElement.Q<Button>("loadBtn") ?? CreateButton(layoutRoot, "loadBtn", HUDStrings.LoadLabel);
-            _buildToggleButton = rootElement.Q<Button>("buildToggleBtn") ?? CreateButton(layoutRoot, "buildToggleBtn", HUDStrings.BuildToggle);
-            _decoToggleButton = rootElement.Q<Button>("decoToggleBtn") ?? CreateButton(layoutRoot, "decoToggleBtn", HUDStrings.DecoToggle);
-            _beautyToggleButton = rootElement.Q<Button>("beautyToggleBtn") ?? CreateButton(layoutRoot, "beautyToggleBtn", HUDStrings.BeautyToggle);
-            _staffToggleButton = rootElement.Q<Button>("staffBtn") ?? CreateButton(layoutRoot, "staffBtn", HUDStrings.StaffButton);
-            _menuToggleButton = rootElement.Q<Button>("menuBtn") ?? CreateButton(layoutRoot, "menuBtn", HUDStrings.MenuButton);
+            _buildToggleButton = EnsureToolbarButton(rootElement, _buildToggleButton, "buildToggleBtn", HUDStrings.BuildToggle);
+            _decoToggleButton = EnsureToolbarButton(rootElement, _decoToggleButton, "decoToggleBtn", HUDStrings.DecoToggle);
+            _beautyToggleButton = EnsureToolbarButton(rootElement, _beautyToggleButton, "beautyToggleBtn", HUDStrings.BeautyToggle);
+            _staffToggleButton = EnsureToolbarButton(rootElement, _staffToggleButton, "staffBtn", HUDStrings.StaffButton);
+            _menuToggleButton = EnsureToolbarButton(rootElement, _menuToggleButton, "menuBtn", HUDStrings.MenuButton);
             _panelToggleButton = rootElement.Q<Button>("panelToggleBtn") ?? CreateButton(layoutRoot, "panelToggleBtn", "Painel");
             _panelPinButton = rootElement.Q<Button>("panelPinBtn") ?? CreateButton(layoutRoot, "panelPinBtn", "Fixar");
             _staffCloseButton = rootElement.Q<Button>("staffCloseBtn");
@@ -473,9 +466,11 @@ namespace TavernSim.UI
             {
                 _sidePanelScroll = _sidePanel.Q<ScrollView>(className: "panel-content");
             }
-            _menuBlock = rootElement.Q<VisualElement>("menuButtonPanel");
+            _menuBlock = rootElement.Q<VisualElement>("menuBlock");
+            _menuButtonPanel = rootElement.Q<VisualElement>("menuButtonPanel");
+            SetMenuButtonPanelVisible(false);
             _currentModeLabel = rootElement.Q<Label>("currentModeLabel");
-            _buildMenu = rootElement.Q<VisualElement>("buildMenu") ?? CreateBuildMenu(layoutRoot);
+            _buildMenu ??= rootElement.Q<VisualElement>("buildMenu");
             _hireControls = rootElement.Q<VisualElement>("hireControls");
             _hireWaiterButton = rootElement.Q<Button>("hireWaiterBtn");
             if (_hireWaiterButton == null)
@@ -1056,9 +1051,15 @@ namespace TavernSim.UI
             if (visible)
             {
                 _menuOpen = false;
+                SetMenuButtonPanelVisible(false);
             }
 
             UpdateMenuButtonState();
+
+            if (!visible && !_menuOpen)
+            {
+                SetMenuButtonPanelVisible(false);
+            }
 
             if (_gridPlacer != null)
             {
@@ -1089,6 +1090,16 @@ namespace TavernSim.UI
         private void UpdateMenuButtonState()
         {
             _menuToggleButton?.EnableInClassList("tool-button--active", _menuOpen && _sidePanelOpen);
+        }
+
+        private void SetMenuButtonPanelVisible(bool visible)
+        {
+            if (_menuButtonPanel == null)
+            {
+                return;
+            }
+
+            _menuButtonPanel.EnableInClassList("open", visible);
         }
 
         private void RebuildBuildButtons()
@@ -1323,6 +1334,7 @@ namespace TavernSim.UI
             {
                 _menuOpen = false;
                 UpdateMenuButtonState();
+                SetMenuButtonPanelVisible(false);
                 SetBuildMenuVisible(false, true);
                 var wasPinned = _panelPinned;
                 if (_panelPinned)
@@ -1347,6 +1359,7 @@ namespace TavernSim.UI
             if (_menuOpen && _sidePanelOpen && !_panelPinned)
             {
                 SetSidePanelOpen(false);
+                SetMenuButtonPanelVisible(false);
                 return;
             }
 
@@ -1359,6 +1372,7 @@ namespace TavernSim.UI
             SetBuildMenuVisible(false, true);
             SetStaffPanelOpen(false);
             SetSidePanelOpen(true);
+            SetMenuButtonPanelVisible(true);
             ScrollMenuIntoView();
             UpdateMenuButtonState();
         }
@@ -1444,6 +1458,7 @@ namespace TavernSim.UI
             if (visible)
             {
                 _menuOpen = false;
+                SetMenuButtonPanelVisible(false);
                 UpdateMenuButtonState();
             }
         }
@@ -2000,6 +2015,11 @@ namespace TavernSim.UI
             if (!open)
             {
                 _menuOpen = false;
+                SetMenuButtonPanelVisible(false);
+            }
+            else
+            {
+                SetMenuButtonPanelVisible(_menuOpen);
             }
 
             UpdateMenuButtonState();
@@ -2120,6 +2140,114 @@ namespace TavernSim.UI
             var scroll = new ScrollView { name = name };
             root.Add(scroll);
             return scroll;
+        }
+
+        private void EnsureToolbarStructure(VisualElement layoutRoot)
+        {
+            if (layoutRoot == null)
+            {
+                return;
+            }
+
+            var toolbar = layoutRoot.Q<VisualElement>("toolbarRoot") ?? layoutRoot.Q<VisualElement>(className: "toolbar");
+            if (toolbar == null)
+            {
+                toolbar = new VisualElement { name = "toolbarRoot" };
+                toolbar.AddToClassList("toolbar");
+                layoutRoot.Add(toolbar);
+            }
+            else if (string.IsNullOrEmpty(toolbar.name))
+            {
+                toolbar.name = "toolbarRoot";
+            }
+
+            toolbar.style.position = Position.Absolute;
+            toolbar.style.left = 0f;
+            toolbar.style.right = 0f;
+            toolbar.style.bottom = 0f;
+            toolbar.style.height = 110f;
+            toolbar.style.display = DisplayStyle.Flex;
+
+            _toolbarGroup = toolbar.Q<VisualElement>("toolbarButtons") ?? toolbar.Q<VisualElement>(className: "toolbar-group");
+            if (_toolbarGroup == null)
+            {
+                _toolbarGroup = new VisualElement { name = "toolbarButtons" };
+                _toolbarGroup.AddToClassList("toolbar-group");
+                toolbar.Insert(0, _toolbarGroup);
+            }
+            else
+            {
+                if (!_toolbarGroup.ClassListContains("toolbar-group"))
+                {
+                    _toolbarGroup.AddToClassList("toolbar-group");
+                }
+
+                if (string.IsNullOrEmpty(_toolbarGroup.name))
+                {
+                    _toolbarGroup.name = "toolbarButtons";
+                }
+            }
+
+            var separator = toolbar.Q<VisualElement>("toolbarSeparator") ?? toolbar.Q<VisualElement>(className: "toolbar-separator");
+            if (separator == null)
+            {
+                separator = new VisualElement { name = "toolbarSeparator" };
+                separator.AddToClassList("toolbar-separator");
+                toolbar.Add(separator);
+            }
+            else
+            {
+                if (!separator.ClassListContains("toolbar-separator"))
+                {
+                    separator.AddToClassList("toolbar-separator");
+                }
+
+                if (string.IsNullOrEmpty(separator.name))
+                {
+                    separator.name = "toolbarSeparator";
+                }
+            }
+
+            var options = toolbar.Q<VisualElement>("buildMenu") ?? toolbar.Q<VisualElement>(className: "toolbar-options");
+            if (options == null)
+            {
+                options = CreateBuildMenu(toolbar);
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(options.name))
+                {
+                    options.name = "buildMenu";
+                }
+
+                options.AddToClassList("toolbar-options");
+            }
+
+            _buildMenu = options;
+        }
+
+        private Button EnsureToolbarButton(VisualElement root, Button existing, string name, string text)
+        {
+            var button = existing ?? (root != null ? root.Q<Button>(name) : null);
+            if (button == null)
+            {
+                button = new Button { name = name };
+            }
+
+            button.text = text;
+
+            if (_toolbarGroup != null && button.parent != _toolbarGroup)
+            {
+                button.RemoveFromHierarchy();
+                _toolbarGroup.Add(button);
+            }
+            else if (_toolbarGroup == null && root != null && button.parent == null)
+            {
+                root.Add(button);
+            }
+
+            button.AddToClassList("tool-button");
+            return button;
         }
 
         private static Button CreateButton(VisualElement root, string name, string text)

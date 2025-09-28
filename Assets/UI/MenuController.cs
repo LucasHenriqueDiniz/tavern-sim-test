@@ -16,6 +16,7 @@ namespace TavernSim.UI
 
         private readonly HashSet<RecipeSO> _allowed = new();
         private bool _hasUserInteracted;
+        private readonly Dictionary<RecipeSO, List<Button>> _buttonsByRecipe = new();
 
         // === métodos esperados pelos chamadores ===
         public void SetDocument(UIDocument doc)
@@ -62,25 +63,43 @@ namespace TavernSim.UI
             EnsureAllowedSeeded();
 
             // limpa seção anterior do menu, se existir
-            var anchor = root.Q<VisualElement>("menuAnchor");
-            if (anchor == null)
+            _buttonsByRecipe.Clear();
+
+            var anchors = new List<VisualElement>(2);
+            var panelAnchor = root.Q<VisualElement>("menuAnchor");
+            if (panelAnchor != null)
             {
-                anchor = root.Q<VisualElement>("sidePanel")?.Q<VisualElement>(className: "panel-content");
+                anchors.Add(panelAnchor);
             }
 
-            if (anchor == null)
+            var quickAnchor = root.Q<VisualElement>("menuButtonAnchor");
+            if (quickAnchor != null && quickAnchor != panelAnchor)
+            {
+                anchors.Add(quickAnchor);
+            }
+
+            if (anchors.Count == 0)
             {
                 return;
             }
 
-            anchor.Clear();
-
-            if (catalog.Recipes == null)
+            foreach (var target in anchors)
             {
+                target.Clear();
+            }
+
+            var recipes = catalog.Recipes;
+            if (recipes == null || recipes.Count == 0)
+            {
+                foreach (var target in anchors)
+                {
+                    target.Add(new Label("Sem receitas disponíveis."));
+                }
+
                 return;
             }
 
-            foreach (var kv in catalog.Recipes)
+            foreach (var kv in recipes)
             {
                 var recipe = kv.Value;
                 if (recipe == null)
@@ -88,33 +107,16 @@ namespace TavernSim.UI
                     continue;
                 }
 
-                var isAllowed = _allowed.Contains(recipe);
-                var button = new Button
+                var buttons = new List<Button>(anchors.Count);
+                foreach (var target in anchors)
                 {
-                    text = recipe.DisplayName ?? recipe.name
-                };
+                    var button = CreateMenuButton(recipe);
+                    target.Add(button);
+                    buttons.Add(button);
+                }
 
-                button.AddToClassList("menu-button");
-                button.EnableInClassList("menu-button--active", isAllowed);
-
-                button.clicked += () =>
-                {
-                    var nowAllowed = !_allowed.Contains(recipe);
-                    _hasUserInteracted = true;
-
-                    if (nowAllowed)
-                    {
-                        _allowed.Add(recipe);
-                    }
-                    else
-                    {
-                        _allowed.Remove(recipe);
-                    }
-
-                    button.EnableInClassList("menu-button--active", nowAllowed);
-                };
-
-                anchor.Add(button);
+                _buttonsByRecipe[recipe] = buttons;
+                UpdateRecipeButtons(recipe, _allowed.Contains(recipe));
             }
         }
 
@@ -157,6 +159,53 @@ namespace TavernSim.UI
                 {
                     _allowed.Add(recipe);
                 }
+            }
+        }
+
+        private Button CreateMenuButton(RecipeSO recipe)
+        {
+            var button = new Button
+            {
+                text = recipe.DisplayName ?? recipe.name
+            };
+
+            button.AddToClassList("menu-button");
+            button.clicked += () => ToggleRecipe(recipe);
+            return button;
+        }
+
+        private void ToggleRecipe(RecipeSO recipe)
+        {
+            if (recipe == null)
+            {
+                return;
+            }
+
+            var nowAllowed = !_allowed.Contains(recipe);
+            _hasUserInteracted = true;
+
+            if (nowAllowed)
+            {
+                _allowed.Add(recipe);
+            }
+            else
+            {
+                _allowed.Remove(recipe);
+            }
+
+            UpdateRecipeButtons(recipe, nowAllowed);
+        }
+
+        private void UpdateRecipeButtons(RecipeSO recipe, bool active)
+        {
+            if (!_buttonsByRecipe.TryGetValue(recipe, out var buttons))
+            {
+                return;
+            }
+
+            for (int i = 0; i < buttons.Count; i++)
+            {
+                buttons[i]?.EnableInClassList("menu-button--active", active);
             }
         }
     }
