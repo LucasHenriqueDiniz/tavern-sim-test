@@ -67,6 +67,11 @@ namespace TavernSim.Agents
                 return;
             }
 
+            if (!_agentSystem.HasAvailableSeating() || !_agentSystem.HasActiveWaiter())
+            {
+                return;
+            }
+
             _timer += deltaTime;
             CleanupInactive();
 

@@ -84,6 +84,19 @@ namespace TavernSim.Simulation.Systems
             return null;
         }
 
+        public bool HasAnySeat()
+        {
+            for (int i = 0; i < _tables.Count; i++)
+            {
+                if (_tables[i].HasFreeSeat(out _))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public void Dispose()
         {
             _tables.Clear();

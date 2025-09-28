@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.UIElements;
+using TavernSim.Agents;
 using TavernSim.Save;
 using TavernSim.Simulation.Systems;
 using TavernSim.Building;
@@ -30,7 +33,10 @@ namespace TavernSim.UI
         private Label _controlsLabel;
         private Label _cashLabel;
         private Label _customerLabel;
-        private Label _selectionLabel;
+        private VisualElement _selectionDetailsPanel;
+        private Label _selectionDetailsTitle;
+        private Label _selectionDetailsBody;
+        private Label _reputationLabel;
         private ScrollView _ordersScroll;
         private Button _saveButton;
         private Button _loadButton;
@@ -38,6 +44,7 @@ namespace TavernSim.UI
         private VisualElement _hireControls;
         private Button _hireWaiterButton;
         private Button _hireCookButton;
+        private Button _hireBartenderButton;
         private VisualElement _buildMenu;
         private readonly List<Label> _orderEntries = new List<Label>(16);
         private readonly List<Button> _buildOptionButtons = new List<Button>();
@@ -49,9 +56,14 @@ namespace TavernSim.UI
         private GridPlacer _gridPlacer;
         private IEventBus _eventBus;
         private HudToastController _toastController;
+        private ReputationSystem _reputationSystem;
+        private readonly StringBuilder _selectionDetailsBuilder = new StringBuilder(256);
+        private bool _pointerGuardsRegistered;
+        private bool _isPointerOverHud;
 
         public event Action HireWaiterRequested;
         public event Action HireCookRequested;
+        public event Action HireBartenderRequested;
 
         private static readonly BuildOption[] BuildOptions =
         {
@@ -97,8 +109,9 @@ namespace TavernSim.UI
 
             RefreshBuildOptionLabels();
             HighlightActiveOption(_gridPlacer != null ? _gridPlacer.ActiveKind : GridPlacer.PlaceableKind.None);
-            UpdateSelectionLabel(_selectionService != null ? _selectionService.Current : null);
-            SetBuildMenuVisible(false);
+            UpdateSelectionDetails(_selectionService != null ? _selectionService.Current : null);
+            SetBuildMenuVisible(false, true);
+            UpdatePointerOverHud();
 
             if (isActiveAndEnabled)
             {
@@ -124,6 +137,28 @@ namespace TavernSim.UI
             {
                 HookEvents();
             }
+        }
+
+        public void BindReputation(ReputationSystem reputationSystem)
+        {
+            if (_reputationSystem == reputationSystem)
+            {
+                return;
+            }
+
+            if (isActiveAndEnabled)
+            {
+                UnhookEvents();
+            }
+
+            _reputationSystem = reputationSystem;
+
+            if (isActiveAndEnabled)
+            {
+                HookEvents();
+            }
+
+            UpdateReputationLabel(_reputationSystem != null ? _reputationSystem.Reputation : 0);
         }
 
         public void PublishEvent(GameEvent gameEvent)
@@ -164,6 +199,8 @@ namespace TavernSim.UI
         private void OnDisable()
         {
             UnhookEvents();
+            _isPointerOverHud = false;
+            UpdatePointerOverHud();
         }
 
         private void Update()
@@ -254,13 +291,15 @@ namespace TavernSim.UI
             _ordersScroll = rootElement.Q<ScrollView>("ordersScroll") ?? CreateScroll(layoutRoot);
             _saveButton = rootElement.Q<Button>("saveBtn") ?? CreateButton(layoutRoot, "saveBtn", "Save (F5)");
             _loadButton = rootElement.Q<Button>("loadBtn") ?? CreateButton(layoutRoot, "loadBtn", "Load (F9)");
-            _selectionLabel = rootElement.Q<Label>("selectionLabel") ?? CreateLabel(layoutRoot, "selectionLabel", "Selecionado: Nenhum");
             _hireControls = rootElement.Q<VisualElement>("hireControls") ?? CreateHireControls(layoutRoot);
             _hireWaiterButton = rootElement.Q<Button>("hireWaiterBtn") ?? CreateButton(_hireControls, "hireWaiterBtn", "Contratar garçom");
             _hireCookButton = rootElement.Q<Button>("hireCookBtn") ?? CreateButton(_hireControls, "hireCookBtn", "Contratar cozinheiro");
+            _hireBartenderButton = rootElement.Q<Button>("hireBartenderBtn") ?? CreateButton(_hireControls, "hireBartenderBtn", "Contratar bartender");
             _hireWaiterButton?.AddToClassList("hud-button");
             _hireCookButton?.AddToClassList("hud-button");
             _hireCookButton?.AddToClassList("stacked");
+            _hireBartenderButton?.AddToClassList("hud-button");
+            _hireBartenderButton?.AddToClassList("stacked");
 
             if (_hireWaiterButton != null)
             {
@@ -271,12 +310,16 @@ namespace TavernSim.UI
             _buildMenu = rootElement.Q<VisualElement>("buildMenu") ?? CreateBuildMenu(layoutRoot);
 
             CreateBuildButtons();
-            SetBuildMenuVisible(false);
+            SetBuildMenuVisible(false, true);
 
             var menuController = GetComponent<MenuController>();
             menuController?.RebuildMenu();
 
             _toastController?.AttachTo(rootElement);
+
+            EnsureSelectionDetailsPanel(rootElement);
+            EnsureReputationLabel(rootElement);
+            RegisterHudPointerGuards(rootElement);
         }
 
         private void HookEvents()
@@ -325,6 +368,12 @@ namespace TavernSim.UI
                 _hireCookButton.clicked += OnHireCookClicked;
             }
 
+            if (_hireBartenderButton != null)
+            {
+                _hireBartenderButton.clicked -= OnHireBartenderClicked;
+                _hireBartenderButton.clicked += OnHireBartenderClicked;
+            }
+
             if (_selectionService != null)
             {
                 _selectionService.SelectionChanged -= OnSelectionChanged;
@@ -345,6 +394,13 @@ namespace TavernSim.UI
             {
                 _eventBus.OnEvent -= OnGameEvent;
                 _eventBus.OnEvent += OnGameEvent;
+            }
+
+            if (_reputationSystem != null)
+            {
+                _reputationSystem.ReputationChanged -= OnReputationChanged;
+                _reputationSystem.ReputationChanged += OnReputationChanged;
+                UpdateReputationLabel(_reputationSystem.Reputation);
             }
         }
 
@@ -385,6 +441,11 @@ namespace TavernSim.UI
                 _hireCookButton.clicked -= OnHireCookClicked;
             }
 
+            if (_hireBartenderButton != null)
+            {
+                _hireBartenderButton.clicked -= OnHireBartenderClicked;
+            }
+
             if (_selectionService != null)
             {
                 _selectionService.SelectionChanged -= OnSelectionChanged;
@@ -400,6 +461,11 @@ namespace TavernSim.UI
             if (_eventBus != null)
             {
                 _eventBus.OnEvent -= OnGameEvent;
+            }
+
+            if (_reputationSystem != null)
+            {
+                _reputationSystem.ReputationChanged -= OnReputationChanged;
             }
         }
 
@@ -508,7 +574,7 @@ namespace TavernSim.UI
 
         private void ToggleBuildMenu()
         {
-            SetBuildMenuVisible(!_buildMenuVisible);
+            SetBuildMenuVisible(!_buildMenuVisible, true);
         }
 
         private void OnHireWaiterClicked()
@@ -521,12 +587,33 @@ namespace TavernSim.UI
             HireCookRequested?.Invoke();
         }
 
-        private void SetBuildMenuVisible(bool visible)
+        private void OnHireBartenderClicked()
+        {
+            HireBartenderRequested?.Invoke();
+        }
+
+        private void SetBuildMenuVisible(bool visible, bool triggeredByToggle = false)
         {
             _buildMenuVisible = visible;
             if (_buildMenu != null)
             {
                 _buildMenu.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+
+            if (_gridPlacer != null)
+            {
+                if (visible)
+                {
+                    _gridPlacer.SetBuildMode(true);
+                }
+                else if (triggeredByToggle)
+                {
+                    _gridPlacer.ExitBuildMode();
+                }
+                else if (!_gridPlacer.HasActivePlacement)
+                {
+                    _gridPlacer.SetBuildMode(false);
+                }
             }
         }
 
@@ -567,9 +654,9 @@ namespace TavernSim.UI
 
             if (evt.currentTarget is Button optionButton && optionButton.userData is GridPlacer.PlaceableKind kind)
             {
-                if (_gridPlacer.ActiveKind == kind)
+                if (_gridPlacer.ActiveKind == kind && _gridPlacer.BuildModeActive)
                 {
-                    _gridPlacer.CancelPlacement();
+                    _gridPlacer.ExitBuildMode();
                 }
                 else
                 {
@@ -583,19 +670,113 @@ namespace TavernSim.UI
 
         private void OnSelectionChanged(ISelectable selectable)
         {
-            UpdateSelectionLabel(selectable);
+            UpdateSelectionDetails(selectable);
         }
 
-        private void UpdateSelectionLabel(ISelectable selectable)
+        private void UpdateSelectionDetails(ISelectable selectable)
         {
-            if (_selectionLabel == null)
+            if (_selectionDetailsPanel == null || _selectionDetailsTitle == null || _selectionDetailsBody == null)
             {
                 return;
             }
 
-            _selectionLabel.text = selectable != null
-                ? $"Selecionado: {selectable.DisplayName}"
-                : "Selecionado: Nenhum";
+            if (selectable == null)
+            {
+                _selectionDetailsPanel.style.display = DisplayStyle.None;
+                _selectionDetailsTitle.text = string.Empty;
+                _selectionDetailsBody.text = string.Empty;
+                return;
+            }
+
+            _selectionDetailsPanel.style.display = DisplayStyle.Flex;
+            _selectionDetailsTitle.text = selectable.DisplayName ?? "Selecionado";
+            _selectionDetailsBuilder.Clear();
+
+            void AppendLine(string label, string value)
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    value = "-";
+                }
+
+                _selectionDetailsBuilder.Append(label);
+                _selectionDetailsBuilder.Append(": ");
+                _selectionDetailsBuilder.AppendLine(value);
+            }
+
+            void AppendSpeed(float speed)
+            {
+                AppendLine("Speed", speed > 0.01f ? speed.ToString("0.##") : "-");
+            }
+
+            void AppendStatus(string status)
+            {
+                AppendLine("Status", string.IsNullOrWhiteSpace(status) ? "-" : status);
+            }
+
+            void AppendGold(int gold)
+            {
+                if (gold >= 0)
+                {
+                    AppendLine("Gold", gold.ToString());
+                }
+            }
+
+            void AppendSalary(float salary)
+            {
+                if (salary > 0f)
+                {
+                    AppendLine("Salário", salary.ToString("0.##"));
+                }
+            }
+
+            switch (selectable)
+            {
+                case Customer customer:
+                    AppendLine("Nome", customer.FullName);
+                    AppendSpeed(customer.Agent != null ? customer.Agent.speed : 0f);
+                    AppendStatus(customer.Status);
+                    AppendGold(customer.Gold);
+                    AppendLine("Paciência", customer.Patience > 0f ? customer.Patience.ToString("0.#") : "-");
+                    break;
+                case Waiter waiter:
+                    AppendLine("Nome", waiter.name);
+                    AppendSpeed(waiter.MovementSpeed);
+                    AppendStatus(waiter.Status);
+                    AppendSalary(waiter.Salary);
+                    break;
+                case Bartender bartender:
+                    AppendLine("Nome", bartender.name);
+                    AppendSpeed(bartender.MovementSpeed);
+                    AppendStatus(bartender.Status);
+                    AppendSalary(bartender.Salary);
+                    break;
+                case Cook cook:
+                    AppendLine("Nome", cook.name);
+                    AppendSpeed(cook.MovementSpeed);
+                    AppendStatus(cook.Status);
+                    AppendSalary(cook.Salary);
+                    break;
+                case TablePresenter tablePresenter:
+                    AppendLine("Nome", tablePresenter.DisplayName);
+                    AppendLine("Lugares", tablePresenter.SeatCount.ToString());
+                    AppendLine("Ocupados", tablePresenter.OccupiedSeats.ToString());
+                    AppendLine("Necessita limpeza", tablePresenter.Dirtiness > 0.01f ? "Sim" : "Não");
+                    break;
+                default:
+                    var go = selectable.Transform != null ? selectable.Transform.gameObject : null;
+                    AppendLine("Nome", go != null ? go.name : "-");
+                    AppendSpeed(GetNavAgentSpeed(go));
+                    AppendStatus(GetIntent(go));
+                    break;
+            }
+
+            if (_selectionDetailsBuilder.Length == 0)
+            {
+                _selectionDetailsBuilder.Append("Sem dados adicionais.");
+            }
+
+            _selectionDetailsBody.text = _selectionDetailsBuilder.ToString().TrimEnd();
         }
 
         private void OnPlacementModeChanged(GridPlacer.PlaceableKind kind)
@@ -616,6 +797,26 @@ namespace TavernSim.UI
                     button.RemoveFromClassList("build-option--active");
                 }
             }
+        }
+
+        private static float GetNavAgentSpeed(GameObject go)
+        {
+            if (go != null && go.TryGetComponent(out NavMeshAgent agent))
+            {
+                return agent.speed;
+            }
+
+            return 0f;
+        }
+
+        private static string GetIntent(GameObject go)
+        {
+            if (go != null && go.TryGetComponent(out AgentIntentDisplay intentDisplay))
+            {
+                return intentDisplay.CurrentIntent;
+            }
+
+            return string.Empty;
         }
 
         private void RefreshBuildOptionLabels()
@@ -659,6 +860,169 @@ namespace TavernSim.UI
 
             RefreshBuildOptionLabels();
             HighlightActiveOption(GridPlacer.PlaceableKind.None);
+        }
+
+        private void EnsureSelectionDetailsPanel(VisualElement rootElement)
+        {
+            if (rootElement == null)
+            {
+                return;
+            }
+
+            _selectionDetailsPanel = rootElement.Q<VisualElement>("selectionDetailsPanel");
+            if (_selectionDetailsPanel == null)
+            {
+                _selectionDetailsPanel = new VisualElement
+                {
+                    name = "selectionDetailsPanel"
+                };
+                _selectionDetailsPanel.style.position = Position.Absolute;
+                _selectionDetailsPanel.style.right = 16f;
+                _selectionDetailsPanel.style.top = 16f;
+                _selectionDetailsPanel.style.width = 320f;
+                _selectionDetailsPanel.style.paddingLeft = 12f;
+                _selectionDetailsPanel.style.paddingRight = 12f;
+                _selectionDetailsPanel.style.paddingTop = 12f;
+                _selectionDetailsPanel.style.paddingBottom = 12f;
+                _selectionDetailsPanel.style.backgroundColor = new Color(0.18f, 0.15f, 0.12f, 0.85f);
+                _selectionDetailsPanel.style.borderTopLeftRadius = 8f;
+                _selectionDetailsPanel.style.borderTopRightRadius = 8f;
+                _selectionDetailsPanel.style.borderBottomLeftRadius = 8f;
+                _selectionDetailsPanel.style.borderBottomRightRadius = 8f;
+                _selectionDetailsPanel.style.flexDirection = FlexDirection.Column;
+                _selectionDetailsPanel.style.display = DisplayStyle.None;
+                rootElement.Add(_selectionDetailsPanel);
+            }
+
+            _selectionDetailsTitle = _selectionDetailsPanel.Q<Label>("selectionDetailsTitle");
+            if (_selectionDetailsTitle == null)
+            {
+                _selectionDetailsTitle = new Label
+                {
+                    name = "selectionDetailsTitle"
+                };
+                _selectionDetailsTitle.style.unityFontStyleAndWeight = FontStyle.Bold;
+                _selectionDetailsTitle.style.fontSize = 16f;
+                _selectionDetailsTitle.style.marginBottom = 6f;
+                _selectionDetailsPanel.Add(_selectionDetailsTitle);
+            }
+
+            _selectionDetailsBody = _selectionDetailsPanel.Q<Label>("selectionDetailsBody");
+            if (_selectionDetailsBody == null)
+            {
+                _selectionDetailsBody = new Label
+                {
+                    name = "selectionDetailsBody"
+                };
+                _selectionDetailsBody.style.whiteSpace = WhiteSpace.Normal;
+                _selectionDetailsBody.style.fontSize = 13f;
+                _selectionDetailsPanel.Add(_selectionDetailsBody);
+            }
+
+            UpdateSelectionDetails(_selectionService != null ? _selectionService.Current : null);
+        }
+
+        private void EnsureReputationLabel(VisualElement rootElement)
+        {
+            if (rootElement == null)
+            {
+                return;
+            }
+
+            _reputationLabel = rootElement.Q<Label>("reputationLabel");
+            if (_reputationLabel == null)
+            {
+                _reputationLabel = new Label
+                {
+                    name = "reputationLabel"
+                };
+                _reputationLabel.style.position = Position.Absolute;
+                _reputationLabel.style.left = 16f;
+                _reputationLabel.style.top = 16f;
+                _reputationLabel.style.backgroundColor = new Color(0.18f, 0.15f, 0.12f, 0.85f);
+                _reputationLabel.style.paddingLeft = 8f;
+                _reputationLabel.style.paddingRight = 8f;
+                _reputationLabel.style.paddingTop = 6f;
+                _reputationLabel.style.paddingBottom = 6f;
+                _reputationLabel.style.borderTopLeftRadius = 6f;
+                _reputationLabel.style.borderTopRightRadius = 6f;
+                _reputationLabel.style.borderBottomLeftRadius = 6f;
+                _reputationLabel.style.borderBottomRightRadius = 6f;
+                _reputationLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+                _reputationLabel.style.fontSize = 14f;
+                rootElement.Add(_reputationLabel);
+            }
+
+            UpdateReputationLabel(_reputationSystem != null ? _reputationSystem.Reputation : 0);
+        }
+
+        private void UpdateReputationLabel(int value)
+        {
+            if (_reputationLabel == null)
+            {
+                return;
+            }
+
+            _reputationLabel.text = $"Reputação: {value}";
+        }
+
+        private int _hudPointerDepth;
+
+        private void RegisterHudPointerGuards(VisualElement rootElement)
+        {
+            if (_pointerGuardsRegistered || rootElement == null)
+            {
+                return;
+            }
+
+            rootElement.RegisterCallback<PointerEnterEvent>(OnHudPointerEnter, TrickleDown.TrickleDown);
+            rootElement.RegisterCallback<PointerLeaveEvent>(OnHudPointerLeave, TrickleDown.TrickleDown);
+            _pointerGuardsRegistered = true;
+        }
+
+        private void OnHudPointerEnter(PointerEnterEvent evt)
+        {
+            if (evt == null)
+            {
+                return;
+            }
+
+            _hudPointerDepth++;
+
+            if (_hudPointerDepth == 1)
+            {
+                _isPointerOverHud = true;
+                UpdatePointerOverHud();
+            }
+        }
+
+        private void OnHudPointerLeave(PointerLeaveEvent evt)
+        {
+            if (evt == null)
+            {
+                return;
+            }
+
+            if (_hudPointerDepth > 0)
+            {
+                _hudPointerDepth--;
+            }
+
+            if (_hudPointerDepth == 0)
+            {
+                _isPointerOverHud = false;
+                UpdatePointerOverHud();
+            }
+        }
+
+        private void UpdatePointerOverHud()
+        {
+            _gridPlacer?.SetPointerOverUI(_isPointerOverHud);
+        }
+
+        private void OnReputationChanged(int value)
+        {
+            UpdateReputationLabel(value);
         }
 
         private static Label CreateLabel(VisualElement root, string name, string text)

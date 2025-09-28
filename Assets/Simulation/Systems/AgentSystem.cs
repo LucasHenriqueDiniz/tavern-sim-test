@@ -24,12 +24,14 @@ namespace TavernSim.Simulation.Systems
         private const float TableSearchTimeout = 12f;
         private const float TableSearchRepathInterval = 1.5f;
         private const float MealDuration = 8f;
+        private const float WaiterServiceOffset = 0.55f;
 
         private readonly TableRegistry _tableRegistry;
         private readonly OrderSystem _orderSystem;
         private readonly EconomySystem _economySystem;
         private readonly CleaningSystem _cleaningSystem;
         private readonly Catalog _catalog;
+        private ReputationSystem _reputationSystem;
 
         private readonly List<CustomerData> _customers = new List<CustomerData>(16);
         private readonly List<WaiterData> _waiters = new List<WaiterData>(4);
@@ -49,7 +51,7 @@ namespace TavernSim.Simulation.Systems
         public event Action<int> ActiveCustomerCountChanged;
         public int ActiveCustomerCount => _customers.Count;
         public event Action<Customer> CustomerReleased;
-        public event Action<Customer> CustomerLeftAngry;
+        public event Action<Customer, string> CustomerLeftAngry;
 
         public AgentSystem(TableRegistry tableRegistry, OrderSystem orderSystem, EconomySystem economySystem, CleaningSystem cleaningSystem, Catalog catalog)
         {
@@ -86,6 +88,21 @@ namespace TavernSim.Simulation.Systems
         public void SetEventBus(IEventBus eventBus)
         {
             _eventBus = eventBus;
+        }
+
+        public void SetReputationSystem(ReputationSystem reputationSystem)
+        {
+            _reputationSystem = reputationSystem;
+        }
+
+        public bool HasAvailableSeating()
+        {
+            return _tableRegistry != null && _tableRegistry.HasAnySeat();
+        }
+
+        public bool HasActiveWaiter()
+        {
+            return _waiters.Count > 0;
         }
 
         public void Initialize(Sim simulation)
@@ -165,6 +182,7 @@ namespace TavernSim.Simulation.Systems
             data.OrderBlocked = false;
             data.BlockReason = string.Empty;
             data.WaiterAssigned = false;
+            customer.ApplyProfile(data.Name, data.Gold, data.Patience);
             _customers.Add(data);
             ActiveCustomerCountChanged?.Invoke(_customers.Count);
             UpdateCustomerIntent(data);
@@ -317,7 +335,8 @@ namespace TavernSim.Simulation.Systems
                         data.SearchTimer = 0f;
                         data.BlockReason = "Sem mesas disponíveis";
                         PublishCustomerAngry(data, data.BlockReason, -1);
-                        CustomerLeftAngry?.Invoke(data.Agent);
+                        CustomerLeftAngry?.Invoke(data.Agent, data.BlockReason);
+                        _reputationSystem?.Add(-2);
                         return;
                     }
                 }
@@ -480,17 +499,20 @@ namespace TavernSim.Simulation.Systems
                     _tablesNeedingClean.Add(data.Table.Id);
                 }
             }
+
+            if (data.Table != null && data.Seat != null)
+            {
+                _tableRegistry.ReleaseSeat(data.Table.Id, data.Seat.Id);
+            }
+
+            data.Table = null;
+            data.Seat = null;
         }
 
         private void HandleLeave(ref CustomerData data)
         {
             if (data.Agent.HasReached(DestinationThresholdSqr) || data.StateTimer > 10f)
             {
-                if (data.Table != null && data.Seat != null)
-                {
-                    _tableRegistry.ReleaseSeat(data.Table.Id, data.Seat.Id);
-                }
-
                 data.Reset();
                 MarkForDespawn(data);
             }
@@ -524,6 +546,8 @@ namespace TavernSim.Simulation.Systems
             if (data.TargetCustomer == null)
             {
                 data.State = WaiterState.Idle;
+                data.ServicePosition = Vector3.zero;
+                data.StateTimer = 0f;
                 return;
             }
 
@@ -536,6 +560,8 @@ namespace TavernSim.Simulation.Systems
             if (customerData == null)
             {
                 data.State = WaiterState.Idle;
+                data.ServicePosition = Vector3.zero;
+                data.StateTimer = 0f;
                 return;
             }
 
@@ -566,25 +592,34 @@ namespace TavernSim.Simulation.Systems
 
                     data.TargetCustomer = null;
                     data.State = WaiterState.Idle;
+                    data.ServicePosition = Vector3.zero;
                     data.Agent.SetDestination(GetPickupPoint(PrepArea.Kitchen));
+                    data.StateTimer = 0f;
                     return;
                 }
 
                 customerData.State = CustomerState.WaitDrink;
+                customerData.StateTimer = 0f;
                 customerData.WaitTimer = 0f;
                 customerData.PendingRecipe = recipe;
                 customerData.OrderBlocked = false;
                 customerData.WaiterAssigned = false;
                 customerData.BlockReason = string.Empty;
+                UpdateCustomerIntent(customerData);
 
                 var area = _orderSystem.EnqueueOrder(customerData.Table.Id, recipe);
                 data.TargetArea = area;
                 data.Agent.SetDestination(GetPickupPoint(area));
                 data.State = WaiterState.WaitPrep;
+                data.StateTimer = 0f;
                 return;
             }
 
             data.State = WaiterState.Idle;
+            data.TargetCustomer = null;
+            data.ServicePosition = Vector3.zero;
+            data.Agent.SetDestination(GetPickupPoint(PrepArea.Kitchen));
+            data.StateTimer = 0f;
         }
 
         private void HandleWaiterWaitPrep(ref WaiterData data)
@@ -597,6 +632,8 @@ namespace TavernSim.Simulation.Systems
             if (data.TargetCustomer == null)
             {
                 data.State = WaiterState.Idle;
+                data.ServicePosition = Vector3.zero;
+                data.StateTimer = 0f;
                 return;
             }
 
@@ -604,6 +641,8 @@ namespace TavernSim.Simulation.Systems
             if (customerData == null || customerData.Table == null)
             {
                 data.State = WaiterState.Idle;
+                data.ServicePosition = Vector3.zero;
+                data.StateTimer = 0f;
                 return;
             }
 
@@ -611,8 +650,10 @@ namespace TavernSim.Simulation.Systems
             {
                 data.CarryingRecipe = recipe;
                 data.CarryingArea = area;
-                data.Agent.SetDestination(customerData.Seat.Anchor.position);
+                data.ServicePosition = GetSeatServicePosition(customerData.Seat);
+                data.Agent.SetDestination(data.ServicePosition);
                 data.State = WaiterState.Deliver;
+                data.StateTimer = 0f;
             }
         }
 
@@ -621,6 +662,8 @@ namespace TavernSim.Simulation.Systems
             if (data.TargetCustomer == null)
             {
                 data.State = WaiterState.Idle;
+                data.ServicePosition = Vector3.zero;
+                data.StateTimer = 0f;
                 return;
             }
 
@@ -633,6 +676,7 @@ namespace TavernSim.Simulation.Systems
             if (customerData != null && customerData.State == CustomerState.WaitDrink)
             {
                 customerData.State = CustomerState.Eat;
+                customerData.StateTimer = 0f;
                 customerData.ConsumeTimer = 0f;
                 customerData.CurrentRecipe = data.CarryingRecipe ?? customerData.PendingRecipe;
                 customerData.PendingRecipe = null;
@@ -641,6 +685,8 @@ namespace TavernSim.Simulation.Systems
                 customerData.WaiterAssigned = false;
                 customerData.BlockReason = string.Empty;
                 PublishOrderDelivered(customerData, data.CarryingRecipe ?? customerData.CurrentRecipe, data.CarryingArea);
+                _reputationSystem?.Add(1);
+                UpdateCustomerIntent(customerData);
             }
 
             data.CarryingRecipe = null;
@@ -648,6 +694,8 @@ namespace TavernSim.Simulation.Systems
             data.TargetCustomer = null;
             data.TargetArea = PrepArea.Kitchen;
             data.State = WaiterState.Idle;
+            data.StateTimer = 0f;
+            data.ServicePosition = Vector3.zero;
         }
 
         private void HandleWaiterClean(ref WaiterData data)
@@ -696,8 +744,10 @@ namespace TavernSim.Simulation.Systems
                 _customersNeedingOrder.RemoveAt(i);
                 data.TargetCustomer = customer;
                 customerData.WaiterAssigned = true;
-                data.Agent.SetDestination(customerData.Seat.Anchor.position);
+                data.ServicePosition = GetSeatServicePosition(customerData.Seat);
+                data.Agent.SetDestination(data.ServicePosition);
                 data.State = WaiterState.TakeOrder;
+                data.StateTimer = 0f;
                 return true;
             }
 
@@ -712,6 +762,34 @@ namespace TavernSim.Simulation.Systems
             }
 
             return _kitchenPickupPoint != Vector3.zero ? _kitchenPickupPoint : _entryPoint;
+        }
+
+        private Vector3 GetSeatServicePosition(Seat seat)
+        {
+            if (seat == null || seat.Anchor == null)
+            {
+                return GetPickupPoint(PrepArea.Kitchen);
+            }
+
+            var anchor = seat.Anchor;
+            var forward = anchor.forward;
+            if (forward.sqrMagnitude <= Mathf.Epsilon)
+            {
+                forward = Vector3.forward;
+            }
+
+            var desired = anchor.position - forward.normalized * WaiterServiceOffset;
+            if (NavMesh.SamplePosition(desired, out var hit, 0.75f, NavMesh.AllAreas))
+            {
+                return hit.position;
+            }
+
+            if (NavMesh.SamplePosition(anchor.position, out hit, 0.75f, NavMesh.AllAreas))
+            {
+                return hit.position;
+            }
+
+            return anchor.position;
         }
 
         private CustomerData FindCustomerData(Customer customer)
@@ -778,8 +856,16 @@ namespace TavernSim.Simulation.Systems
             data.PendingRecipe = null;
             data.CurrentRecipe = null;
             PublishCustomerAngry(data, reason, tableId);
-            CustomerLeftAngry?.Invoke(data.Agent);
+            CustomerLeftAngry?.Invoke(data.Agent, reason);
             data.BlockReason = string.Empty;
+            _reputationSystem?.Add(-2);
+
+            if (data.Table != null && data.Seat != null)
+            {
+                _tableRegistry.ReleaseSeat(data.Table.Id, data.Seat.Id);
+                data.Table = null;
+                data.Seat = null;
+            }
         }
 
         private void PublishOrderBlockedByMenu(CustomerData data, RecipeSO recipe)
@@ -1016,6 +1102,7 @@ namespace TavernSim.Simulation.Systems
                 WaiterAssigned = false;
                 OrderBlocked = false;
                 BlockReason = string.Empty;
+                Agent?.ApplyProfile(Name, Gold, Patience);
             }
         }
 
@@ -1029,6 +1116,7 @@ namespace TavernSim.Simulation.Systems
             public RecipeSO CarryingRecipe;
             public PrepArea TargetArea;
             public PrepArea CarryingArea;
+            public Vector3 ServicePosition;
 
             public WaiterData(Waiter agent)
             {
@@ -1036,6 +1124,7 @@ namespace TavernSim.Simulation.Systems
                 State = WaiterState.Idle;
                 TargetArea = PrepArea.Kitchen;
                 CarryingArea = PrepArea.Kitchen;
+                ServicePosition = Vector3.zero;
             }
         }
     }

@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Rendering;
 using TavernSim.Core;
 using TavernSim.Simulation.Models;
 using TavernSim.Simulation.Systems;
@@ -11,7 +12,8 @@ using Object = UnityEngine.Object;
 namespace TavernSim.Building
 {
     /// <summary>
-    /// Minimal grid based placement tool used for development of the MVP.
+    /// Grid based placement tool used for development of the MVP.
+    /// Adds build-mode helpers such as grid visualization and placement previews.
     /// </summary>
     public sealed class GridPlacer : MonoBehaviour
     {
@@ -33,18 +35,38 @@ namespace TavernSim.Building
         [SerializeField] private float kitchenStationCost = 420f;
         [SerializeField] private float barCounterCost = 360f;
         [SerializeField] private float pickupPointCost = 0f;
+        [Header("Build Mode")]
+        [SerializeField] private BuildGridVisualizer gridVisualizer;
+        [SerializeField] private LayerMask placementMask = ~0;
+        [SerializeField] private LayerMask blockingMask = ~0;
+        [SerializeField] private float previewHeight = 0.05f;
+        [SerializeField] private Color previewValidColor = new Color(0.25f, 0.8f, 0.25f, 0.35f);
+        [SerializeField] private Color previewInvalidColor = new Color(0.85f, 0.3f, 0.3f, 0.35f);
 
         private EconomySystem _economySystem;
         private SelectionService _selectionService;
         private TableRegistry _tableRegistry;
         private CleaningSystem _cleaningSystem;
         private PlaceableKind _activeKind = PlaceableKind.None;
+        private bool _buildModeActive;
+        private GameObject _previewObject;
+        private Renderer[] _previewRenderers = Array.Empty<Renderer>();
+        private Material _previewMaterial;
+        private PlaceableKind _previewKind = PlaceableKind.None;
+        private Vector3 _currentPreviewPosition;
+        private bool _hasValidPreview;
+        private bool _canAffordPreview = true;
+        private Collider _lastSurfaceCollider;
+        private readonly Collider[] _overlapResults = new Collider[32];
+        private bool _pointerOverUI;
 
-        public event System.Action<PlaceableKind> PlacementModeChanged;
+        public event Action<PlaceableKind> PlacementModeChanged;
 
         public PlaceableKind ActiveKind => _activeKind;
 
         public bool HasActivePlacement => _activeKind != PlaceableKind.None;
+
+        public bool BuildModeActive => _buildModeActive;
 
         public void Configure(
             EconomySystem economySystem,
@@ -56,6 +78,40 @@ namespace TavernSim.Building
             _selectionService = selectionService;
             _tableRegistry = tableRegistry;
             _cleaningSystem = cleaningSystem;
+
+            ApplyGridSizeToVisualizer();
+            UpdateGridVisibility();
+        }
+
+        private void Awake()
+        {
+            ApplyGridSizeToVisualizer();
+            UpdateGridVisibility();
+        }
+
+        private void OnValidate()
+        {
+            gridSize = Mathf.Max(0.1f, gridSize);
+            ApplyGridSizeToVisualizer();
+        }
+
+        private void OnDestroy()
+        {
+            DestroyPreview();
+
+            if (_previewMaterial != null)
+            {
+                if (Application.isPlaying)
+                {
+                    Destroy(_previewMaterial);
+                }
+                else
+                {
+                    DestroyImmediate(_previewMaterial);
+                }
+
+                _previewMaterial = null;
+            }
         }
 
         private void Update()
@@ -65,68 +121,55 @@ namespace TavernSim.Building
                 return;
             }
 
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-            var mouse = Mouse.current;
-            var keyboard = Keyboard.current;
-            if (mouse == null)
+            if (!TryGetPointerData(out var screenPoint, out var leftClick, out var rightClick, out var cancelPressed))
             {
                 return;
             }
 
-            if (HasActivePlacement && (mouse.rightButton.wasPressedThisFrame || (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)))
+            if (_pointerOverUI)
             {
-                CancelPlacement();
-                return;
-            }
-
-            if (!mouse.leftButton.wasPressedThisFrame)
-            {
-                return;
-            }
-
-            var pointerPosition = mouse.position.ReadValue();
-            var screenPoint = new Vector3(pointerPosition.x, pointerPosition.y, 0f);
-#elif ENABLE_LEGACY_INPUT_MANAGER
-            if (HasActivePlacement && (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape)))
-            {
-                CancelPlacement();
-                return;
-            }
-
-            if (!Input.GetMouseButtonDown(0))
-            {
-                return;
-            }
-
-            var screenPoint = Input.mousePosition;
-#else
-            return;
-#endif
-
-            var mainCamera = Camera.main;
-            if (mainCamera == null)
-            {
-                return;
-            }
-
-            var ray = mainCamera.ScreenPointToRay(screenPoint);
-            if (!Physics.Raycast(ray, out var hit, 100f))
-            {
-                if (!HasActivePlacement)
-                {
-                    _selectionService.ClearSelection();
-                }
-
-                return;
+                leftClick = false;
+                rightClick = false;
             }
 
             if (HasActivePlacement)
             {
-                TryPlaceAt(hit.point);
+                if (rightClick || cancelPressed)
+                {
+                    ExitBuildMode();
+                    return;
+                }
+
+                UpdatePlacementPreview(screenPoint);
+
+                if (leftClick && _hasValidPreview)
+                {
+                    if (_canAffordPreview)
+                    {
+                        TryPlaceAt(_currentPreviewPosition);
+                    }
+                    else
+                    {
+                        UpdatePreviewColor(false);
+                    }
+                }
             }
             else
             {
-                SelectHit(hit.collider);
+                if (rightClick || cancelPressed)
+                {
+                    if (_buildModeActive)
+                    {
+                        SetBuildMode(false);
+                    }
+
+                    return;
+                }
+
+                if (leftClick)
+                {
+                    HandleSelection(screenPoint);
+                }
             }
         }
 
@@ -138,20 +181,46 @@ namespace TavernSim.Building
                 return;
             }
 
+            SetBuildMode(true);
             _selectionService?.ClearSelection();
             _activeKind = kind;
+            DestroyPreview();
             PlacementModeChanged?.Invoke(_activeKind);
         }
 
         public void CancelPlacement()
         {
-            if (_activeKind == PlaceableKind.None)
+            CancelPlacementInternal();
+            PlacementModeChanged?.Invoke(_activeKind);
+            UpdateGridVisibility();
+        }
+
+        public void SetBuildMode(bool active)
+        {
+            if (_buildModeActive == active)
             {
                 return;
             }
 
-            _activeKind = PlaceableKind.None;
-            PlacementModeChanged?.Invoke(_activeKind);
+            _buildModeActive = active;
+
+            if (!_buildModeActive)
+            {
+                CancelPlacementInternal();
+                PlacementModeChanged?.Invoke(_activeKind);
+            }
+
+            UpdateGridVisibility();
+        }
+
+        public void ExitBuildMode()
+        {
+            SetBuildMode(false);
+        }
+
+        public void SetPointerOverUI(bool isOverUI)
+        {
+            _pointerOverUI = isOverUI;
         }
 
         public float GetPlacementCost(PlaceableKind kind)
@@ -179,6 +248,7 @@ namespace TavernSim.Building
             if (cost > 0f && !_economySystem.TrySpend(cost))
             {
                 Debug.LogWarning($"Not enough cash to place {_activeKind} (cost {cost:0}).");
+                UpdatePreviewColor(false);
                 return;
             }
 
@@ -232,6 +302,354 @@ namespace TavernSim.Building
             position.z = Mathf.Round(position.z / gridSize) * gridSize;
             position.y = 0f;
             return position;
+        }
+
+        private void HandleSelection(Vector3 screenPoint)
+        {
+            var mainCamera = Camera.main;
+            if (mainCamera == null)
+            {
+                return;
+            }
+
+            var ray = mainCamera.ScreenPointToRay(screenPoint);
+            if (Physics.Raycast(ray, out var hit, 200f, placementMask))
+            {
+                SelectHit(hit.collider);
+            }
+            else
+            {
+                _selectionService.ClearSelection();
+            }
+        }
+
+        private bool TryGetPointerData(out Vector3 screenPoint, out bool leftClick, out bool rightClick, out bool cancelPressed)
+        {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+            var mouse = Mouse.current;
+            var keyboard = Keyboard.current;
+            if (mouse == null)
+            {
+                screenPoint = default;
+                leftClick = false;
+                rightClick = false;
+                cancelPressed = false;
+                return false;
+            }
+
+            var pointerPosition = mouse.position.ReadValue();
+            screenPoint = new Vector3(pointerPosition.x, pointerPosition.y, 0f);
+            leftClick = mouse.leftButton.wasPressedThisFrame;
+            rightClick = mouse.rightButton.wasPressedThisFrame;
+            cancelPressed = keyboard != null && keyboard.escapeKey.wasPressedThisFrame;
+            return true;
+#elif ENABLE_LEGACY_INPUT_MANAGER
+            screenPoint = Input.mousePosition;
+            leftClick = Input.GetMouseButtonDown(0);
+            rightClick = Input.GetMouseButtonDown(1);
+            cancelPressed = Input.GetKeyDown(KeyCode.Escape);
+            return true;
+#else
+            screenPoint = default;
+            leftClick = false;
+            rightClick = false;
+            cancelPressed = false;
+            return false;
+#endif
+        }
+
+        private void UpdatePlacementPreview(Vector3 screenPoint)
+        {
+            var mainCamera = Camera.main;
+            if (mainCamera == null)
+            {
+                HidePreview();
+                return;
+            }
+
+            var ray = mainCamera.ScreenPointToRay(screenPoint);
+            if (Physics.Raycast(ray, out var hit, 200f, placementMask))
+            {
+                _currentPreviewPosition = AlignToGrid(hit.point);
+                EnsurePreviewObject();
+
+                if (_previewObject != null)
+                {
+                    _previewObject.transform.position = _currentPreviewPosition + Vector3.up * previewHeight;
+                }
+
+                _lastSurfaceCollider = hit.collider;
+                UpdatePreviewState(true);
+            }
+            else
+            {
+                _lastSurfaceCollider = null;
+                UpdatePreviewState(false);
+            }
+        }
+
+        private void UpdatePreviewState(bool hasValidPosition)
+        {
+            if (_previewObject == null)
+            {
+                _hasValidPreview = false;
+                return;
+            }
+
+            if (!hasValidPosition)
+            {
+                _previewObject.SetActive(false);
+                _hasValidPreview = false;
+                _canAffordPreview = true;
+                return;
+            }
+
+            _previewObject.SetActive(true);
+            var blocked = IsPlacementBlocked(_currentPreviewPosition, _activeKind);
+            _hasValidPreview = !blocked;
+            _canAffordPreview = IsPlacementAffordable(_activeKind);
+            UpdatePreviewColor(_hasValidPreview && _canAffordPreview);
+        }
+
+        private bool IsPlacementAffordable(PlaceableKind kind)
+        {
+            if (_economySystem == null)
+            {
+                return true;
+            }
+
+            var cost = GetPlacementCost(kind);
+            return cost <= 0f || _economySystem.Cash >= cost - 0.001f;
+        }
+
+        private void UpdatePreviewColor(bool valid)
+        {
+            if (_previewMaterial != null)
+            {
+                _previewMaterial.color = valid ? previewValidColor : previewInvalidColor;
+            }
+        }
+
+        private void EnsurePreviewObject()
+        {
+            if (_previewObject != null && _previewKind == _activeKind)
+            {
+                return;
+            }
+
+            DestroyPreview();
+
+            if (_activeKind == PlaceableKind.None)
+            {
+                return;
+            }
+
+            _previewObject = CreatePreviewObject(_activeKind);
+            _previewKind = _activeKind;
+            _previewRenderers = _previewObject != null
+                ? _previewObject.GetComponentsInChildren<Renderer>(true)
+                : Array.Empty<Renderer>();
+
+            if (_previewMaterial == null)
+            {
+                CreatePreviewMaterial();
+            }
+
+            if (_previewRenderers != null)
+            {
+                for (int i = 0; i < _previewRenderers.Length; i++)
+                {
+                    var renderer = _previewRenderers[i];
+                    if (renderer == null)
+                    {
+                        continue;
+                    }
+
+                    renderer.shadowCastingMode = ShadowCastingMode.Off;
+                    renderer.receiveShadows = false;
+                    renderer.sharedMaterial = _previewMaterial;
+                }
+            }
+
+            UpdatePreviewColor(true);
+        }
+
+        private void CreatePreviewMaterial()
+        {
+            if (_previewMaterial != null)
+            {
+                return;
+            }
+
+            var shader = Shader.Find("Sprites/Default");
+            if (shader == null)
+            {
+                shader = Shader.Find("Universal Render Pipeline/Unlit");
+            }
+
+            if (shader == null)
+            {
+                shader = Shader.Find("Unlit/Color");
+            }
+
+            if (shader == null)
+            {
+                return;
+            }
+
+            _previewMaterial = new Material(shader)
+            {
+                color = previewValidColor,
+                renderQueue = 3000,
+                hideFlags = HideFlags.HideAndDontSave
+            };
+        }
+
+        private GameObject CreatePreviewObject(PlaceableKind kind)
+        {
+            var root = new GameObject($"{kind}Preview")
+            {
+                hideFlags = HideFlags.DontSave
+            };
+
+            var mesh = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            mesh.name = "PreviewMesh";
+            mesh.transform.SetParent(root.transform, false);
+            var scale = GetPreviewScale(kind);
+            mesh.transform.localScale = scale;
+            mesh.transform.localPosition = new Vector3(0f, scale.y * 0.5f, 0f);
+
+            if (mesh.TryGetComponent(out Collider collider))
+            {
+                Object.Destroy(collider);
+            }
+
+            return root;
+        }
+
+        private static Vector3 GetPreviewScale(PlaceableKind kind)
+        {
+            return kind switch
+            {
+                PlaceableKind.SmallTable => new Vector3(1.4f, 0.2f, 1.4f),
+                PlaceableKind.LargeTable => new Vector3(2.6f, 0.2f, 1.4f),
+                PlaceableKind.Decoration => new Vector3(0.6f, 0.2f, 0.6f),
+                PlaceableKind.KitchenStation => new Vector3(2.4f, 0.25f, 1.2f),
+                PlaceableKind.BarCounter => new Vector3(2.8f, 0.25f, 0.8f),
+                PlaceableKind.PickupPoint => new Vector3(0.6f, 0.2f, 0.6f),
+                _ => new Vector3(1f, 0.2f, 1f)
+            };
+        }
+
+        private void HidePreview()
+        {
+            _hasValidPreview = false;
+            _lastSurfaceCollider = null;
+            if (_previewObject != null)
+            {
+                _previewObject.SetActive(false);
+            }
+        }
+
+        private void DestroyPreview()
+        {
+            if (_previewObject != null)
+            {
+                if (Application.isPlaying)
+                {
+                    Destroy(_previewObject);
+                }
+                else
+                {
+                    DestroyImmediate(_previewObject);
+                }
+            }
+
+            _previewObject = null;
+            _previewRenderers = Array.Empty<Renderer>();
+            _previewKind = PlaceableKind.None;
+            _hasValidPreview = false;
+            _canAffordPreview = true;
+            _lastSurfaceCollider = null;
+        }
+
+        private void CancelPlacementInternal()
+        {
+            if (_activeKind == PlaceableKind.None && _previewObject == null)
+            {
+                return;
+            }
+
+            _activeKind = PlaceableKind.None;
+            DestroyPreview();
+        }
+
+        private bool IsPlacementBlocked(Vector3 position, PlaceableKind kind)
+        {
+            if (kind == PlaceableKind.None)
+            {
+                return true;
+            }
+
+            var scale = GetPreviewScale(kind);
+            var halfExtents = new Vector3(
+                Mathf.Max(0.1f, scale.x * 0.5f * 0.95f),
+                0.6f,
+                Mathf.Max(0.1f, scale.z * 0.5f * 0.95f));
+            var center = position + new Vector3(0f, halfExtents.y, 0f);
+
+            var rotation = Quaternion.identity;
+            var hitCount = Physics.OverlapBoxNonAlloc(center, halfExtents, _overlapResults, rotation, blockingMask, QueryTriggerInteraction.Ignore);
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                var collider = _overlapResults[i];
+                if (collider == null)
+                {
+                    continue;
+                }
+
+                if (!collider.enabled || collider.isTrigger)
+                {
+                    continue;
+                }
+
+                if (_previewObject != null && collider.transform.IsChildOf(_previewObject.transform))
+                {
+                    continue;
+                }
+
+                if (_lastSurfaceCollider != null && collider == _lastSurfaceCollider)
+                {
+                    continue;
+                }
+
+                if (gridVisualizer != null && collider.transform.IsChildOf(gridVisualizer.transform))
+                {
+                    continue;
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+
+        private void ApplyGridSizeToVisualizer()
+        {
+            if (gridVisualizer != null)
+            {
+                gridVisualizer.SetGridSize(gridSize);
+            }
+        }
+
+        private void UpdateGridVisibility()
+        {
+            if (gridVisualizer != null)
+            {
+                gridVisualizer.SetGridSize(gridSize);
+                gridVisualizer.SetVisible(_buildModeActive);
+            }
         }
 
         private void CreateAndRegisterTable(Vector3 position, Func<int, Vector3, Table> factory)
@@ -355,6 +773,8 @@ namespace TavernSim.Building
             AddChair(table, root.transform, tableId, 0, new Vector3(0f, 0f, 0.9f));
             AddChair(table, root.transform, tableId, 1, new Vector3(0f, 0f, -0.9f));
 
+            AttachPresenter(root, table);
+
             return table;
         }
 
@@ -366,6 +786,8 @@ namespace TavernSim.Building
             CreateTableTop(root.transform, new Vector3(2.6f, 0.1f, 1.4f));
             AddBench(table, root.transform, tableId, 0, new Vector3(0f, 0f, 1.15f));
             AddBench(table, root.transform, tableId, 2, new Vector3(0f, 0f, -1.15f));
+
+            AttachPresenter(root, table);
 
             return table;
         }
@@ -468,6 +890,22 @@ namespace TavernSim.Building
             back.transform.SetParent(bench.transform, false);
             back.transform.localPosition = new Vector3(0f, 0.6f, -0.3f);
             back.transform.localScale = new Vector3(BenchLength, 1.2f, 0.2f);
+        }
+
+        private static void AttachPresenter(GameObject root, Table table)
+        {
+            if (root == null || table == null)
+            {
+                return;
+            }
+
+            var presenter = root.GetComponent<TablePresenter>();
+            if (presenter == null)
+            {
+                presenter = root.AddComponent<TablePresenter>();
+            }
+
+            presenter.Initialize(table);
         }
     }
 }

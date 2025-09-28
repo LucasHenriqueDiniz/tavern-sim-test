@@ -15,21 +15,46 @@ namespace TavernSim.UI
         [SerializeField] private Catalog catalog;
 
         private readonly HashSet<RecipeSO> _allowed = new();
+        private bool _hasUserInteracted;
 
         // === métodos esperados pelos chamadores ===
         public void Initialize(Catalog cat)
         {
             catalog = cat != null ? cat : catalog;
-            if (document == null) document = GetComponent<UIDocument>();
+            if (document == null)
+            {
+                document = GetComponent<UIDocument>();
+            }
+
+            _allowed.Clear();
+            _hasUserInteracted = false;
             RebuildMenu(); // reconstrói UI e estado
+        }
+
+        private void OnEnable()
+        {
+            RebuildMenu();
         }
 
         public void RebuildMenu()
         {
-            if (document == null) document = GetComponent<UIDocument>();
-            if (document == null || catalog == null) return;
-            var root = document.rootVisualElement;
-            if (root == null) return;
+            if (catalog == null)
+            {
+                return;
+            }
+
+            if (document == null)
+            {
+                document = GetComponent<UIDocument>();
+            }
+
+            var root = document != null ? document.rootVisualElement : null;
+            if (root == null)
+            {
+                return;
+            }
+
+            EnsureAllowedSeeded();
 
             // limpa seção anterior do menu, se existir
             var old = root.Q<Foldout>("__MenuFoldout");
@@ -38,25 +63,81 @@ namespace TavernSim.UI
             var fold = new Foldout { name = "__MenuFoldout", text = "Menu", value = false };
             root.Add(fold);
 
-            _allowed.Clear();
-            if (catalog.Recipes == null) return;
+            if (catalog.Recipes == null)
+            {
+                return;
+            }
 
             foreach (var kv in catalog.Recipes)
             {
                 var recipe = kv.Value;
-                if (recipe == null) continue;
-                var t = new Toggle(recipe.DisplayName ?? recipe.name) { value = true };
-                _allowed.Add(recipe);
-                t.RegisterValueChangedCallback(ev =>
+                if (recipe == null)
                 {
-                    if (ev.newValue) _allowed.Add(recipe);
-                    else _allowed.Remove(recipe);
+                    continue;
+                }
+
+                var toggle = new Toggle(recipe.DisplayName ?? recipe.name)
+                {
+                    value = _allowed.Contains(recipe)
+                };
+
+                toggle.RegisterValueChangedCallback(ev =>
+                {
+                    _hasUserInteracted = true;
+                    if (ev.newValue)
+                    {
+                        _allowed.Add(recipe);
+                    }
+                    else
+                    {
+                        _allowed.Remove(recipe);
+                    }
                 });
-                fold.Add(t);
+
+                fold.Add(toggle);
             }
         }
 
         // IMenuPolicy
-        public bool IsAllowed(RecipeSO recipe) => recipe != null && _allowed.Contains(recipe);
+        public bool IsAllowed(RecipeSO recipe)
+        {
+            if (recipe == null)
+            {
+                return false;
+            }
+
+            EnsureAllowedSeeded();
+
+            if (_allowed.Count == 0)
+            {
+                // Enquanto nenhum toggle foi construído (ou o usuário ainda não interagiu),
+                // tratamos o cardápio como totalmente liberado para não travar o fluxo.
+                return !_hasUserInteracted;
+            }
+
+            return _allowed.Contains(recipe);
+        }
+
+        private void EnsureAllowedSeeded()
+        {
+            if (_hasUserInteracted)
+            {
+                return;
+            }
+
+            if (catalog == null || catalog.Recipes == null)
+            {
+                return;
+            }
+
+            foreach (var kv in catalog.Recipes)
+            {
+                var recipe = kv.Value;
+                if (recipe != null)
+                {
+                    _allowed.Add(recipe);
+                }
+            }
+        }
     }
 }

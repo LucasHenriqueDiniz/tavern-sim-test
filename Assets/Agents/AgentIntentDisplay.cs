@@ -11,12 +11,14 @@ namespace TavernSim.Agents
         [SerializeField] private Vector3 offset = new Vector3(0f, 2f, 0f);
         [SerializeField] private float fontSize = 2f;
         [SerializeField] private Color textColor = Color.white;
-
-        private static readonly Camera[] CameraSearchBuffer = new Camera[8];
+        [SerializeField] private bool faceCamera = true;
+        [SerializeField] private bool yawOnly = true;
+        [SerializeField] private Transform pivot;
 
         private TextMeshPro _label;
         private Transform _labelTransform;
         private Camera _camera;
+        private string _currentIntent = string.Empty;
 
         private void Awake()
         {
@@ -35,7 +37,8 @@ namespace TavernSim.Agents
                 return;
             }
 
-            if (!TryResolveCamera(out var camera))
+            var camera = ResolveCamera();
+            if (camera == null)
             {
                 return;
             }
@@ -44,13 +47,32 @@ namespace TavernSim.Agents
             var worldPosition = transform.position + offset;
             _labelTransform.position = worldPosition;
 
-            var toCamera = cameraTransform.position - worldPosition;
-            if (toCamera.sqrMagnitude <= Mathf.Epsilon)
+            if (!faceCamera)
             {
-                toCamera = -cameraTransform.forward;
+                return;
             }
 
-            _labelTransform.rotation = Quaternion.LookRotation(toCamera, cameraTransform.up);
+            var target = pivot != null ? pivot : _labelTransform;
+            if (target == null)
+            {
+                return;
+            }
+
+            if (yawOnly)
+            {
+                var toCamera = cameraTransform.position - target.position;
+                toCamera.y = 0f;
+                if (toCamera.sqrMagnitude <= 0.0001f)
+                {
+                    return;
+                }
+
+                target.rotation = Quaternion.LookRotation(toCamera, Vector3.up);
+            }
+            else
+            {
+                target.rotation = cameraTransform.rotation;
+            }
         }
 
         public void SetIntent(string text)
@@ -60,7 +82,11 @@ namespace TavernSim.Agents
             {
                 _label.text = text;
             }
+
+            _currentIntent = text;
         }
+
+        public string CurrentIntent => _currentIntent;
 
         private void EnsureLabel()
         {
@@ -73,6 +99,10 @@ namespace TavernSim.Agents
             go.transform.SetParent(transform, false);
             go.transform.localPosition = offset;
             _labelTransform = go.transform;
+            if (pivot == null)
+            {
+                pivot = _labelTransform;
+            }
 
             _label = go.AddComponent<TextMeshPro>();
             _label.text = string.Empty;
@@ -83,38 +113,15 @@ namespace TavernSim.Agents
             _label.sortingOrder = int.MaxValue;
         }
 
-        private bool TryResolveCamera(out Camera camera)
+        private Camera ResolveCamera()
         {
             if (_camera != null && _camera.isActiveAndEnabled)
             {
-                camera = _camera;
-                return true;
+                return _camera;
             }
 
-            var mainCamera = Camera.main;
-            if (mainCamera != null && mainCamera.isActiveAndEnabled)
-            {
-                _camera = mainCamera;
-                camera = _camera;
-                return true;
-            }
-
-            var count = Camera.GetAllCameras(CameraSearchBuffer);
-            for (var i = 0; i < count; i++)
-            {
-                var candidate = CameraSearchBuffer[i];
-                if (candidate == null || !candidate.isActiveAndEnabled)
-                {
-                    continue;
-                }
-
-                _camera = candidate;
-                camera = _camera;
-                return true;
-            }
-
-            camera = null;
-            return false;
+            _camera = Camera.main;
+            return _camera != null && _camera.isActiveAndEnabled ? _camera : null;
         }
 
         private void OnDestroy()

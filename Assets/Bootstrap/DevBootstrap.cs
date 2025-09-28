@@ -3,7 +3,6 @@ using UnityEngine.AI;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UIElements;
-using UnityEngine.TextCore.Text;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem.UI;
 #endif
@@ -30,9 +29,7 @@ namespace TavernSim.Bootstrap
 
         private static PanelSettings _panelSettings;
         private static ThemeStyleSheet _panelTheme;
-        private static PanelTextSettings _panelTextSettings;
         private static bool _themeLookupAttempted;
-        private static bool _panelTextSettingsLookupAttempted;
 
         private SimulationRunner _runner;
         private EconomySystem _economySystem;
@@ -40,6 +37,7 @@ namespace TavernSim.Bootstrap
         private AgentSystem _agentSystem;
         private CleaningSystem _cleaningSystem;
         private TableRegistry _tableRegistry;
+        private ReputationSystem _reputationSystem;
         private CustomerSpawner _customerSpawner;
         private SaveService _saveService;
         private NavMeshSurface _navMeshSurface;
@@ -53,9 +51,6 @@ namespace TavernSim.Bootstrap
         private MenuController _menuController;
         private HudToastController _toastController;
 
-        private Waiter _initialWaiter;
-        private Cook _initialCook;
-        private Bartender _initialBartender;
         private int _waiterCount;
         private int _cookCount;
         private int _bartenderCount;
@@ -120,12 +115,6 @@ namespace TavernSim.Bootstrap
             barPickup.transform.position = _barPickupPoint;
             barPickup.transform.SetParent(transform, false);
 
-            var bar = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            bar.name = "Bar";
-            bar.transform.position = new Vector3(-2f, 0.75f, 1.5f);
-            bar.transform.localScale = new Vector3(2f, 1.5f, 1f);
-            NavMeshSetup.MarkObstacle(bar);
-
             var cameraGo = new GameObject("DevCamera");
             cameraGo.tag = "MainCamera";
             var camera = cameraGo.AddComponent<Camera>();
@@ -147,15 +136,6 @@ namespace TavernSim.Bootstrap
             _waiterCount = 0;
             _cookCount = 0;
             _bartenderCount = 0;
-
-            _initialWaiter = CreateWaiter(GetWaiterSpawnPosition(_waiterCount));
-            _waiterCount++;
-
-            _initialBartender = CreateBartender(GetBartenderSpawnPosition(_bartenderCount));
-            _bartenderCount++;
-
-            _initialCook = CreateCook(GetCookSpawnPosition(_cookCount));
-            _cookCount++;
         }
 
         private void SetupSimulation()
@@ -163,17 +143,19 @@ namespace TavernSim.Bootstrap
             _runner = gameObject.AddComponent<SimulationRunner>();
 
             _eventBus = new GameEventBus();
-            _economySystem = new EconomySystem(500f, 1f);
+            _economySystem = new EconomySystem(2000f, 1f);
             _orderSystem = new OrderSystem();
             _orderSystem.SetEventBus(_eventBus);
             _orderSystem.SetKitchenStations(2);
             _orderSystem.SetBarStations(1);
             _cleaningSystem = new CleaningSystem(0.1f);
             _tableRegistry = new TableRegistry();
+            _reputationSystem = new ReputationSystem();
             _agentSystem = new AgentSystem(_tableRegistry, _orderSystem, _economySystem, _cleaningSystem, catalog);
             _agentSystem.Configure(_entryPoint, _exitPoint, _kitchenPoint, _kitchenPickupPoint, _barPickupPoint);
             _agentSystem.SetInventory(_inventory);
             _agentSystem.SetEventBus(_eventBus);
+            _agentSystem.SetReputationSystem(_reputationSystem);
             _agentSystem.ActiveCustomerCountChanged += count => _hudController?.SetCustomers(count);
             _agentSystem.CustomerLeftAngry += HandleCustomerLeftAngry;
 
@@ -181,6 +163,7 @@ namespace TavernSim.Bootstrap
             _runner.RegisterSystem(_orderSystem);
             _runner.RegisterSystem(_cleaningSystem);
             _runner.RegisterSystem(_tableRegistry);
+            _runner.RegisterSystem(_reputationSystem);
             _runner.RegisterSystem(_agentSystem);
 
             _customerSpawner = new GameObject("CustomerSpawner").AddComponent<CustomerSpawner>();
@@ -200,15 +183,6 @@ namespace TavernSim.Bootstrap
             _saveService = new SaveService(_economySystem);
             _gridPlacer?.Configure(_economySystem, _selectionService, _tableRegistry, _cleaningSystem);
 
-            var initialTable = TableBuilderUtility.CreateSmallTable(_tableRegistry.Tables.Count, new Vector3(0f, 0f, 1f));
-            _tableRegistry.RegisterTable(initialTable);
-            _cleaningSystem.RegisterTable(initialTable);
-
-            if (_initialWaiter != null)
-            {
-                _agentSystem.RegisterWaiter(_initialWaiter);
-            }
-
             _debugOverlay.Configure(_agentSystem, _orderSystem);
         }
 
@@ -226,6 +200,7 @@ namespace TavernSim.Bootstrap
             _hudController.BindSaveService(_saveService);
             _hudController.BindSelection(_selectionService, _gridPlacer);
             _hudController.BindEventBus(_eventBus);
+            _hudController.BindReputation(_reputationSystem);
 
             _toastController = uiGo.AddComponent<HudToastController>();
 
@@ -241,6 +216,7 @@ namespace TavernSim.Bootstrap
             {
                 _hudController.HireWaiterRequested += HandleHireWaiterRequested;
                 _hudController.HireCookRequested += HandleHireCookRequested;
+                _hudController.HireBartenderRequested += HandleHireBartenderRequested;
             }
 
             uiGo.SetActive(true);
@@ -249,16 +225,11 @@ namespace TavernSim.Bootstrap
             _hudController.SetCustomers(_agentSystem != null ? _agentSystem.ActiveCustomerCount : 0);
         }
 
-        private void HandleCustomerLeftAngry(Customer customer)
+        private void HandleCustomerLeftAngry(Customer customer, string reason)
         {
-            if (customer != null)
-            {
-                Debug.LogWarning($"Cliente {customer.name} saiu irritado por falta de mesas.");
-            }
-            else
-            {
-                Debug.LogWarning("Um cliente saiu irritado por falta de mesas.");
-            }
+            var cause = string.IsNullOrEmpty(reason) ? "Motivo desconhecido" : reason;
+            var label = customer != null ? customer.name : "Cliente";
+            Debug.LogWarning($"{label} saiu irritado: {cause}.");
         }
 
         private void OnDestroy()
@@ -272,6 +243,7 @@ namespace TavernSim.Bootstrap
             {
                 _hudController.HireWaiterRequested -= HandleHireWaiterRequested;
                 _hudController.HireCookRequested -= HandleHireCookRequested;
+                _hudController.HireBartenderRequested -= HandleHireBartenderRequested;
             }
         }
 
@@ -293,6 +265,13 @@ namespace TavernSim.Bootstrap
             var spawn = GetCookSpawnPosition(_cookCount);
             CreateCook(spawn);
             _cookCount++;
+        }
+
+        private void HandleHireBartenderRequested()
+        {
+            var spawn = GetBartenderSpawnPosition(_bartenderCount);
+            CreateBartender(spawn);
+            _bartenderCount++;
         }
 
         private Waiter CreateWaiter(Vector3 position)
@@ -318,11 +297,13 @@ namespace TavernSim.Bootstrap
             bartenderGo.name = index == 1 ? "Bartender" : $"Bartender_{index}";
             bartenderGo.transform.SetParent(transform, false);
             var agent = EnsureNavMeshAgent(bartenderGo);
+            agent.speed = 1.8f;
             if (!agent.Warp(position))
             {
                 Debug.LogWarning($"Bartender NavMeshAgent.Warp falhou para {bartenderGo.name}; verifique o NavMesh.");
             }
 
+            bartenderGo.AddComponent<AgentIntentDisplay>();
             return bartenderGo.AddComponent<Bartender>();
         }
 
@@ -333,11 +314,13 @@ namespace TavernSim.Bootstrap
             cookGo.name = index == 1 ? "Cook" : $"Cook_{index}";
             cookGo.transform.SetParent(transform, false);
             var agent = EnsureNavMeshAgent(cookGo);
+            agent.speed = 1.6f;
             if (!agent.Warp(position))
             {
                 Debug.LogWarning($"Cook NavMeshAgent.Warp falhou para {cookGo.name}; verifique o NavMesh.");
             }
 
+            cookGo.AddComponent<AgentIntentDisplay>();
             return cookGo.AddComponent<Cook>();
         }
 
@@ -430,34 +413,18 @@ namespace TavernSim.Bootstrap
                 return _panelSettings;
             }
 
-            var asset = Resources.Load<PanelSettings>(PanelSettingsResourcePath);
-            if (asset != null)
-            {
-                _panelSettings = Instantiate(asset);
-                _panelSettings.name = asset.name + " (Runtime)";
-                _panelSettings.hideFlags = HideFlags.HideAndDontSave;
-            }
-            else
-            {
-                _panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
-                _panelSettings.name = "DevBootstrapPanelSettings";
-                _panelSettings.hideFlags = HideFlags.HideAndDontSave;
-                _panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
-                _panelSettings.referenceResolution = new Vector2Int(1920, 1080);
-                _panelSettings.sortingOrder = 100;
-                _panelSettings.targetTexture = null;
-            }
+            _panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+            _panelSettings.name = "DevBootstrapPanelSettings";
+            _panelSettings.hideFlags = HideFlags.HideAndDontSave;
+            _panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+            _panelSettings.referenceResolution = new Vector2Int(1920, 1080);
+            _panelSettings.sortingOrder = 100;
+            _panelSettings.targetTexture = null;
 
             var theme = GetOrLoadTheme();
             if (theme != null)
             {
                 _panelSettings.themeStyleSheet = theme;
-            }
-
-            var panelTextSettings = GetOrLoadPanelTextSettings();
-            if (panelTextSettings != null)
-            {
-                _panelSettings.textSettings = panelTextSettings;
             }
 
             return _panelSettings;
@@ -482,33 +449,7 @@ namespace TavernSim.Bootstrap
             return _panelTheme;
         }
 
-        private static PanelTextSettings GetOrLoadPanelTextSettings()
-        {
-            if (_panelTextSettings != null || _panelTextSettingsLookupAttempted)
-            {
-                return _panelTextSettings;
-            }
-
-            _panelTextSettingsLookupAttempted = true;
-
-            var resourceAsset = Resources.Load<PanelTextSettings>(PanelTextSettingsResourcePath);
-            if (resourceAsset != null)
-            {
-                _panelTextSettings = Instantiate(resourceAsset);
-                _panelTextSettings.hideFlags = HideFlags.HideAndDontSave;
-                return _panelTextSettings;
-            }
-
-            if (_panelTextSettings == null)
-            {
-                Debug.LogWarning("DevBootstrap could not locate PanelTextSettings. UI text may not use the intended font assets.");
-            }
-
-            return _panelTextSettings;
-        }
-        private const string PanelSettingsResourcePath = "UIToolkit/DevBootstrapPanelSettings";
         private const string ThemeResourcePath = "UIToolkit/UnityThemes/UnityDefaultRuntimeTheme";
-        private const string PanelTextSettingsResourcePath = "UIToolkit/DevBootstrapPanelTextSettings";
 
     }
 }
