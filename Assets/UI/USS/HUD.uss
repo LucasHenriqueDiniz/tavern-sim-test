@@ -28,7 +28,6 @@
     flex-direction: row;
     align-items: center;
     flex-wrap: wrap;
-    gap: 4px;
 }
 
 .resource {
@@ -39,7 +38,7 @@
 
 .resource--weather {
     min-width: 200px;
-    gap: 6px;
+    align-items: center;
 }
 
 .weather-indicator__icon {
@@ -47,6 +46,8 @@
     height: 24px;
     background-color: rgba(0, 0, 0, 0.2);
     border-radius: 12px;
+    margin-left: 6px;
+    margin-right: 6px;
 }
 
 .weather-indicator__label {
@@ -77,19 +78,24 @@
 .top-bar-right {
     flex-direction: row;
     align-items: center;
-    gap: 16px;
+    padding-left: 16px;
 }
 
 .top-bar-controls {
     flex-direction: row;
     align-items: center;
-    gap: 8px;
+    margin-left: 16px;
 }
 
 .top-bar-controls .hud-button {
     min-height: 34px;
     padding-left: 14px;
     padding-right: 14px;
+    margin-left: 8px;
+}
+
+.top-bar-controls .hud-button--leading {
+    margin-left: 0;
 }
 
 .time-label {
@@ -308,7 +314,6 @@
 .toolbar__group {
     flex-direction: row;
     align-items: center;
-    gap: 8px;
 }
 
 .toolbar__group--left,
@@ -385,7 +390,6 @@
 .toolbar-modes {
     flex-direction: row;
     align-items: center;
-    gap: 8px;
     margin-bottom: 12px;
 }
 
@@ -398,6 +402,7 @@
     border-color: #6d5131;
     -unity-text-align: middle-center;
     -unity-font-style: bold;
+    margin-right: 8px;
 }
 
 .toolbar-mode__button:hover {
@@ -408,6 +413,10 @@
     background-color: #d4af37;
     color: #2c1810;
     border-color: #f0d27e;
+}
+
+.toolbar-mode__button:last-child {
+    margin-right: 0;
 }
 
 .toolbar-options__scroll {
@@ -460,8 +469,6 @@
     flex-direction: row;
     align-items: center;
     flex-wrap: wrap;
-    gap: 8px;
-    gap: 6px;
     margin-bottom: 8px;
 }
 
@@ -654,7 +661,6 @@
 .selection-actions {
     margin-top: 12px;
     flex-direction: row;
-    gap: 8px;
 }
 
 .selection-action__button {
@@ -665,6 +671,11 @@
     border-width: 1px;
     border-color: #6d5131;
     -unity-text-align: middle-center;
+    margin-right: 8px;
+}
+
+.selection-action__button:last-child {
+    margin-right: 0;
 }
 
 .selection-action__button:hover {

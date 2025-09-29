@@ -2,18 +2,17 @@
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    margin-left: -300px;
+    margin-top: -250px;
     width: 600px;
-    max-width: 90vw;
+    max-width: 640px;
     height: 500px;
-    max-height: 80vh;
+    max-height: 520px;
     background-color: #24130b;
     border-width: 2px;
     border-color: #8b6f47;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
     display: none;
     flex-direction: column;
-    z-index: 30;
 }
 
 .staff-panel.open {
@@ -150,7 +149,6 @@
 
 .staff-member__actions {
     flex-direction: row;
-    column-gap: 8px;
 }
 
 .staff-member__action {
@@ -163,6 +161,7 @@
     border-color: #6d5131;
     -unity-text-align: middle-center;
     font-size: 12px;
+    margin-right: 8px;
 }
 
 .staff-member__action:hover {
@@ -179,9 +178,8 @@
     background-color: #a83a3a;
 }
 
-.hire-section {
-    flex-direction: column;
-    gap: 8px;
+.staff-member__action:last-child {
+    margin-right: 0;
 }
 
 .hire-button {
@@ -194,6 +192,15 @@
     padding-right: 16px;
     -unity-text-align: middle-center;
     -unity-font-style: bold;
+    margin-bottom: 8px;
+}
+
+.hire-section {
+    flex-direction: column;
+}
+
+.hire-button:last-child {
+    margin-bottom: 0;
 }
 
 .hire-button:hover {

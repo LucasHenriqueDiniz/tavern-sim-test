@@ -33,6 +33,8 @@ namespace TavernSim.UI
         public event Action HireCookRequested;
         public event Action HireBartenderRequested;
         public event Action HireCleanerRequested;
+        public event Action<StaffCategory, ScrollView> StaffListRefreshRequested;
+        public event Action<StaffCategory> ActiveCategoryChanged;
 
         public bool IsOpen => _isOpen;
 
@@ -284,6 +286,9 @@ namespace TavernSim.UI
                 var isActive = contentPair.Key == category;
                 content.EnableInClassList("staff-content--active", isActive);
             }
+
+            ActiveCategoryChanged?.Invoke(_activeCategory);
+            RefreshStaffList(_activeCategory);
         }
 
         private void SetOpen(bool open)
@@ -295,6 +300,11 @@ namespace TavernSim.UI
             if (_panelRoot != null)
             {
                 _panelRoot.EnableInClassList("open", open);
+            }
+
+            if (open)
+            {
+                RefreshAllStaffLists();
             }
         }
 
@@ -316,6 +326,36 @@ namespace TavernSim.UI
         private void OnHireCleanerClicked()
         {
             HireCleanerRequested?.Invoke();
+        }
+
+        public void RefreshAllStaffLists()
+        {
+            EnsurePanel();
+
+            foreach (var pair in _staffLists)
+            {
+                RefreshStaffList(pair.Key);
+            }
+        }
+
+        public void RefreshStaffList(StaffCategory category)
+        {
+            EnsurePanel();
+
+            if (!_staffLists.TryGetValue(category, out var list) || list == null)
+            {
+                return;
+            }
+
+            if (StaffListRefreshRequested != null)
+            {
+                list.contentContainer.Clear();
+                StaffListRefreshRequested.Invoke(category, list);
+            }
+            else
+            {
+                list.MarkDirtyRepaint();
+            }
         }
 
         public enum StaffCategory

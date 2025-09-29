@@ -93,7 +93,6 @@ namespace TavernSim.UI
 
             element.style.backgroundImage = iconTexture;
             element.style.backgroundSize = new BackgroundSize(BackgroundSizeType.Contain);
-            element.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
         }
 
         /// <summary>

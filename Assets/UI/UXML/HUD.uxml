@@ -24,7 +24,7 @@
       <ui:VisualElement class="top-bar-right">
         <ui:Label name="timeLabel" class="time-label" text="Dia 1 – 08:00" />
         <ui:VisualElement class="top-bar-controls">
-          <ui:Button name="staffBtn" class="hud-button" text="Equipe" />
+          <ui:Button name="staffBtn" class="hud-button hud-button--leading" text="Equipe" />
           <ui:Button name="pauseBtn" class="hud-button" text="Pausar" />
           <ui:Button name="play1Btn" class="hud-button" text="1x" />
           <ui:Button name="play2Btn" class="hud-button" text="2x" />
