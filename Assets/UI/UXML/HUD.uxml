@@ -15,10 +15,15 @@
           <ui:Label class="resource-label" text="Clientes:" />
           <ui:Label name="customerLabel" class="resource-value" text="0" />
         </ui:VisualElement>
+        <ui:VisualElement class="resource">
+          <ui:Label class="resource-label" text="Clima:" />
+          <ui:Label name="weatherLabel" class="resource-value" text="23°C" />
+        </ui:VisualElement>
       </ui:VisualElement>
       <ui:VisualElement class="top-bar-right">
         <ui:Label name="timeLabel" class="time-label" text="Dia 1 – 08:00" />
         <ui:VisualElement class="top-bar-controls">
+          <ui:Button name="staffBtn" class="hud-button" text="Equipe" />
           <ui:Button name="pauseBtn" class="hud-button" text="Pausar" />
           <ui:Button name="play1Btn" class="hud-button" text="1x" />
           <ui:Button name="play2Btn" class="hud-button" text="2x" />
@@ -79,6 +84,12 @@
           <ui:VisualElement name="menuAnchor" class="group-body" />
         </ui:VisualElement>
 
+        <ui:VisualElement name="logBlock" class="stat-group">
+          <ui:Label class="group-title" text="Registro de Eventos" />
+          <ui:VisualElement name="logFilters" class="log-filters" />
+          <ui:ScrollView name="logScroll" class="log-scroll" />
+        </ui:VisualElement>
+
         <ui:VisualElement name="contextActions" class="stat-group context-actions">
           <ui:Label class="group-title" text="Ações" />
           <ui:VisualElement name="contextActionsBody" class="group-body" />
@@ -87,14 +98,6 @@
       </ui:ScrollView>
     </ui:VisualElement>
 
-    <ui:VisualElement name="logBlock" class="log-overlay">
-      <ui:VisualElement class="log-overlay__header">
-        <ui:Label class="log-overlay__title" text="Registro de eventos" />
-        <ui:Button name="logCloseBtn" class="hud-button" text="Fechar" />
-      </ui:VisualElement>
-      <ui:VisualElement name="logFilters" class="log-filters" />
-      <ui:ScrollView name="logScroll" class="log-scroll" />
-    </ui:VisualElement>
 
     <ui:VisualElement name="selectionPopup" class="selection-popup">
       <ui:Label class="group-title" text="Seleção atual" />
@@ -110,37 +113,15 @@
       </ui:VisualElement>
     </ui:VisualElement>
 
-    <ui:VisualElement name="staffPanel" class="modal-panel">
-      <ui:VisualElement class="panel-header">
-        <ui:Label name="staffTitleLabel" class="panel-title" text="Equipe" />
-        <ui:Button name="staffCloseBtn" class="panel-pin" text="Fechar" />
-      </ui:VisualElement>
-      <ui:ScrollView name="staffList" class="panel-content" />
-      <ui:VisualElement class="panel-content">
-        <ui:Label class="group-title" text="Contratação" />
-        <ui:VisualElement class="group-body hire-controls">
-          <ui:Button name="hireWaiterBtn" class="hud-button" text="Contratar garçom" />
-          <ui:Button name="hireCookBtn" class="hud-button" text="Contratar cozinheiro" />
-          <ui:Button name="hireBartenderBtn" class="hud-button" text="Contratar bartender" />
-        </ui:VisualElement>
-      </ui:VisualElement>
-    </ui:VisualElement>
 
     <ui:VisualElement name="toolbarRoot" class="toolbar">
       <ui:VisualElement name="toolbarButtons" class="toolbar-group">
-        <ui:Button name="buildToggleBtn" class="tool-button" text="Construir" />
+        <ui:Button name="buildToggleBtn" class="tool-button" text="Construção" />
         <ui:Button name="decoToggleBtn" class="tool-button" text="Decoração" />
         <ui:Button name="beautyToggleBtn" class="tool-button" text="Beleza" />
-        <ui:Button name="staffBtn" class="tool-button" text="Equipe" />
-        <ui:Button name="menuBtn" class="tool-button" text="Cardápio" />
       </ui:VisualElement>
       <ui:VisualElement name="toolbarSeparator" class="toolbar-separator" />
       <ui:VisualElement name="buildMenu" class="toolbar-options" />
-    </ui:VisualElement>
-
-    <ui:VisualElement name="menuButtonPanel" class="menu-button-panel">
-      <ui:Label class="menu-button-panel__title" text="Cardápio" />
-      <ui:VisualElement name="menuButtonAnchor" class="menu-button-list" />
     </ui:VisualElement>
 
     <ui:Button name="devLogBtn" class="dev-fab" text="Log" />

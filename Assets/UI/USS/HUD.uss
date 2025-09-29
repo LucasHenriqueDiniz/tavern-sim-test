@@ -28,7 +28,7 @@
     flex-direction: row;
     align-items: center;
     flex-wrap: wrap;
-    row-gap: 4px;
+    gap: 4px;
 }
 
 .resource {
@@ -61,13 +61,13 @@
 .top-bar-right {
     flex-direction: row;
     align-items: center;
-    column-gap: 16px;
+    gap: 16px;
 }
 
 .top-bar-controls {
     flex-direction: row;
     align-items: center;
-    column-gap: 8px;
+    gap: 8px;
 }
 
 .top-bar-controls .hud-button {
@@ -337,7 +337,7 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: flex-start;
-    row-gap: 6px;
+    gap: 6px;
 }
 
 .build-option {
@@ -377,7 +377,54 @@
 }
 
 .log-scroll {
-    max-height: 240px;
+    max-height: 180px;
+    margin-top: 8px;
+}
+
+.log-filters {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.log-filter {
+    margin-right: 8px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    border-width: 1px;
+    border-color: #6d5131;
+    background-color: #3b2214;
+    color: #f0d390;
+    font-size: 12px;
+}
+
+.log-filter--active {
+    background-color: #d4af37;
+    color: #2c1810;
+    border-color: #f0d27e;
+}
+
+.log-entry {
+    margin-top: 6px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    border-width: 1px;
+    border-color: #5f4431;
+    background-color: #322016;
+}
+
+.log-entry__meta {
+    color: #c8ab7c;
+    -unity-font-style: italic;
+    margin-bottom: 2px;
+    font-size: 11px;
 }
 
 .toast-layer {
@@ -425,48 +472,6 @@
     border-color: #d4af37;
 }
 
-.log-filters {
-    flex-direction: row;
-    align-items: center;
-    flex-wrap: wrap;
-    column-gap: 8px;
-    row-gap: 6px;
-}
-
-.log-filter {
-    margin-right: 8px;
-    padding-left: 8px;
-    padding-right: 8px;
-    padding-top: 4px;
-    padding-bottom: 4px;
-    border-width: 1px;
-    border-color: #6d5131;
-    background-color: #3b2214;
-    color: #f0d390;
-}
-
-.log-filter--active {
-    background-color: #d4af37;
-    color: #2c1810;
-    border-color: #f0d27e;
-}
-
-.log-entry {
-    margin-top: 6px;
-    padding-left: 8px;
-    padding-right: 8px;
-    padding-top: 6px;
-    padding-bottom: 6px;
-    border-width: 1px;
-    border-color: #5f4431;
-    background-color: #322016;
-}
-
-.log-entry__meta {
-    color: #c8ab7c;
-    -unity-font-style: italic;
-    margin-bottom: 2px;
-}
 
 .log-overlay {
     position: absolute;
@@ -479,9 +484,9 @@
     background-color: #24130b;
     border-width: 2px;
     border-color: #8b6f47;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    /* box-shadow not supported in Unity UI Toolkit */
     padding: 16px;
-    z-index: 28;
+    /* z-index not supported in Unity UI Toolkit */
 }
 
 .log-overlay.open {
@@ -526,12 +531,13 @@
 }
 
 /* camadas explícitas para evitar sobreposição errada */
-.top-bar   { z-index: 10; }
-.toolbar   { z-index: 15; }   /* garante aparecer sempre */
-.side-panel { z-index: 20; }
+/* z-index not supported in Unity UI Toolkit - using order instead */
+.top-bar   { /* z-index: 10; */ }
+.toolbar   { /* z-index: 15; */ }
+.side-panel { /* z-index: 20; */ }
 .panel-toggle,
-.dev-fab { z-index: 30; }
-.toast-layer { z-index: 40; }
+.dev-fab { /* z-index: 30; */ }
+.toast-layer { /* z-index: 40; */ }
 
 .modal-panel {
     position: absolute;
@@ -544,8 +550,7 @@
     background-color: #24130b;
     border-width: 2px;
     border-color: #8b6f47;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
-    z-index: 26;
+    /* box-shadow and z-index not supported in Unity UI Toolkit */
 }
 
 .modal-panel.open {
@@ -564,8 +569,7 @@
     background-color: #322016;
     border-width: 1px;
     border-color: #5f4431;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
-    z-index: 25;
+    /* box-shadow and z-index not supported in Unity UI Toolkit */
 }
 
 .selection-popup.open {
@@ -578,61 +582,30 @@
     -unity-font-style: italic;
 }
 
-.menu-button-panel {
-    position: absolute;
-    left: 24px;
-    bottom: 120px;
-    min-width: 200px;
-    padding: 12px;
-    background-color: rgba(44, 24, 16, 0.92);
-    border-width: 2px;
-    border-color: #8b6f47;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
-    display: none;
-    flex-direction: column;
-    gap: 8px;
+/* Staff Panel - será carregado via StaffPanel.uss separado */
+
+/* Cursor states - classes para indicar estado do cursor */
+/* Custom cursors not supported in Unity UI Toolkit */
+.cursor-default {
+    /* cursor: url('Cursors/default.png'), auto; */
 }
 
-.menu-button-panel.open {
-    display: flex;
+.cursor-hover {
+    /* cursor: url('Cursors/hover.png'), auto; */
 }
 
-.menu-button-panel__title {
-    color: #d4af37;
-    -unity-font-style: bold;
-    -unity-text-align: middle-left;
-    font-size: 14px;
+.cursor-build {
+    /* cursor: url('Cursors/build.png'), auto; */
 }
 
-.menu-button-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+.cursor-build-invalid {
+    /* cursor: url('Cursors/build_invalid.png'), auto; */
 }
 
-.menu-button {
-    min-width: 160px;
-    padding: 8px 12px;
-    background-color: #3b2214;
-    border-width: 2px;
-    border-color: #6d5131;
-    color: #f0d390;
-    -unity-text-align: middle-left;
+.cursor-sell {
+    /* cursor: url('Cursors/sell.png'), auto; */
 }
 
-.menu-button:hover {
-    background-color: #4a2c1a;
-}
-
-.menu-button:active,
-.menu-button--active {
-    background-color: #d4af37;
-    border-color: #f0d27e;
-    color: #2c1810;
-}
-
-.menu-button:disabled {
-    background-color: #2b160c;
-    border-color: #5e4a32;
-    color: #9c8560;
+.cursor-pan {
+    /* cursor: url('Cursors/pan.png'), auto; */
 }

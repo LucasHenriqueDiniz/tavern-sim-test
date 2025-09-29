@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xmlns:engine="UnityEngine.UIElements">
+  <ui:VisualElement name="staffPanel" class="staff-panel">
+    <ui:VisualElement class="staff-panel__header">
+      <ui:Label class="staff-panel__title" text="Equipe" />
+      <ui:Button name="staffCloseBtn" class="staff-panel__close" text="✕" />
+    </ui:VisualElement>
+    
+    <ui:VisualElement class="staff-panel__tabs">
+      <ui:Button name="cooksTab" class="staff-tab staff-tab--active" text="Cozinheiros" />
+      <ui:Button name="waitersTab" class="staff-tab" text="Garçons" />
+      <ui:Button name="bartendersTab" class="staff-tab" text="Bartenders" />
+      <ui:Button name="cleanersTab" class="staff-tab" text="Faxineiros" />
+    </ui:VisualElement>
+
+    <ui:ScrollView class="staff-panel__content">
+      <ui:VisualElement name="cooksContent" class="staff-content staff-content--active">
+        <ui:Label class="staff-section__title" text="Cozinheiros Atuais" />
+        <ui:ScrollView name="cooksList" class="staff-list" />
+        <ui:Label class="staff-section__title" text="Contratar Cozinheiro" />
+        <ui:VisualElement class="hire-section">
+          <ui:Button name="hireCookBtn" class="hire-button" text="Contratar Cozinheiro - 50 ouro" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+
+      <ui:VisualElement name="waitersContent" class="staff-content">
+        <ui:Label class="staff-section__title" text="Garçons Atuais" />
+        <ui:ScrollView name="waitersList" class="staff-list" />
+        <ui:Label class="staff-section__title" text="Contratar Garçom" />
+        <ui:VisualElement class="hire-section">
+          <ui:Button name="hireWaiterBtn" class="hire-button" text="Contratar Garçom - 30 ouro" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+
+      <ui:VisualElement name="bartendersContent" class="staff-content">
+        <ui:Label class="staff-section__title" text="Bartenders Atuais" />
+        <ui:ScrollView name="bartendersList" class="staff-list" />
+        <ui:Label class="staff-section__title" text="Contratar Bartender" />
+        <ui:VisualElement class="hire-section">
+          <ui:Button name="hireBartenderBtn" class="hire-button" text="Contratar Bartender - 40 ouro" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+
+      <ui:VisualElement name="cleanersContent" class="staff-content">
+        <ui:Label class="staff-section__title" text="Faxineiros Atuais" />
+        <ui:ScrollView name="cleanersList" class="staff-list" />
+        <ui:Label class="staff-section__title" text="Contratar Faxineiro" />
+        <ui:VisualElement class="hire-section">
+          <ui:Button name="hireCleanerBtn" class="hire-button" text="Contratar Faxineiro - 20 ouro" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+    </ui:ScrollView>
+  </ui:VisualElement>
+</engine:UXML>
+
