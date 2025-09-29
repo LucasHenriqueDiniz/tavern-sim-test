@@ -7,7 +7,16 @@ namespace TavernSim.UI
     /// </summary>
     public class WeatherServiceStub : MonoBehaviour, IWeatherService
     {
-        [SerializeField] private string[] weatherIcons = { "☀️", "⛅", "☁️", "🌧️", "⛈️", "❄️" };
+        [SerializeField]
+        private WeatherPreset[] presets =
+        {
+            new WeatherPreset("weather-sun", "Ensolarado"),
+            new WeatherPreset("weather-partly", "Parcialmente nublado"),
+            new WeatherPreset("weather-cloud", "Nublado"),
+            new WeatherPreset("weather-rain", "Chuvoso"),
+            new WeatherPreset("weather-storm", "Tempestade"),
+            new WeatherPreset("weather-snow", "Nevando")
+        };
         [SerializeField] private int minTemperature = 15;
         [SerializeField] private int maxTemperature = 35;
         [SerializeField] private float changeInterval = 30f; // segundos
@@ -35,10 +44,30 @@ namespace TavernSim.UI
 
         private void GenerateRandomWeather()
         {
-            var icon = weatherIcons[Random.Range(0, weatherIcons.Length)];
+            if (presets == null || presets.Length == 0)
+            {
+                _currentWeather = new WeatherSnapshot("weather-sun", Random.Range(minTemperature, maxTemperature + 1), "Ensolarado");
+                _lastChangeTime = Time.time;
+                return;
+            }
+
+            var preset = presets[Random.Range(0, presets.Length)];
             var temperature = Random.Range(minTemperature, maxTemperature + 1);
-            _currentWeather = new WeatherSnapshot(icon, temperature);
+            _currentWeather = new WeatherSnapshot(preset.IconName, temperature, preset.Condition);
             _lastChangeTime = Time.time;
+        }
+
+        [System.Serializable]
+        private struct WeatherPreset
+        {
+            public string IconName;
+            public string Condition;
+
+            public WeatherPreset(string iconName, string condition)
+            {
+                IconName = iconName;
+                Condition = condition;
+            }
         }
     }
 }

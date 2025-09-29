@@ -18,34 +18,25 @@ namespace TavernSim.UI
     /// </summary>
     public readonly struct WeatherSnapshot
     {
-        public readonly string Icon;
+        public readonly string IconName;
         public readonly int Temperature;
-        public readonly string Description;
+        public readonly string Condition;
 
-        public WeatherSnapshot(string icon, int temperature, string description = null)
+        public WeatherSnapshot(string iconName, int temperature, string condition)
         {
-            Icon = icon;
+            IconName = iconName ?? string.Empty;
             Temperature = temperature;
-            Description = description ?? GetDefaultDescription(icon);
+            Condition = condition ?? string.Empty;
         }
 
-        private static string GetDefaultDescription(string icon)
+        public string GetDisplayText()
         {
-            return icon switch
+            if (string.IsNullOrWhiteSpace(Condition))
             {
-                "☀️" => "Ensolarado",
-                "⛅" => "Parcialmente nublado",
-                "☁️" => "Nublado",
-                "🌧️" => "Chuvoso",
-                "⛈️" => "Tempestade",
-                "❄️" => "Nevando",
-                _ => "Clima normal"
-            };
-        }
+                return $"{Temperature}°C";
+            }
 
-        public override string ToString()
-        {
-            return $"{Icon} {Temperature}°C";
+            return $"{Condition} • {Temperature}°C";
         }
     }
 }

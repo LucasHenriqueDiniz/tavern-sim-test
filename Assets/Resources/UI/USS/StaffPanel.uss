@@ -38,8 +38,8 @@
 }
 
 .staff-panel__close {
-    width: 32px;
-    height: 32px;
+    min-width: 88px;
+    height: 36px;
     background-color: #2c1810;
     color: #d4af37;
     border-width: 2px;

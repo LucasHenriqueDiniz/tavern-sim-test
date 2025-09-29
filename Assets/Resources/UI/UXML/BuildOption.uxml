@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xmlns:engine="UnityEngine.UIElements">
+  <ui:Button name="buildOptionButton" class="build-option" />
+</engine:UXML>

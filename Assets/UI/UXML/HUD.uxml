@@ -15,9 +15,10 @@
           <ui:Label class="resource-label" text="Clientes:" />
           <ui:Label name="customerLabel" class="resource-value" text="0" />
         </ui:VisualElement>
-        <ui:VisualElement class="resource">
+        <ui:VisualElement class="resource resource--weather">
           <ui:Label class="resource-label" text="Clima:" />
-          <ui:Label name="weatherLabel" class="resource-value" text="23°C" />
+          <ui:VisualElement name="weatherIcon" class="weather-indicator__icon" />
+          <ui:Label name="weatherLabel" class="resource-value weather-indicator__label" text="--" />
         </ui:VisualElement>
       </ui:VisualElement>
       <ui:VisualElement class="top-bar-right">
@@ -111,17 +112,33 @@
         <ui:Label class="summary-label" text="Velocidade" />
         <ui:Label name="selectionSpeed" class="summary-value" text="-" />
       </ui:VisualElement>
+      <ui:VisualElement class="selection-actions" name="selectionActions">
+        <ui:Button name="selectionFireBtn" class="selection-action__button selection-action__button--danger" text="Demitir" />
+        <ui:Button name="selectionMoveBtn" class="selection-action__button" text="Mover" />
+        <ui:Button name="selectionSellBtn" class="selection-action__button" text="Vender" />
+      </ui:VisualElement>
     </ui:VisualElement>
 
 
     <ui:VisualElement name="toolbarRoot" class="toolbar">
-      <ui:VisualElement name="toolbarButtons" class="toolbar-group">
-        <ui:Button name="buildToggleBtn" class="tool-button" text="Construção" />
-        <ui:Button name="decoToggleBtn" class="tool-button" text="Decoração" />
+      <ui:VisualElement class="toolbar__group toolbar__group--left">
+        <ui:Button name="buildToggleBtn" class="tool-button" text="Construção" tooltip="Construir estruturas" />
+        <ui:Button name="decoToggleBtn" class="tool-button" text="Decoração" tooltip="Itens decorativos" />
+      </ui:VisualElement>
+      <ui:VisualElement class="toolbar__group toolbar__group--center">
+        <ui:Button name="staffToggleBtn" class="tool-button tool-button--primary" text="Equipe" />
+      </ui:VisualElement>
+      <ui:VisualElement class="toolbar__group toolbar__group--right">
         <ui:Button name="beautyToggleBtn" class="tool-button" text="Beleza" />
       </ui:VisualElement>
       <ui:VisualElement name="toolbarSeparator" class="toolbar-separator" />
-      <ui:VisualElement name="buildMenu" class="toolbar-options" />
+      <ui:VisualElement name="buildMenu" class="toolbar-options">
+        <ui:VisualElement name="buildTabs" class="toolbar-modes">
+          <ui:Button name="buildModeBtn" class="toolbar-mode__button toolbar-mode__button--active" text="Construir" />
+          <ui:Button name="decorModeBtn" class="toolbar-mode__button" text="Decorar" />
+        </ui:VisualElement>
+        <ui:ScrollView name="buildOptionsScroll" class="toolbar-options__scroll" />
+      </ui:VisualElement>
     </ui:VisualElement>
 
     <ui:Button name="devLogBtn" class="dev-fab" text="Log" />

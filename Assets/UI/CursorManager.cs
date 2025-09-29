@@ -1,11 +1,11 @@
 using UnityEngine;
-using TavernSim.Building;
 
 namespace TavernSim.UI
 {
     /// <summary>
     /// Gerencia a troca de cursores baseada no estado atual do jogo.
     /// </summary>
+    [ExecuteAlways]
     public class CursorManager : MonoBehaviour
     {
         [Header("Cursor Textures")]
@@ -24,30 +24,14 @@ namespace TavernSim.UI
         [SerializeField] private Vector2 sellHotspot = new Vector2(6, 6);
         [SerializeField] private Vector2 panHotspot = new Vector2(16, 16);
 
-        private void Awake()
-        {
-            // Load cursor textures if not assigned
-            if (defaultCursor == null)
-                defaultCursor = Resources.Load<Texture2D>("UI/Cursors/pointer_a");
-            if (hoverCursor == null)
-                hoverCursor = Resources.Load<Texture2D>("UI/Cursors/hand_point");
-            if (buildCursor == null)
-                buildCursor = Resources.Load<Texture2D>("UI/Cursors/tool_hammer");
-            if (buildInvalidCursor == null)
-                buildInvalidCursor = Resources.Load<Texture2D>("UI/Cursors/cross_large");
-            if (sellCursor == null)
-                sellCursor = Resources.Load<Texture2D>("UI/Cursors/drawing_eraser");
-            if (panCursor == null)
-                panCursor = Resources.Load<Texture2D>("UI/Cursors/hand_closed");
-        }
-
-        private CursorMode _currentMode = CursorMode.Default;
+        private CursorState _currentState = CursorState.Default;
         private bool _isPointerOverHud;
-        private bool _isRightMouseDown;
+        private bool _isPanActive;
         private bool _isInBuildMode;
         private bool _isInSellMode;
         private bool _hasValidPreview;
         private bool _canAffordPreview;
+        private bool _hasHoverAction;
 
         public void SetPointerOverHud(bool isOverHud)
         {
@@ -55,9 +39,9 @@ namespace TavernSim.UI
             UpdateCursor();
         }
 
-        public void SetRightMouseDown(bool isDown)
+        public void SetPanActive(bool isActive)
         {
-            _isRightMouseDown = isDown;
+            _isPanActive = isActive;
             UpdateCursor();
         }
 
@@ -73,6 +57,12 @@ namespace TavernSim.UI
             UpdateCursor();
         }
 
+        public void SetHoverState(bool hasHoverAction)
+        {
+            _hasHoverAction = hasHoverAction;
+            UpdateCursor();
+        }
+
         public void SetPreviewState(bool hasValid, bool canAfford)
         {
             _hasValidPreview = hasValid;
@@ -82,56 +72,78 @@ namespace TavernSim.UI
 
         private void UpdateCursor()
         {
+            EnsureTextures();
+
+            var targetState = CursorState.Default;
+
             if (_isPointerOverHud)
             {
-                SetCursor(CursorMode.Default, defaultCursor, defaultHotspot);
-                return;
+                targetState = CursorState.Default;
             }
-
-            if (_isRightMouseDown)
+            else if (_isPanActive)
             {
-                SetCursor(CursorMode.Pan, panCursor, panHotspot);
-                return;
+                targetState = CursorState.Pan;
             }
-
-            if (_isInSellMode)
+            else if (_isInSellMode)
             {
-                SetCursor(CursorMode.Sell, sellCursor, sellHotspot);
-                return;
+                targetState = CursorState.Sell;
             }
-
-            if (_isInBuildMode)
+            else if (_isInBuildMode)
             {
-                if (_hasValidPreview && _canAffordPreview)
-                {
-                    SetCursor(CursorMode.Build, buildCursor, buildHotspot);
-                }
-                else
-                {
-                    SetCursor(CursorMode.BuildInvalid, buildInvalidCursor, buildInvalidHotspot);
-                }
-                return;
+                targetState = (_hasValidPreview && _canAffordPreview) ? CursorState.BuildPlace : CursorState.BuildInvalid;
+            }
+            else if (_hasHoverAction)
+            {
+                targetState = CursorState.HoverAction;
             }
 
-            SetCursor(CursorMode.Default, defaultCursor, defaultHotspot);
+            ApplyCursor(targetState);
         }
 
-        private void SetCursor(CursorMode mode, Texture2D texture, Vector2 hotspot)
+        private void ApplyCursor(CursorState state)
         {
-            if (_currentMode == mode && texture != null)
+            if (_currentState == state && Application.isPlaying)
             {
                 return;
             }
 
-            _currentMode = mode;
-            if (texture != null)
+            _currentState = state;
+            var (texture, hotspot) = GetCursorData(state);
+            Cursor.SetCursor(texture, hotspot, UnityEngine.CursorMode.Auto);
+        }
+
+        private (Texture2D texture, Vector2 hotspot) GetCursorData(CursorState state)
+        {
+            return state switch
             {
-                Cursor.SetCursor(texture, hotspot, UnityEngine.CursorMode.Auto);
-            }
-            else
+                CursorState.HoverAction => (hoverCursor, hoverHotspot),
+                CursorState.BuildPlace => (buildCursor, buildHotspot),
+                CursorState.BuildInvalid => (buildInvalidCursor, buildInvalidHotspot),
+                CursorState.Sell => (sellCursor, sellHotspot),
+                CursorState.Pan => (panCursor, panHotspot),
+                _ => (defaultCursor, defaultHotspot)
+            };
+        }
+
+        private void EnsureTextures()
+        {
+            defaultCursor ??= LoadCursorTexture("default", "pointer_a");
+            hoverCursor ??= LoadCursorTexture("hover", "hand_point");
+            buildCursor ??= LoadCursorTexture("build", "tool_hammer");
+            buildInvalidCursor ??= LoadCursorTexture("build_invalid", "cross_large");
+            sellCursor ??= LoadCursorTexture("sell", "drawing_eraser");
+            panCursor ??= LoadCursorTexture("pan", "hand_closed");
+        }
+
+        private static Texture2D LoadCursorTexture(string primaryName, string fallbackName)
+        {
+            var texture = Resources.Load<Texture2D>($"UI/Cursors/{primaryName}");
+            if (texture == null && !string.IsNullOrEmpty(fallbackName))
             {
-                Cursor.SetCursor(null, Vector2.zero, UnityEngine.CursorMode.Auto);
+                texture = Resources.Load<Texture2D>($"UI/Cursors/{fallbackName}");
             }
+
+            return texture;
         }
 
         private void OnValidate()
@@ -142,11 +154,11 @@ namespace TavernSim.UI
             }
         }
 
-        private enum CursorMode
+        private enum CursorState
         {
             Default,
-            Hover,
-            Build,
+            HoverAction,
+            BuildPlace,
             BuildInvalid,
             Sell,
             Pan

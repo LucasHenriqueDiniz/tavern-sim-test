@@ -8,6 +8,7 @@ namespace TavernSim.UI
     /// <summary>
     /// Controller para a barra de ferramentas inferior (construção, decoração, beleza).
     /// </summary>
+    [ExecuteAlways]
     public class ToolbarController : MonoBehaviour
     {
         private UIDocument _document;
@@ -19,8 +20,12 @@ namespace TavernSim.UI
         private Button _buildToggleButton;
         private Button _decoToggleButton;
         private Button _beautyToggleButton;
+        private Button _staffToggleButton;
         private VisualElement _buildMenu;
-        private VisualElement _toolbarGroup;
+        private Button _buildModeButton;
+        private Button _decorModeButton;
+        private ScrollView _buildOptionsScroll;
+        private VisualTreeAsset _buildOptionTemplate;
 
         private readonly System.Collections.Generic.List<Button> _buildOptionButtons = new System.Collections.Generic.List<Button>();
         private readonly System.Collections.Generic.Dictionary<Button, BuildCatalog.Entry> _buildOptionLookup = new System.Collections.Generic.Dictionary<Button, BuildCatalog.Entry>();
@@ -31,6 +36,7 @@ namespace TavernSim.UI
         private BuildCategory _activeBuildCategory = BuildCategory.Build;
 
         public event System.Action BeautyToggleChanged;
+        public event System.Action StaffToggleClicked;
 
         public void SetHUDController(HUDController hudController)
         {
@@ -84,11 +90,24 @@ namespace TavernSim.UI
                 return;
             }
 
-            _toolbarGroup       = toolbarRoot.Q<VisualElement>("toolbarButtons");
             _buildToggleButton  = toolbarRoot.Q<Button>("buildToggleBtn");
             _decoToggleButton   = toolbarRoot.Q<Button>("decoToggleBtn");
+            _staffToggleButton  = toolbarRoot.Q<Button>("staffToggleBtn");
             _beautyToggleButton = toolbarRoot.Q<Button>("beautyToggleBtn");
             _buildMenu          = toolbarRoot.Q<VisualElement>("buildMenu");
+            _buildModeButton    = toolbarRoot.Q<Button>("buildModeBtn");
+            _decorModeButton    = toolbarRoot.Q<Button>("decorModeBtn");
+            _buildOptionsScroll = toolbarRoot.Q<ScrollView>("buildOptionsScroll");
+
+            if (_buildMenu != null)
+            {
+                _buildMenu.RemoveFromClassList("open");
+            }
+
+            if (_buildOptionTemplate == null)
+            {
+                _buildOptionTemplate = Resources.Load<VisualTreeAsset>("UI/UXML/BuildOption");
+            }
         }
 
         public void BindGridPlacer(GridPlacer gridPlacer)
@@ -113,7 +132,7 @@ namespace TavernSim.UI
         public void BindBuildCatalog(BuildCatalog catalog)
         {
             _buildCatalog = catalog;
-            if (_buildMenu != null)
+            if (_buildOptionsScroll != null)
             {
                 RebuildBuildButtons();
             }
@@ -122,7 +141,7 @@ namespace TavernSim.UI
         public void BindEconomy(EconomySystem economy)
         {
             _economy = economy;
-            if (_buildMenu != null)
+            if (_buildOptionsScroll != null)
             {
                 UpdateBuildButtonsByCash(_economy?.Cash ?? 0f);
             }
@@ -144,6 +163,21 @@ namespace TavernSim.UI
             {
                 _beautyToggleButton.clicked += OnBeautyToggleClicked;
             }
+
+            if (_staffToggleButton != null)
+            {
+                _staffToggleButton.clicked += OnStaffToggleInternal;
+            }
+
+            if (_buildModeButton != null)
+            {
+                _buildModeButton.clicked += OnBuildModeClicked;
+            }
+
+            if (_decorModeButton != null)
+            {
+                _decorModeButton.clicked += OnDecorModeClicked;
+            }
         }
 
         private void UnhookEvents()
@@ -163,6 +197,21 @@ namespace TavernSim.UI
                 _beautyToggleButton.clicked -= OnBeautyToggleClicked;
             }
 
+            if (_staffToggleButton != null)
+            {
+                _staffToggleButton.clicked -= OnStaffToggleInternal;
+            }
+
+            if (_buildModeButton != null)
+            {
+                _buildModeButton.clicked -= OnBuildModeClicked;
+            }
+
+            if (_decorModeButton != null)
+            {
+                _decorModeButton.clicked -= OnDecorModeClicked;
+            }
+
             DetachBuildOptionCallbacks();
 
             if (_gridPlacer != null)
@@ -175,12 +224,26 @@ namespace TavernSim.UI
 
         public void OnBuildButton()
         {
-            ShowBuildCategory(BuildCategory.Build);
+            if (_buildMenuVisible && _activeBuildCategory == BuildCategory.Build)
+            {
+                SetBuildMenuVisible(false);
+            }
+            else
+            {
+                ShowBuildCategory(BuildCategory.Build);
+            }
         }
 
         public void OnDecoToggleClicked()
         {
-            ShowBuildCategory(BuildCategory.Deco);
+            if (_buildMenuVisible && _activeBuildCategory == BuildCategory.Deco)
+            {
+                SetBuildMenuVisible(false);
+            }
+            else
+            {
+                ShowBuildCategory(BuildCategory.Deco);
+            }
         }
 
         public void OnBeautyToggleClicked()
@@ -188,6 +251,21 @@ namespace TavernSim.UI
             _beautyOverlayEnabled = !_beautyOverlayEnabled;
             UpdateCategoryButtons();
             BeautyToggleChanged?.Invoke();
+        }
+
+        private void OnStaffToggleInternal()
+        {
+            StaffToggleClicked?.Invoke();
+        }
+
+        private void OnBuildModeClicked()
+        {
+            ShowBuildCategory(BuildCategory.Build);
+        }
+
+        private void OnDecorModeClicked()
+        {
+            ShowBuildCategory(BuildCategory.Deco);
         }
 
         private void ShowBuildCategory(BuildCategory category)
@@ -207,7 +285,7 @@ namespace TavernSim.UI
             _buildMenuVisible = visible;
             if (_buildMenu != null)
             {
-                _buildMenu.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+                _buildMenu.EnableInClassList("open", visible);
             }
 
             UpdateCategoryButtons();
@@ -226,35 +304,50 @@ namespace TavernSim.UI
         {
             var buildActive = _buildMenuVisible && _activeBuildCategory == BuildCategory.Build;
             var decoActive = _buildMenuVisible && _activeBuildCategory == BuildCategory.Deco;
-            
+
             _buildToggleButton?.EnableInClassList("tool-button--active", buildActive);
             _decoToggleButton?.EnableInClassList("tool-button--active", decoActive);
             _beautyToggleButton?.EnableInClassList("tool-button--active", _beautyOverlayEnabled);
+            _buildModeButton?.EnableInClassList("toolbar-mode__button--active", _activeBuildCategory == BuildCategory.Build);
+            _decorModeButton?.EnableInClassList("toolbar-mode__button--active", _activeBuildCategory == BuildCategory.Deco);
         }
 
         private void RebuildBuildButtons()
         {
-            if (_buildMenu == null || _buildCatalog == null)
+            if (_buildOptionsScroll == null || _buildCatalog == null)
             {
                 return;
             }
 
             DetachBuildOptionCallbacks();
-            _buildMenu.Clear();
             _buildOptionButtons.Clear();
             _buildOptionLookup.Clear();
 
+            _buildOptionsScroll.contentContainer.Clear();
+
             foreach (var entry in _buildCatalog.GetEntries(_activeBuildCategory))
             {
-                var button = new Button
+                if (_buildOptionTemplate == null)
                 {
-                    name = entry.Id + "Btn",
-                    userData = entry.Kind
-                };
+                    continue;
+                }
+
+                var template = _buildOptionTemplate.Instantiate();
+                var button = template.Q<Button>("buildOptionButton");
+                if (button == null)
+                {
+                    Debug.LogWarning("ToolbarController: template buildOptionButton não encontrado.");
+                    continue;
+                }
+
+                button.name = entry.Id + "Btn";
+                button.userData = entry.Kind;
                 button.AddToClassList("build-option");
                 UpdateBuildButtonLabel(button, entry);
                 button.tooltip = BuildTooltip(entry);
-                _buildMenu.Add(button);
+
+                _buildOptionsScroll.Add(template);
+
                 _buildOptionButtons.Add(button);
                 _buildOptionLookup[button] = entry;
             }

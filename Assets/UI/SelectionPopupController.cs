@@ -9,6 +9,7 @@ namespace TavernSim.UI
     /// <summary>
     /// Controller para o popup de seleção que aparece quando algo está selecionado.
     /// </summary>
+    [ExecuteAlways]
     public class SelectionPopupController : MonoBehaviour
     {
         private UIDocument _document;
@@ -20,7 +21,14 @@ namespace TavernSim.UI
         private Label _selectionStatusLabel;
         private Label _selectionSpeedLabel;
         private VisualElement _contextActionsGroup;
-        private VisualElement _contextActions;
+        private Button _fireButton;
+        private Button _moveButton;
+        private Button _sellButton;
+        private IVisualElementScheduledItem _followHandle;
+
+        public event System.Action<ISelectable> FireRequested;
+        public event System.Action<ISelectable> MoveRequested;
+        public event System.Action<ISelectable> SellRequested;
 
         private void Awake()
         {
@@ -36,6 +44,7 @@ namespace TavernSim.UI
         private void OnDisable()
         {
             UnhookEvents();
+            ReleaseFollowHandle();
         }
 
         private void SetupUI()
@@ -51,8 +60,12 @@ namespace TavernSim.UI
             _selectionTypeLabel = root.Q<Label>("selectionType");
             _selectionStatusLabel = root.Q<Label>("selectionStatus");
             _selectionSpeedLabel = root.Q<Label>("selectionSpeed");
-            _contextActionsGroup = root.Q<VisualElement>("contextActions");
-            _contextActions = root.Q<VisualElement>("contextActionsBody") ?? _contextActionsGroup ?? root;
+            _contextActionsGroup = root.Q<VisualElement>("selectionActions");
+            _fireButton = root.Q<Button>("selectionFireBtn");
+            _moveButton = root.Q<Button>("selectionMoveBtn");
+            _sellButton = root.Q<Button>("selectionSellBtn");
+
+            HookActionButtons();
 
             if (_selectionPopup != null)
             {
@@ -61,6 +74,8 @@ namespace TavernSim.UI
                 _selectionPopup.style.right = 24f;
                 _selectionPopup.style.top = 96f;
             }
+
+            UpdateActionButtons(null);
         }
 
         public void BindSelection(SelectionService selectionService)
@@ -106,6 +121,7 @@ namespace TavernSim.UI
 
             if (!hasSelection)
             {
+                ReleaseFollowHandle();
                 _selectionPopup.style.left = StyleKeyword.Null;
                 _selectionPopup.style.right = 24f;
                 _selectionPopup.style.top = 96f;
@@ -115,6 +131,7 @@ namespace TavernSim.UI
             var targetTransform = selectable.Transform;
             if (targetTransform == null)
             {
+                ReleaseFollowHandle();
                 _selectionPopup.style.left = StyleKeyword.Null;
                 _selectionPopup.style.right = 24f;
                 _selectionPopup.style.top = 96f;
@@ -131,14 +148,7 @@ namespace TavernSim.UI
                 return;
             }
 
-            void Perform()
-            {
-                if (target != null)
-                {
-                    PositionSelectionPopup(target);
-                }
-            }
-
+            ReleaseFollowHandle();
             PositionSelectionPopup(target);
 
             var scheduler = _selectionPopup.schedule;
@@ -147,7 +157,30 @@ namespace TavernSim.UI
                 return;
             }
 
-            scheduler.Execute(Perform).ExecuteLater(0);
+            _followHandle = scheduler.Execute(() =>
+            {
+                if (target == null)
+                {
+                    ReleaseFollowHandle();
+                    return;
+                }
+
+                PositionSelectionPopup(target);
+            });
+
+            _followHandle.Every(33);
+            _followHandle.Resume();
+        }
+
+        private void ReleaseFollowHandle()
+        {
+            if (_followHandle == null)
+            {
+                return;
+            }
+
+            _followHandle.Pause();
+            _followHandle = null;
         }
 
         private void PositionSelectionPopup(Transform target)
@@ -231,7 +264,7 @@ namespace TavernSim.UI
                 _selectionTypeLabel.text = "-";
                 _selectionStatusLabel.text = "-";
                 _selectionSpeedLabel.text = "-";
-                PopulateContextActions(null);
+                UpdateActionButtons(null);
                 return;
             }
 
@@ -290,69 +323,87 @@ namespace TavernSim.UI
                 }
             }
 
-            PopulateContextActions(selectable);
+            UpdateActionButtons(selectable);
         }
 
-        private void PopulateContextActions(ISelectable selectable)
+        private void HookActionButtons()
         {
-            if (_contextActions == null)
+            if (_fireButton != null)
+            {
+                _fireButton.clicked -= OnFireClicked;
+                _fireButton.clicked += OnFireClicked;
+            }
+
+            if (_moveButton != null)
+            {
+                _moveButton.clicked -= OnMoveClicked;
+                _moveButton.clicked += OnMoveClicked;
+            }
+
+            if (_sellButton != null)
+            {
+                _sellButton.clicked -= OnSellClicked;
+                _sellButton.clicked += OnSellClicked;
+            }
+        }
+
+        private void UpdateActionButtons(ISelectable selectable)
+        {
+            if (_contextActionsGroup == null)
             {
                 return;
             }
 
-            _contextActions.Clear();
+            var hasSelection = selectable != null;
+            _contextActionsGroup.style.display = hasSelection ? DisplayStyle.Flex : DisplayStyle.None;
 
-            if (_contextActionsGroup != null)
-            {
-                _contextActionsGroup.style.display = selectable != null ? DisplayStyle.Flex : DisplayStyle.None;
-            }
-
-            if (selectable == null)
+            if (!hasSelection)
             {
                 return;
             }
 
-            void AddAction(string label, System.Action handler)
+            bool fireVisible = selectable is Waiter or Cook or Bartender or Cleaner;
+            bool moveVisible = selectable is TablePresenter;
+            bool sellVisible = selectable is TablePresenter;
+
+            SetActionState(_fireButton, fireVisible, selectable);
+            SetActionState(_moveButton, moveVisible, selectable);
+            SetActionState(_sellButton, sellVisible, selectable);
+        }
+
+        private static void SetActionState(Button button, bool visible, ISelectable context)
+        {
+            if (button == null)
             {
-                var button = new Button(handler) { text = label };
-                button.AddToClassList("hud-button");
-                _contextActions.Add(button);
+                return;
             }
 
-            switch (selectable)
-            {
-                case Waiter waiter:
-                    AddAction(HUDStrings.FireAction, () => ShowActionToast(waiter.DisplayName ?? waiter.name + " será removido em breve."));
-                    break;
-                case Cook cook:
-                    AddAction(HUDStrings.FireAction, () => ShowActionToast(cook.DisplayName ?? cook.name + " será removido em breve."));
-                    break;
-                case Bartender bartender:
-                    AddAction(HUDStrings.FireAction, () => ShowActionToast(bartender.DisplayName ?? bartender.name + " será removido em breve."));
-                    break;
-                case TablePresenter tablePresenter:
-                    AddAction(HUDStrings.MoveAction, () => ShowActionToast(tablePresenter.name + " será reposicionada."));
-                    if (tablePresenter.SeatCount > 0)
-                    {
-                        AddAction(HUDStrings.SellAction, () => ShowActionToast(tablePresenter.name + " será vendida."));
-                    }
-                    break;
-                default:
-                    break;
-            }
+            button.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            button.userData = visible ? context : null;
+        }
 
-            if (_contextActions.childCount == 0)
+        private void OnFireClicked()
+        {
+            if (_fireButton?.userData is ISelectable selectable)
             {
-                var placeholder = new Label(HUDStrings.NoActions);
-                placeholder.AddToClassList("context-actions__empty");
-                _contextActions.Add(placeholder);
+                FireRequested?.Invoke(selectable);
             }
         }
 
-        private void ShowActionToast(string message)
+        private void OnMoveClicked()
         {
-            // This would be handled by the main HUD controller
-            Debug.Log($"Action: {message}");
+            if (_moveButton?.userData is ISelectable selectable)
+            {
+                MoveRequested?.Invoke(selectable);
+            }
+        }
+
+        private void OnSellClicked()
+        {
+            if (_sellButton?.userData is ISelectable selectable)
+            {
+                SellRequested?.Invoke(selectable);
+            }
         }
 
         private static float GetNavAgentSpeed(GameObject go)

@@ -134,6 +134,17 @@ Crie os seguintes arquivos na pasta `Assets/UI/Cursors/`:
 - `sell.png` (hotspot 6,6)
 - `pan.png` (hotspot 16,16)
 
+### Ícones de Clima
+Os ícones carregados pelo `IconManager` ficam em `Assets/UI/Icons/` e devem ser fornecidos como SVG/texto (evite binários `.png`).
+- `weather-sun.svg`
+- `weather-partly.svg`
+- `weather-cloud.svg`
+- `weather-rain.svg`
+- `weather-storm.svg`
+- `weather-snow.svg`
+
+> Observação: mantenha estes nomes para que o `WeatherService` consiga resolver os ícones corretamente. Substitua os placeholders SVG por arte final quando os assets estiverem disponíveis.
+
 ### Staff Panel
 - `Assets/UI/UXML/StaffPanel.uxml`
 - `Assets/UI/USS/StaffPanel.uss`

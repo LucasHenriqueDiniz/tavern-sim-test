@@ -8,6 +8,7 @@ namespace TavernSim.UI
     /// <summary>
     /// Controller para a barra superior do HUD (recursos, clima, controles de tempo).
     /// </summary>
+    [ExecuteAlways]
     public class TopBarController : MonoBehaviour
     {
         private UIDocument _document;
@@ -20,6 +21,7 @@ namespace TavernSim.UI
         private Label _customerLabel;
         private Label _weatherLabel;
         private Label _timeLabel;
+        private VisualElement _weatherIcon;
         private Button _staffButton;
 
         public event System.Action StaffButtonClicked;
@@ -52,12 +54,14 @@ namespace TavernSim.UI
             _reputationLabel = root.Q<Label>("reputationLabel");
             _customerLabel = root.Q<Label>("customerLabel");
             _weatherLabel = root.Q<Label>("weatherLabel");
+            _weatherIcon = root.Q<VisualElement>("weatherIcon");
             _timeLabel = root.Q<Label>("timeLabel");
             _staffButton = root.Q<Button>("staffBtn");
 
             if (_staffButton != null)
             {
-                _staffButton.clicked += () => StaffButtonClicked?.Invoke();
+                _staffButton.clicked -= OnStaffButtonClicked;
+                _staffButton.clicked += OnStaffButtonClicked;
             }
         }
 
@@ -131,6 +135,11 @@ namespace TavernSim.UI
             {
                 _clockSystem.TimeChanged -= OnTimeChanged;
             }
+
+            if (_staffButton != null)
+            {
+                _staffButton.clicked -= OnStaffButtonClicked;
+            }
         }
 
         private void OnCashChanged(float cash)
@@ -168,16 +177,30 @@ namespace TavernSim.UI
             }
 
             var weather = _weatherService.GetSnapshot();
-            _weatherLabel.text = weather.ToString();
+            _weatherLabel.text = weather.GetDisplayText();
+            if (_weatherIcon != null)
+            {
+                IconManager.ApplyIconToElement(_weatherIcon, weather.IconName);
+            }
         }
 
         private void Update()
         {
+            if (!Application.isPlaying)
+            {
+                return;
+            }
+
             // Atualizar clima periodicamente
             if (_weatherService != null && Time.time % 5f < Time.deltaTime)
             {
                 UpdateWeather();
             }
+        }
+
+        private void OnStaffButtonClicked()
+        {
+            StaffButtonClicked?.Invoke();
         }
     }
 }

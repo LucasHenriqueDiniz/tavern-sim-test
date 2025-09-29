@@ -19,6 +19,7 @@ namespace TavernSim.UI
     /// Coordenador principal do HUD que integra todos os controllers especializados.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
+    [ExecuteAlways]
     public sealed class HUDController : MonoBehaviour
     {
         [Header("Controllers")]
@@ -61,25 +62,20 @@ namespace TavernSim.UI
         public event Action<Cook> FireCookRequested;
         public event Action<Bartender> FireBartenderRequested;
         public event Action<Cleaner> FireCleanerRequested;
+        public event Action<ISelectable> MoveSelectionRequested;
+        public event Action<ISelectable> SellSelectionRequested;
 
         private void Awake()
         {
-            Debug.Log("HUDController.Awake() called");
             _document = GetComponent<UIDocument>();
             if (_document != null)
             {
                 _document.sortingOrder = 100;
-                Debug.Log("HUDController: UIDocument found");
-            }
-            else
-            {
-                Debug.LogError("HUDController: UIDocument not found!");
             }
 
             if (visualConfig == null)
             {
                 visualConfig = Resources.Load<HUDVisualConfig>("UI/HUDVisualConfig");
-                Debug.Log($"HUDController: visualConfig loaded = {visualConfig != null}");
             }
 
             SetupControllers();
@@ -87,7 +83,6 @@ namespace TavernSim.UI
 
         private void OnEnable()
         {
-            Debug.Log("HUDController.OnEnable() called");
             ApplyVisualTree();
             HookEvents();
         }
@@ -99,19 +94,23 @@ namespace TavernSim.UI
 
         private void Update()
         {
+            if (!Application.isPlaying)
+            {
+                return;
+            }
+
             HandleInput();
         }
 
         private void SetupControllers()
         {
-            // Get or create controllers
-            topBarController = GetOrCreateController<TopBarController>();
-            toolbarController = GetOrCreateController<ToolbarController>();
-            sidePanelController = GetOrCreateController<SidePanelController>();
-            selectionPopupController = GetOrCreateController<SelectionPopupController>();
-            staffPanelController = GetOrCreateController<StaffPanelController>();
-            cursorManager = GetOrCreateController<CursorManager>();
-            toastController = GetOrCreateController<HudToastController>();
+            topBarController ??= GetComponent<TopBarController>();
+            toolbarController ??= GetComponent<ToolbarController>();
+            sidePanelController ??= GetComponent<SidePanelController>();
+            selectionPopupController ??= GetComponent<SelectionPopupController>();
+            staffPanelController ??= GetComponent<StaffPanelController>();
+            cursorManager ??= GetComponent<CursorManager>();
+            toastController ??= GetComponent<HudToastController>();
 
             // Setup toolbar controller to use this HUDController's UIDocument
             if (toolbarController != null)
@@ -135,11 +134,19 @@ namespace TavernSim.UI
             if (toolbarController != null)
             {
                 toolbarController.BeautyToggleChanged += OnBeautyToggleChanged;
+                toolbarController.StaffToggleClicked += OnStaffButtonClicked;
             }
 
             if (sidePanelController != null)
             {
                 sidePanelController.PanelToggled += OnSidePanelToggled;
+            }
+
+            if (selectionPopupController != null)
+            {
+                selectionPopupController.FireRequested += OnSelectionFireRequested;
+                selectionPopupController.MoveRequested += OnSelectionMoveRequested;
+                selectionPopupController.SellRequested += OnSelectionSellRequested;
             }
 
             if (staffPanelController != null)
@@ -151,34 +158,18 @@ namespace TavernSim.UI
             }
         }
 
-        private T GetOrCreateController<T>() where T : MonoBehaviour
-        {
-            var controller = GetComponent<T>();
-            if (controller == null)
-            {
-                controller = gameObject.AddComponent<T>();
-            }
-            return controller;
-        }
-
         private void ApplyVisualTree()
         {
-            Debug.Log("HUDController.ApplyVisualTree() called");
             if (_document == null)
             {
-                Debug.LogWarning("HUDController requires a UIDocument to build the HUD visuals.");
                 return;
             }
 
             var rootElement = _document.rootVisualElement;
             if (rootElement == null)
             {
-                Debug.LogWarning("HUDController could not access the UIDocument root. UI will be applied once the panel is ready.");
                 return;
             }
-
-            Debug.Log($"HUDController: rootElement found, visualConfig = {visualConfig != null}");
-            Debug.Log($"HUDController: UIDocument panelSettings = {_document.panelSettings != null}, sortingOrder = {_document.sortingOrder}");
 
             // Setup root element
             rootElement.style.position = Position.Absolute;
@@ -187,56 +178,34 @@ namespace TavernSim.UI
             rootElement.style.right = 0;
             rootElement.style.bottom = 0;
 
-            // Debug: Check rootElement properties
-            Debug.Log($"HUDController: rootElement position={rootElement.style.position.value}, top={rootElement.style.top.value}, left={rootElement.style.left.value}, right={rootElement.style.right.value}, bottom={rootElement.style.bottom.value}");
-            Debug.Log($"HUDController: rootElement width={rootElement.style.width.value}, height={rootElement.style.height.value}, display={rootElement.style.display.value}");
-
             rootElement.Clear();
 
             VisualElement layoutRoot;
             if (visualConfig != null && visualConfig.VisualTree != null)
             {
-                Debug.Log("HUDController: Applying VisualTree from visualConfig");
                 layoutRoot = visualConfig.VisualTree.Instantiate();
                 rootElement.Add(layoutRoot);
-                Debug.Log($"HUDController: VisualTree instantiated and added to rootElement");
 
                 var hudRoot = layoutRoot.Q<VisualElement>("hudRoot");
                 if (hudRoot != null)
                 {
-                    Debug.Log("HUDController: hudRoot found in VisualTree");
                     hudRoot.style.position = Position.Absolute;
                     hudRoot.style.top = 0;
                     hudRoot.style.left = 0;
                     hudRoot.style.right = 0;
                     hudRoot.style.bottom = 0;
                     hudRoot.style.flexGrow = 1f;
-                    
-                    // Debug: Check hudRoot properties
-                    Debug.Log($"HUDController: hudRoot position={hudRoot.style.position.value}, top={hudRoot.style.top.value}, left={hudRoot.style.left.value}, right={hudRoot.style.right.value}, bottom={hudRoot.style.bottom.value}");
-                    Debug.Log($"HUDController: hudRoot width={hudRoot.style.width.value}, height={hudRoot.style.height.value}, display={hudRoot.style.display.value}");
-                }
-                else
-                {
-                    Debug.LogError("HUDController: hudRoot not found in VisualTree!");
                 }
             }
             else
             {
-                Debug.LogError("HUDController: visualConfig or VisualTree is null! Using fallback layout.");
-                Debug.Log($"HUDController: visualConfig = {visualConfig != null}, VisualTree = {visualConfig?.VisualTree != null}");
                 layoutRoot = new VisualElement { style = { flexDirection = FlexDirection.Column } };
                 rootElement.Add(layoutRoot);
             }
 
             if (visualConfig != null && visualConfig.StyleSheet != null && !rootElement.styleSheets.Contains(visualConfig.StyleSheet))
             {
-                Debug.Log("HUDController: Adding StyleSheet to rootElement");
                 rootElement.styleSheets.Add(visualConfig.StyleSheet);
-            }
-            else
-            {
-                Debug.LogWarning($"HUDController: StyleSheet not applied. visualConfig={visualConfig != null}, StyleSheet={visualConfig?.StyleSheet != null}, Contains={rootElement.styleSheets.Contains(visualConfig?.StyleSheet)}");
             }
 
             // Setup controls label
@@ -260,19 +229,9 @@ namespace TavernSim.UI
             _panelToggleButton = rootElement.Q<Button>("panelToggleBtn");
             if (_panelToggleButton != null)
             {
-                Debug.Log("HUDController: Panel toggle button found");
-                _panelToggleButton.clicked += () => {
-                    Debug.Log("Panel button clicked!");
-                    sidePanelController?.ToggleSidePanel();
-                };
+                _panelToggleButton.clicked -= OnPanelToggleClicked;
+                _panelToggleButton.clicked += OnPanelToggleClicked;
             }
-            else
-            {
-                Debug.LogError("HUDController: Panel toggle button not found!");
-            }
-
-            // Create toolbar dynamically (like topbar)
-            CreateToolbar(rootElement);
 
             // Attach toast controller
             toastController?.AttachTo(rootElement);
@@ -304,11 +263,19 @@ namespace TavernSim.UI
             if (toolbarController != null)
             {
                 toolbarController.BeautyToggleChanged -= OnBeautyToggleChanged;
+                toolbarController.StaffToggleClicked -= OnStaffButtonClicked;
             }
 
             if (sidePanelController != null)
             {
                 sidePanelController.PanelToggled -= OnSidePanelToggled;
+            }
+
+            if (selectionPopupController != null)
+            {
+                selectionPopupController.FireRequested -= OnSelectionFireRequested;
+                selectionPopupController.MoveRequested -= OnSelectionMoveRequested;
+                selectionPopupController.SellRequested -= OnSelectionSellRequested;
             }
         }
 
@@ -468,6 +435,11 @@ namespace TavernSim.UI
             staffPanelController?.TogglePanel();
         }
 
+        private void OnPanelToggleClicked()
+        {
+            sidePanelController?.ToggleSidePanel();
+        }
+
         private void OnBeautyToggleChanged()
         {
             // Handle beauty toggle if needed
@@ -476,6 +448,35 @@ namespace TavernSim.UI
         private void OnSidePanelToggled()
         {
             // Handle side panel toggle if needed
+        }
+
+        private void OnSelectionFireRequested(ISelectable selectable)
+        {
+            switch (selectable)
+            {
+                case Waiter waiter:
+                    FireWaiterRequested?.Invoke(waiter);
+                    break;
+                case Cook cook:
+                    FireCookRequested?.Invoke(cook);
+                    break;
+                case Bartender bartender:
+                    FireBartenderRequested?.Invoke(bartender);
+                    break;
+                case Cleaner cleaner:
+                    FireCleanerRequested?.Invoke(cleaner);
+                    break;
+            }
+        }
+
+        private void OnSelectionMoveRequested(ISelectable selectable)
+        {
+            MoveSelectionRequested?.Invoke(selectable);
+        }
+
+        private void OnSelectionSellRequested(ISelectable selectable)
+        {
+            SellSelectionRequested?.Invoke(selectable);
         }
 
         private void SaveGame()
@@ -532,6 +533,8 @@ namespace TavernSim.UI
                 return;
             }
 
+            rootElement.UnregisterCallback<PointerEnterEvent>(OnHudPointerEnter, TrickleDown.TrickleDown);
+            rootElement.UnregisterCallback<PointerLeaveEvent>(OnHudPointerLeave, TrickleDown.TrickleDown);
             rootElement.RegisterCallback<PointerEnterEvent>(OnHudPointerEnter, TrickleDown.TrickleDown);
             rootElement.RegisterCallback<PointerLeaveEvent>(OnHudPointerLeave, TrickleDown.TrickleDown);
         }
@@ -551,70 +554,5 @@ namespace TavernSim.UI
             return "Camera: WASD/Arrows move • Shift sprint • Scroll zoom • Right Drag pan • Middle Drag orbit • Q/E rotate • Left Click select • Build button to place props";
         }
 
-        private void CreateToolbar(VisualElement rootElement)
-        {
-            Debug.Log("HUDController: Creating toolbar dynamically");
-            
-            // Create toolbar container
-            var toolbarRoot = new VisualElement();
-            toolbarRoot.name = "toolbarRoot";
-            toolbarRoot.AddToClassList("toolbar");
-            toolbarRoot.style.display = DisplayStyle.Flex;
-            
-            // Create toolbar buttons group
-            var toolbarButtons = new VisualElement();
-            toolbarButtons.name = "toolbarButtons";
-            toolbarButtons.AddToClassList("toolbar-group");
-            
-            // Create buttons
-            var buildBtn = new Button { text = "Construção" };
-            buildBtn.name = "buildToggleBtn";
-            buildBtn.AddToClassList("tool-button");
-            buildBtn.clicked += () => {
-                Debug.Log("Build button clicked!");
-                toolbarController?.OnBuildButton();
-            };
-            
-            var decoBtn = new Button { text = "Decoração" };
-            decoBtn.name = "decoToggleBtn";
-            decoBtn.AddToClassList("tool-button");
-            decoBtn.clicked += () => {
-                Debug.Log("Deco button clicked!");
-                toolbarController?.OnDecoToggleClicked();
-            };
-            
-            var beautyBtn = new Button { text = "Beleza" };
-            beautyBtn.name = "beautyToggleBtn";
-            beautyBtn.AddToClassList("tool-button");
-            beautyBtn.clicked += () => {
-                Debug.Log("Beauty button clicked!");
-                toolbarController?.OnBeautyToggleClicked();
-            };
-            
-            // Add buttons to group
-            toolbarButtons.Add(buildBtn);
-            toolbarButtons.Add(decoBtn);
-            toolbarButtons.Add(beautyBtn);
-            
-            // Create separator
-            var separator = new VisualElement();
-            separator.name = "toolbarSeparator";
-            separator.AddToClassList("toolbar-separator");
-            
-            // Create build menu
-            var buildMenu = new VisualElement();
-            buildMenu.name = "buildMenu";
-            buildMenu.AddToClassList("toolbar-options");
-            
-            // Assemble toolbar
-            toolbarRoot.Add(toolbarButtons);
-            toolbarRoot.Add(separator);
-            toolbarRoot.Add(buildMenu);
-            
-            // Add to root
-            rootElement.Add(toolbarRoot);
-            
-            Debug.Log("HUDController: Toolbar created and added to root");
-        }
     }
 }

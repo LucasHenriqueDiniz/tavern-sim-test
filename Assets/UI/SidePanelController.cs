@@ -10,6 +10,7 @@ namespace TavernSim.UI
     /// <summary>
     /// Controller para o painel lateral (informações da taverna, log de eventos).
     /// </summary>
+    [ExecuteAlways]
     public class SidePanelController : MonoBehaviour
     {
         private UIDocument _document;

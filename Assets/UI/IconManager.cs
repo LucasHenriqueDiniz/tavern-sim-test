@@ -14,7 +14,7 @@ namespace TavernSim.UI
         // Mapeamento de botões para ícones
         private static readonly Dictionary<string, string> _buttonIconMap = new Dictionary<string, string>
         {
-            { "staffBtn", "contract" },
+            { "staffBtn", "cook" },
             { "pauseBtn", "pause-button" },
             { "play1Btn", "play-button" },
             { "play2Btn", "fast-forward-button" },
@@ -24,7 +24,8 @@ namespace TavernSim.UI
             { "panelToggleBtn", "histogram" },
             { "buildToggleBtn", "build" },
             { "decoToggleBtn", "large-paint-brush" },
-            { "beautyToggleBtn", "mona-lisa" }
+            { "beautyToggleBtn", "mona-lisa" },
+            { "staffToggleBtn", "cook" }
         };
 
         /// <summary>
@@ -54,8 +55,15 @@ namespace TavernSim.UI
             var iconTexture = LoadIcon(iconName);
             if (iconTexture != null)
             {
+                var existing = button.Q<VisualElement>("__icon");
+                if (existing != null)
+                {
+                    existing.style.backgroundImage = iconTexture;
+                    return;
+                }
+
                 // Criar um VisualElement para o ícone
-                var iconElement = new VisualElement();
+                var iconElement = new VisualElement { name = "__icon" };
                 iconElement.style.backgroundImage = iconTexture;
                 iconElement.style.width = 16;
                 iconElement.style.height = 16;
@@ -65,6 +73,35 @@ namespace TavernSim.UI
                 // Adicionar o ícone antes do texto
                 button.Insert(0, iconElement);
             }
+        }
+
+        /// <summary>
+        /// Define a imagem de fundo de um elemento com o ícone informado.
+        /// </summary>
+        public static void ApplyIconToElement(VisualElement element, string iconName)
+        {
+            if (element == null || string.IsNullOrEmpty(iconName))
+            {
+                return;
+            }
+
+            var iconTexture = LoadIcon(iconName);
+            if (iconTexture == null)
+            {
+                return;
+            }
+
+            element.style.backgroundImage = iconTexture;
+            element.style.backgroundSize = new BackgroundSize(BackgroundSizeType.Contain);
+            element.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+        }
+
+        /// <summary>
+        /// Retorna a textura correspondente ao ícone informado.
+        /// </summary>
+        public static Texture2D GetIconTexture(string iconName)
+        {
+            return LoadIcon(iconName);
         }
 
         /// <summary>

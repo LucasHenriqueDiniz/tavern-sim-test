@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <engine:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xmlns:engine="UnityEngine.UIElements">
+  <ui:Style src="../USS/StaffPanel.uss" />
   <ui:VisualElement name="staffPanel" class="staff-panel">
     <ui:VisualElement class="staff-panel__header">
       <ui:Label class="staff-panel__title" text="Equipe" />
-      <ui:Button name="staffCloseBtn" class="staff-panel__close" text="✕" />
+      <ui:Button name="staffCloseBtn" class="staff-panel__close" text="Fechar" />
     </ui:VisualElement>
     
     <ui:VisualElement class="staff-panel__tabs">
