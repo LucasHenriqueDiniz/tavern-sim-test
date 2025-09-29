@@ -183,7 +183,6 @@ namespace TavernSim.UI
 
         public void ToggleSidePanel()
         {
-            Debug.Log($"ToggleSidePanel called! Current state: {_sidePanelOpen}");
             SetSidePanelOpen(!_sidePanelOpen);
             PanelToggled?.Invoke();
         }
@@ -200,16 +199,13 @@ namespace TavernSim.UI
 
         private void SetSidePanelOpen(bool open)
         {
-            Debug.Log($"SetSidePanelOpen called with open={open}, pinned={_panelPinned}");
-            
             if (!open && _panelPinned)
             {
-                Debug.Log("Panel is pinned, not closing");
                 return;
             }
 
             _sidePanelOpen = open;
-            
+
             if (_sidePanel != null)
             {
                 _sidePanel.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
@@ -222,11 +218,9 @@ namespace TavernSim.UI
                     _sidePanel.style.display = DisplayStyle.Flex;
                 }
             }
-            
+
             _panelToggleButton?.EnableInClassList("panel-toggle--active", open);
             _panelPinButton?.EnableInClassList("panel-pin--active", _panelPinned);
-            
-            Debug.Log($"Panel state set to: {_sidePanelOpen}, _sidePanel is null: {_sidePanel == null}");
         }
 
         private void OnGameEvent(GameEvent gameEvent)

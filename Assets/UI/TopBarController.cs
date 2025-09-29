@@ -23,6 +23,12 @@ namespace TavernSim.UI
         private Label _timeLabel;
         private VisualElement _weatherIcon;
         private Button _staffButton;
+        private Label _clockLargeLabel;
+        private Label _weatherLargeLabel;
+        private VisualElement _weatherLargeIcon;
+        private Label _quickReputationLabel;
+        private Label _quickCleanlinessLabel;
+        private Label _quickSatisfactionLabel;
 
         public event System.Action StaffButtonClicked;
 
@@ -54,9 +60,15 @@ namespace TavernSim.UI
             _reputationLabel = root.Q<Label>("reputationLabel");
             _customerLabel = root.Q<Label>("customerLabel");
             _weatherLabel = root.Q<Label>("weatherLabel");
-            _weatherIcon = root.Q<VisualElement>("weatherIcon");
+            _weatherIcon = root.Q<VisualElement>("topWeatherIcon") ?? root.Q<VisualElement>("weatherIcon");
             _timeLabel = root.Q<Label>("timeLabel");
             _staffButton = root.Q<Button>("staffBtn");
+            _clockLargeLabel = root.Q<Label>("clockLargeLabel");
+            _weatherLargeLabel = root.Q<Label>("weatherLargeLabel");
+            _weatherLargeIcon = root.Q<VisualElement>("weatherLargeIcon");
+            _quickReputationLabel = root.Q<Label>("quickReputationLabel");
+            _quickCleanlinessLabel = root.Q<Label>("quickCleanlinessLabel");
+            _quickSatisfactionLabel = root.Q<Label>("quickSatisfactionLabel");
 
             if (_staffButton != null)
             {
@@ -109,6 +121,11 @@ namespace TavernSim.UI
             {
                 _customerLabel.text = count.ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
             }
+
+            if (_quickSatisfactionLabel != null)
+            {
+                _quickSatisfactionLabel.text = count.ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
+            }
         }
 
         public void SetReputation(int reputation)
@@ -116,6 +133,11 @@ namespace TavernSim.UI
             if (_reputationLabel != null)
             {
                 _reputationLabel.text = reputation.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            if (_quickReputationLabel != null)
+            {
+                _quickReputationLabel.text = reputation.ToString(System.Globalization.CultureInfo.InvariantCulture);
             }
         }
 
@@ -165,8 +187,13 @@ namespace TavernSim.UI
             var day = Mathf.Max(1, snapshot.Day);
             var hour = Mathf.Clamp(snapshot.Hour, 0, 23);
             var minute = Mathf.Clamp(snapshot.Minute, 0, 59);
-            _timeLabel.text = string.Format(System.Globalization.CultureInfo.InvariantCulture, 
+            _timeLabel.text = string.Format(System.Globalization.CultureInfo.InvariantCulture,
                 "Dia {0} – {1:00}:{2:00}", day, hour, minute);
+
+            if (_clockLargeLabel != null)
+            {
+                _clockLargeLabel.text = _timeLabel.text;
+            }
         }
 
         private void UpdateWeather()
@@ -181,6 +208,16 @@ namespace TavernSim.UI
             if (_weatherIcon != null)
             {
                 IconManager.ApplyIconToElement(_weatherIcon, weather.IconName);
+            }
+
+            if (_weatherLargeLabel != null)
+            {
+                _weatherLargeLabel.text = weather.GetDisplayText();
+            }
+
+            if (_weatherLargeIcon != null)
+            {
+                IconManager.ApplyIconToElement(_weatherLargeIcon, weather.IconName);
             }
         }
 

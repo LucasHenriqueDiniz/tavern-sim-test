@@ -14,6 +14,11 @@ namespace TavernSim.UI
         // Mapeamento de botões para ícones
         private static readonly Dictionary<string, string> _buttonIconMap = new Dictionary<string, string>
         {
+            { "messagesBtn", "chat-bubble" },
+            { "statsBtn", "histogram" },
+            { "infoBtn", "info" },
+            { "panelToggleBtn", "expand" },
+            { "panelPinBtn", "pin" },
             { "staffBtn", "cook" },
             { "pauseBtn", "pause-button" },
             { "play1Btn", "play-button" },
@@ -21,11 +26,36 @@ namespace TavernSim.UI
             { "play4Btn", "fast-forward-button" },
             { "saveBtn", "save" },
             { "loadBtn", "load" },
-            { "panelToggleBtn", "histogram" },
+            { "buildMenuBtn", "build" },
+            { "buildStructuresBtn", "bricks" },
+            { "buildStairsBtn", "3d-stairs" },
+            { "buildDoorsBtn", "entry-door" },
+            { "buildDemolishBtn", "wrecking-ball" },
+            { "decorMenuBtn", "large-paint-brush" },
+            { "decorArtBtn", "mona-lisa" },
+            { "decorBasicBtn", "house" },
+            { "decorThemeBtn", "carnival-mask" },
+            { "decorNatureBtn", "shiny-apple" },
+            { "inventoryBtn", "beer-stein" },
+            { "managementStaffBtn", "cook" },
+            { "financesBtn", "money-stack" },
+            { "eventsBtn", "drama-masks" },
+            { "questsBtn", "contract" },
             { "buildToggleBtn", "build" },
             { "decoToggleBtn", "large-paint-brush" },
             { "beautyToggleBtn", "mona-lisa" },
             { "staffToggleBtn", "cook" }
+        };
+
+        private static readonly Dictionary<string, string> _elementIconMap = new Dictionary<string, string>
+        {
+            { "goldIcon", "two-coins" },
+            { "reputationIcon", "round-star" },
+            { "customersIcon", "hot-meal" },
+            { "quickReputationIcon", "round-star" },
+            { "quickCleanlinessIcon", "trash-can" },
+            { "quickSatisfactionIcon", "thumb-up" },
+            { "tavernBadge", "mounted-knight" }
         };
 
         /// <summary>
@@ -41,6 +71,15 @@ namespace TavernSim.UI
                 if (button != null)
                 {
                     ApplyIconToButton(button, mapping.Value);
+                }
+            }
+
+            foreach (var mapping in _elementIconMap)
+            {
+                var element = rootElement.Q<VisualElement>(mapping.Key);
+                if (element != null)
+                {
+                    ApplyIconToElement(element, mapping.Value);
                 }
             }
         }

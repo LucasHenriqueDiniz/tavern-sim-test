@@ -26,6 +26,17 @@ namespace TavernSim.UI
         private Button _decorModeButton;
         private ScrollView _buildOptionsScroll;
         private VisualTreeAsset _buildOptionTemplate;
+        private Button _topBuildButton;
+        private Button _topDecorButton;
+        private Button _buildStructuresButton;
+        private Button _buildStairsButton;
+        private Button _buildDoorsButton;
+        private Button _buildDemolishButton;
+        private Button _decorArtButton;
+        private Button _decorBasicButton;
+        private Button _decorThemeButton;
+        private Button _decorNatureButton;
+        private Button _managementStaffButton;
 
         private readonly System.Collections.Generic.List<Button> _buildOptionButtons = new System.Collections.Generic.List<Button>();
         private readonly System.Collections.Generic.Dictionary<Button, BuildCatalog.Entry> _buildOptionLookup = new System.Collections.Generic.Dictionary<Button, BuildCatalog.Entry>();
@@ -98,6 +109,17 @@ namespace TavernSim.UI
             _buildModeButton    = toolbarRoot.Q<Button>("buildModeBtn");
             _decorModeButton    = toolbarRoot.Q<Button>("decorModeBtn");
             _buildOptionsScroll = toolbarRoot.Q<ScrollView>("buildOptionsScroll");
+            _topBuildButton     = root.Q<Button>("buildMenuBtn");
+            _topDecorButton     = root.Q<Button>("decorMenuBtn");
+            _buildStructuresButton = root.Q<Button>("buildStructuresBtn");
+            _buildStairsButton     = root.Q<Button>("buildStairsBtn");
+            _buildDoorsButton      = root.Q<Button>("buildDoorsBtn");
+            _buildDemolishButton   = root.Q<Button>("buildDemolishBtn");
+            _decorArtButton        = root.Q<Button>("decorArtBtn");
+            _decorBasicButton      = root.Q<Button>("decorBasicBtn");
+            _decorThemeButton      = root.Q<Button>("decorThemeBtn");
+            _decorNatureButton     = root.Q<Button>("decorNatureBtn");
+            _managementStaffButton = root.Q<Button>("managementStaffBtn");
 
             if (_buildMenu != null)
             {
@@ -169,6 +191,61 @@ namespace TavernSim.UI
                 _staffToggleButton.clicked += OnStaffToggleInternal;
             }
 
+            if (_topBuildButton != null)
+            {
+                _topBuildButton.clicked += OnBuildButton;
+            }
+
+            if (_topDecorButton != null)
+            {
+                _topDecorButton.clicked += OnDecoToggleClicked;
+            }
+
+            if (_buildStructuresButton != null)
+            {
+                _buildStructuresButton.clicked += OnBuildCategoryShortcut;
+            }
+
+            if (_buildStairsButton != null)
+            {
+                _buildStairsButton.clicked += OnBuildCategoryShortcut;
+            }
+
+            if (_buildDoorsButton != null)
+            {
+                _buildDoorsButton.clicked += OnBuildCategoryShortcut;
+            }
+
+            if (_buildDemolishButton != null)
+            {
+                _buildDemolishButton.clicked += OnBuildCategoryShortcut;
+            }
+
+            if (_decorArtButton != null)
+            {
+                _decorArtButton.clicked += OnDecorCategoryShortcut;
+            }
+
+            if (_decorBasicButton != null)
+            {
+                _decorBasicButton.clicked += OnDecorCategoryShortcut;
+            }
+
+            if (_decorThemeButton != null)
+            {
+                _decorThemeButton.clicked += OnDecorCategoryShortcut;
+            }
+
+            if (_decorNatureButton != null)
+            {
+                _decorNatureButton.clicked += OnDecorCategoryShortcut;
+            }
+
+            if (_managementStaffButton != null)
+            {
+                _managementStaffButton.clicked += OnStaffToggleInternal;
+            }
+
             if (_buildModeButton != null)
             {
                 _buildModeButton.clicked += OnBuildModeClicked;
@@ -200,6 +277,61 @@ namespace TavernSim.UI
             if (_staffToggleButton != null)
             {
                 _staffToggleButton.clicked -= OnStaffToggleInternal;
+            }
+
+            if (_topBuildButton != null)
+            {
+                _topBuildButton.clicked -= OnBuildButton;
+            }
+
+            if (_topDecorButton != null)
+            {
+                _topDecorButton.clicked -= OnDecoToggleClicked;
+            }
+
+            if (_buildStructuresButton != null)
+            {
+                _buildStructuresButton.clicked -= OnBuildCategoryShortcut;
+            }
+
+            if (_buildStairsButton != null)
+            {
+                _buildStairsButton.clicked -= OnBuildCategoryShortcut;
+            }
+
+            if (_buildDoorsButton != null)
+            {
+                _buildDoorsButton.clicked -= OnBuildCategoryShortcut;
+            }
+
+            if (_buildDemolishButton != null)
+            {
+                _buildDemolishButton.clicked -= OnBuildCategoryShortcut;
+            }
+
+            if (_decorArtButton != null)
+            {
+                _decorArtButton.clicked -= OnDecorCategoryShortcut;
+            }
+
+            if (_decorBasicButton != null)
+            {
+                _decorBasicButton.clicked -= OnDecorCategoryShortcut;
+            }
+
+            if (_decorThemeButton != null)
+            {
+                _decorThemeButton.clicked -= OnDecorCategoryShortcut;
+            }
+
+            if (_decorNatureButton != null)
+            {
+                _decorNatureButton.clicked -= OnDecorCategoryShortcut;
+            }
+
+            if (_managementStaffButton != null)
+            {
+                _managementStaffButton.clicked -= OnStaffToggleInternal;
             }
 
             if (_buildModeButton != null)
@@ -264,6 +396,16 @@ namespace TavernSim.UI
         }
 
         private void OnDecorModeClicked()
+        {
+            ShowBuildCategory(BuildCategory.Deco);
+        }
+
+        private void OnBuildCategoryShortcut()
+        {
+            ShowBuildCategory(BuildCategory.Build);
+        }
+
+        private void OnDecorCategoryShortcut()
         {
             ShowBuildCategory(BuildCategory.Deco);
         }
