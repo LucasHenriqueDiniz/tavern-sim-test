@@ -47,6 +47,7 @@ namespace TavernSim.Building
         private SelectionService _selectionService;
         private TableRegistry _tableRegistry;
         private CleaningSystem _cleaningSystem;
+        private BuildCatalog _catalog;
         private PlaceableKind _activeKind = PlaceableKind.None;
         private bool _buildModeActive;
         private GameObject _previewObject;
@@ -61,6 +62,8 @@ namespace TavernSim.Building
         private bool _pointerOverUI;
 
         public event Action<PlaceableKind> PlacementModeChanged;
+        public event Action<bool, bool> PreviewStateChanged;
+        public event Action<float> PlacementFailedInsufficientFunds;
 
         public PlaceableKind ActiveKind => _activeKind;
 
@@ -81,6 +84,11 @@ namespace TavernSim.Building
 
             ApplyGridSizeToVisualizer();
             UpdateGridVisibility();
+        }
+
+        public void SetCatalog(BuildCatalog catalog)
+        {
+            _catalog = catalog;
         }
 
         private void Awake()
@@ -225,6 +233,11 @@ namespace TavernSim.Building
 
         public float GetPlacementCost(PlaceableKind kind)
         {
+            if (_catalog != null)
+            {
+                return _catalog.GetCost(kind);
+            }
+
             return kind switch
             {
                 PlaceableKind.SmallTable => smallTableCost,
@@ -249,6 +262,7 @@ namespace TavernSim.Building
             {
                 Debug.LogWarning($"Not enough cash to place {_activeKind} (cost {cost:0}).");
                 UpdatePreviewColor(false);
+                PlacementFailedInsufficientFunds?.Invoke(cost);
                 return;
             }
 
@@ -392,22 +406,46 @@ namespace TavernSim.Building
         {
             if (_previewObject == null)
             {
+                var changed = _hasValidPreview || !_canAffordPreview;
                 _hasValidPreview = false;
+                _canAffordPreview = true;
+                if (changed)
+                {
+                    PreviewStateChanged?.Invoke(false, true);
+                }
                 return;
             }
 
             if (!hasValidPosition)
             {
                 _previewObject.SetActive(false);
+                var changed = _hasValidPreview || !_canAffordPreview;
                 _hasValidPreview = false;
                 _canAffordPreview = true;
+                if (changed)
+                {
+                    PreviewStateChanged?.Invoke(false, true);
+                }
                 return;
             }
 
             _previewObject.SetActive(true);
             var blocked = IsPlacementBlocked(_currentPreviewPosition, _activeKind);
-            _hasValidPreview = !blocked;
-            _canAffordPreview = IsPlacementAffordable(_activeKind);
+            var newHasValid = !blocked;
+            var newCanAfford = IsPlacementAffordable(_activeKind);
+
+            if (_hasValidPreview != newHasValid || _canAffordPreview != newCanAfford)
+            {
+                _hasValidPreview = newHasValid;
+                _canAffordPreview = newCanAfford;
+                PreviewStateChanged?.Invoke(_hasValidPreview, _canAffordPreview);
+            }
+            else
+            {
+                _hasValidPreview = newHasValid;
+                _canAffordPreview = newCanAfford;
+            }
+
             UpdatePreviewColor(_hasValidPreview && _canAffordPreview);
         }
 

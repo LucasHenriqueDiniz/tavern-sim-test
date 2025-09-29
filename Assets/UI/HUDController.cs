@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
 using UnityEngine;
-using UnityEngine.AI;
 using UnityEngine.UIElements;
 using TavernSim.Agents;
 using TavernSim.Save;
@@ -18,72 +16,369 @@ using UnityEngine.InputSystem;
 namespace TavernSim.UI
 {
     /// <summary>
-    /// Binds simulation systems to the UI Toolkit HUD.
+    /// Coordenador principal do HUD que integra todos os controllers especializados.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public sealed class HUDController : MonoBehaviour
     {
+        [Header("Controllers")]
+        [SerializeField] private TopBarController topBarController;
+        [SerializeField] private ToolbarController toolbarController;
+        [SerializeField] private SidePanelController sidePanelController;
+        [SerializeField] private SelectionPopupController selectionPopupController;
+        [SerializeField] private StaffPanelController staffPanelController;
+        [SerializeField] private CursorManager cursorManager;
+        [SerializeField] private HudToastController toastController;
+
+        [Header("Configuration")]
         [SerializeField] private HUDVisualConfig visualConfig;
 
+        // Systems
         private EconomySystem _economy;
         private OrderSystem _orders;
         private SaveService _saveService;
-
-        private UIDocument _document;
-        private Label _controlsLabel;
-        private Label _cashLabel;
-        private Label _customerLabel;
-        private VisualElement _selectionDetailsPanel;
-        private Label _selectionDetailsTitle;
-        private Label _selectionDetailsBody;
-        private Label _reputationLabel;
-        private ScrollView _ordersScroll;
-        private Button _saveButton;
-        private Button _loadButton;
-        private Button _buildToggleButton;
-        private VisualElement _hireControls;
-        private Button _hireWaiterButton;
-        private Button _hireCookButton;
-        private Button _hireBartenderButton;
-        private VisualElement _buildMenu;
-        private readonly List<Label> _orderEntries = new List<Label>(16);
-        private readonly List<Button> _buildOptionButtons = new List<Button>();
-        private readonly Dictionary<Button, BuildOption> _buildOptionLookup = new Dictionary<Button, BuildOption>();
-        private EventCallback<ClickEvent> _buildOptionHandler;
-        private bool _buildMenuVisible;
-
+        private IEventBus _eventBus;
+        private ReputationSystem _reputationSystem;
+        private BuildCatalog _buildCatalog;
+        private GameClockSystem _clockSystem;
+        private IWeatherService _weatherService;
         private SelectionService _selectionService;
         private GridPlacer _gridPlacer;
-        private IEventBus _eventBus;
-        private HudToastController _toastController;
-        private ReputationSystem _reputationSystem;
-        private readonly StringBuilder _selectionDetailsBuilder = new StringBuilder(256);
-        private bool _pointerGuardsRegistered;
-        private bool _isPointerOverHud;
 
+        // UI Elements
+        private UIDocument _document;
+        private Label _controlsLabel;
+        private Button _devLogButton;
+        private Button _panelToggleButton;
+        private bool _logVisible;
+
+        // Events
         public event Action HireWaiterRequested;
         public event Action HireCookRequested;
         public event Action HireBartenderRequested;
+        public event Action HireCleanerRequested;
+        public event Action<Waiter> FireWaiterRequested;
+        public event Action<Cook> FireCookRequested;
+        public event Action<Bartender> FireBartenderRequested;
+        public event Action<Cleaner> FireCleanerRequested;
 
-        private static readonly BuildOption[] BuildOptions =
+        private void Awake()
         {
-            new BuildOption("buildSmallTableBtn", "Mesa pequena", GridPlacer.PlaceableKind.SmallTable),
-            new BuildOption("buildLargeTableBtn", "Mesa grande", GridPlacer.PlaceableKind.LargeTable),
-            new BuildOption("buildDecorBtn", "Planta", GridPlacer.PlaceableKind.Decoration),
-            new BuildOption("buildKitchenStationBtn", "Estação de cozinha", GridPlacer.PlaceableKind.KitchenStation),
-            new BuildOption("buildBarCounterBtn", "Balcão do bar", GridPlacer.PlaceableKind.BarCounter),
-            new BuildOption("buildPickupPointBtn", "Ponto de retirada", GridPlacer.PlaceableKind.PickupPoint)
-        };
+            Debug.Log("HUDController.Awake() called");
+            _document = GetComponent<UIDocument>();
+            if (_document != null)
+            {
+                _document.sortingOrder = 100;
+                Debug.Log("HUDController: UIDocument found");
+            }
+            else
+            {
+                Debug.LogError("HUDController: UIDocument not found!");
+            }
 
-        public void Initialize(EconomySystem economySystem, OrderSystem orderSystem)
+            if (visualConfig == null)
+            {
+                visualConfig = Resources.Load<HUDVisualConfig>("UI/HUDVisualConfig");
+                Debug.Log($"HUDController: visualConfig loaded = {visualConfig != null}");
+            }
+
+            SetupControllers();
+        }
+
+        private void OnEnable()
+        {
+            Debug.Log("HUDController.OnEnable() called");
+            ApplyVisualTree();
+            HookEvents();
+        }
+
+        private void OnDisable()
         {
             UnhookEvents();
+        }
+
+        private void Update()
+        {
+            HandleInput();
+        }
+
+        private void SetupControllers()
+        {
+            // Get or create controllers
+            topBarController = GetOrCreateController<TopBarController>();
+            toolbarController = GetOrCreateController<ToolbarController>();
+            sidePanelController = GetOrCreateController<SidePanelController>();
+            selectionPopupController = GetOrCreateController<SelectionPopupController>();
+            staffPanelController = GetOrCreateController<StaffPanelController>();
+            cursorManager = GetOrCreateController<CursorManager>();
+            toastController = GetOrCreateController<HudToastController>();
+
+            // Setup toolbar controller to use this HUDController's UIDocument
+            if (toolbarController != null)
+            {
+                toolbarController.Initialize(_document);
+                toolbarController.SetHUDController(this);
+            }
+
+            // Setup staff panel controller
+            if (staffPanelController != null)
+            {
+                staffPanelController.Initialize(_document);
+            }
+
+            // Hook controller events
+            if (topBarController != null)
+            {
+                topBarController.StaffButtonClicked += OnStaffButtonClicked;
+            }
+
+            if (toolbarController != null)
+            {
+                toolbarController.BeautyToggleChanged += OnBeautyToggleChanged;
+            }
+
+            if (sidePanelController != null)
+            {
+                sidePanelController.PanelToggled += OnSidePanelToggled;
+            }
+
+            if (staffPanelController != null)
+            {
+                staffPanelController.HireWaiterRequested += () => HireWaiterRequested?.Invoke();
+                staffPanelController.HireCookRequested += () => HireCookRequested?.Invoke();
+                staffPanelController.HireBartenderRequested += () => HireBartenderRequested?.Invoke();
+                staffPanelController.HireCleanerRequested += () => HireCleanerRequested?.Invoke();
+            }
+        }
+
+        private T GetOrCreateController<T>() where T : MonoBehaviour
+        {
+            var controller = GetComponent<T>();
+            if (controller == null)
+            {
+                controller = gameObject.AddComponent<T>();
+            }
+            return controller;
+        }
+
+        private void ApplyVisualTree()
+        {
+            Debug.Log("HUDController.ApplyVisualTree() called");
+            if (_document == null)
+            {
+                Debug.LogWarning("HUDController requires a UIDocument to build the HUD visuals.");
+                return;
+            }
+
+            var rootElement = _document.rootVisualElement;
+            if (rootElement == null)
+            {
+                Debug.LogWarning("HUDController could not access the UIDocument root. UI will be applied once the panel is ready.");
+                return;
+            }
+
+            Debug.Log($"HUDController: rootElement found, visualConfig = {visualConfig != null}");
+            Debug.Log($"HUDController: UIDocument panelSettings = {_document.panelSettings != null}, sortingOrder = {_document.sortingOrder}");
+
+            // Setup root element
+            rootElement.style.position = Position.Absolute;
+            rootElement.style.top = 0;
+            rootElement.style.left = 0;
+            rootElement.style.right = 0;
+            rootElement.style.bottom = 0;
+
+            // Debug: Check rootElement properties
+            Debug.Log($"HUDController: rootElement position={rootElement.style.position.value}, top={rootElement.style.top.value}, left={rootElement.style.left.value}, right={rootElement.style.right.value}, bottom={rootElement.style.bottom.value}");
+            Debug.Log($"HUDController: rootElement width={rootElement.style.width.value}, height={rootElement.style.height.value}, display={rootElement.style.display.value}");
+
+            rootElement.Clear();
+
+            VisualElement layoutRoot;
+            if (visualConfig != null && visualConfig.VisualTree != null)
+            {
+                Debug.Log("HUDController: Applying VisualTree from visualConfig");
+                layoutRoot = visualConfig.VisualTree.Instantiate();
+                rootElement.Add(layoutRoot);
+                Debug.Log($"HUDController: VisualTree instantiated and added to rootElement");
+
+                var hudRoot = layoutRoot.Q<VisualElement>("hudRoot");
+                if (hudRoot != null)
+                {
+                    Debug.Log("HUDController: hudRoot found in VisualTree");
+                    hudRoot.style.position = Position.Absolute;
+                    hudRoot.style.top = 0;
+                    hudRoot.style.left = 0;
+                    hudRoot.style.right = 0;
+                    hudRoot.style.bottom = 0;
+                    hudRoot.style.flexGrow = 1f;
+                    
+                    // Debug: Check hudRoot properties
+                    Debug.Log($"HUDController: hudRoot position={hudRoot.style.position.value}, top={hudRoot.style.top.value}, left={hudRoot.style.left.value}, right={hudRoot.style.right.value}, bottom={hudRoot.style.bottom.value}");
+                    Debug.Log($"HUDController: hudRoot width={hudRoot.style.width.value}, height={hudRoot.style.height.value}, display={hudRoot.style.display.value}");
+                }
+                else
+                {
+                    Debug.LogError("HUDController: hudRoot not found in VisualTree!");
+                }
+            }
+            else
+            {
+                Debug.LogError("HUDController: visualConfig or VisualTree is null! Using fallback layout.");
+                Debug.Log($"HUDController: visualConfig = {visualConfig != null}, VisualTree = {visualConfig?.VisualTree != null}");
+                layoutRoot = new VisualElement { style = { flexDirection = FlexDirection.Column } };
+                rootElement.Add(layoutRoot);
+            }
+
+            if (visualConfig != null && visualConfig.StyleSheet != null && !rootElement.styleSheets.Contains(visualConfig.StyleSheet))
+            {
+                Debug.Log("HUDController: Adding StyleSheet to rootElement");
+                rootElement.styleSheets.Add(visualConfig.StyleSheet);
+            }
+            else
+            {
+                Debug.LogWarning($"HUDController: StyleSheet not applied. visualConfig={visualConfig != null}, StyleSheet={visualConfig?.StyleSheet != null}, Contains={rootElement.styleSheets.Contains(visualConfig?.StyleSheet)}");
+            }
+
+            // Setup controls label
+            _controlsLabel = rootElement.Q<Label>("controlsLabel");
+            if (_controlsLabel != null)
+            {
+                _controlsLabel.text = GetControlsSummary();
+            }
+
+            // Setup dev log button
+            _devLogButton = rootElement.Q<Button>("devLogBtn");
+#if !UNITY_EDITOR
+            if (_devLogButton != null)
+            {
+                _devLogButton.RemoveFromHierarchy();
+                _devLogButton = null;
+            }
+#endif
+
+            // Setup panel toggle button
+            _panelToggleButton = rootElement.Q<Button>("panelToggleBtn");
+            if (_panelToggleButton != null)
+            {
+                Debug.Log("HUDController: Panel toggle button found");
+                _panelToggleButton.clicked += () => {
+                    Debug.Log("Panel button clicked!");
+                    sidePanelController?.ToggleSidePanel();
+                };
+            }
+            else
+            {
+                Debug.LogError("HUDController: Panel toggle button not found!");
+            }
+
+            // Create toolbar dynamically (like topbar)
+            CreateToolbar(rootElement);
+
+            // Attach toast controller
+            toastController?.AttachTo(rootElement);
+
+            // Apply icons to buttons
+            IconManager.ApplyIconsToHUD(rootElement);
+
+            // Setup pointer guards for cursor management
+            RegisterHudPointerGuards(rootElement);
+
+            // Rebind depois que o UXML foi injetado
+            toolbarController?.Initialize(_document);
+            sidePanelController?.RebuildUI();
+            staffPanelController?.Initialize(_document);
+        }
+
+        private void HookEvents()
+        {
+            // Events are hooked in SetupControllers
+        }
+
+        private void UnhookEvents()
+        {
+            if (topBarController != null)
+            {
+                topBarController.StaffButtonClicked -= OnStaffButtonClicked;
+            }
+
+            if (toolbarController != null)
+            {
+                toolbarController.BeautyToggleChanged -= OnBeautyToggleChanged;
+            }
+
+            if (sidePanelController != null)
+            {
+                sidePanelController.PanelToggled -= OnSidePanelToggled;
+            }
+        }
+
+        private void HandleInput()
+        {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+            var keyboard = Keyboard.current;
+            if (keyboard == null)
+            {
+                return;
+            }
+
+            if (keyboard.escapeKey.wasPressedThisFrame)
+            {
+                if (staffPanelController != null && staffPanelController.IsOpen)
+                {
+                    staffPanelController.ClosePanel();
+                }
+            }
+
+            if (_saveService == null)
+            {
+                return;
+            }
+
+            if (keyboard.f5Key.wasPressedThisFrame)
+            {
+                SaveGame();
+            }
+
+            if (keyboard.f9Key.wasPressedThisFrame)
+            {
+                LoadGame();
+            }
+#elif ENABLE_LEGACY_INPUT_MANAGER
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                if (staffPanelController != null && staffPanelController.IsOpen)
+                {
+                    staffPanelController.ClosePanel();
+                }
+            }
+
+            if (_saveService == null)
+            {
+                return;
+            }
+
+            if (Input.GetKeyDown(KeyCode.F5))
+            {
+                SaveGame();
+            }
+
+            if (Input.GetKeyDown(KeyCode.F9))
+            {
+                LoadGame();
+            }
+#endif
+        }
+
+        // Public API methods
+        public void Initialize(EconomySystem economySystem, OrderSystem orderSystem)
+        {
             _economy = economySystem;
             _orders = orderSystem;
-            if (isActiveAndEnabled)
-            {
-                HookEvents();
-            }
+
+            // Bind to controllers
+            topBarController?.BindEconomy(_economy);
+            toolbarController?.BindEconomy(_economy);
+            sidePanelController?.BindOrders(_orders);
         }
 
         public void BindSaveService(SaveService saveService)
@@ -93,72 +388,59 @@ namespace TavernSim.UI
 
         public void BindSelection(SelectionService selectionService, GridPlacer gridPlacer)
         {
-            var changed = _selectionService != selectionService || _gridPlacer != gridPlacer;
-            if (!changed)
-            {
-                return;
-            }
-
-            if (isActiveAndEnabled)
-            {
-                UnhookEvents();
-            }
-
             _selectionService = selectionService;
             _gridPlacer = gridPlacer;
 
-            RefreshBuildOptionLabels();
-            HighlightActiveOption(_gridPlacer != null ? _gridPlacer.ActiveKind : GridPlacer.PlaceableKind.None);
-            UpdateSelectionDetails(_selectionService != null ? _selectionService.Current : null);
-            SetBuildMenuVisible(false, true);
-            UpdatePointerOverHud();
+            selectionPopupController?.BindSelection(_selectionService);
+            toolbarController?.BindGridPlacer(_gridPlacer);
 
-            if (isActiveAndEnabled)
+            // Setup cursor management
+            if (cursorManager != null)
             {
-                HookEvents();
+                if (_gridPlacer != null)
+                {
+                    _gridPlacer.PreviewStateChanged += (hasValid, canAfford) => 
+                        cursorManager.SetPreviewState(hasValid, canAfford);
+                    _gridPlacer.PlacementModeChanged += (kind) => 
+                        cursorManager.SetBuildMode(kind != GridPlacer.PlaceableKind.None);
+                }
             }
         }
 
         public void BindEventBus(IEventBus eventBus)
         {
-            if (_eventBus == eventBus)
-            {
-                return;
-            }
-
-            if (isActiveAndEnabled)
-            {
-                UnhookEvents();
-            }
-
             _eventBus = eventBus;
-
-            if (isActiveAndEnabled)
-            {
-                HookEvents();
-            }
+            sidePanelController?.BindEventBus(_eventBus);
         }
 
         public void BindReputation(ReputationSystem reputationSystem)
         {
-            if (_reputationSystem == reputationSystem)
-            {
-                return;
-            }
-
-            if (isActiveAndEnabled)
-            {
-                UnhookEvents();
-            }
-
             _reputationSystem = reputationSystem;
+            topBarController?.SetReputation(_reputationSystem?.Reputation ?? 0);
+            sidePanelController?.BindReputation(_reputationSystem);
+        }
 
-            if (isActiveAndEnabled)
-            {
-                HookEvents();
-            }
+        public void BindBuildCatalog(BuildCatalog catalog)
+        {
+            _buildCatalog = catalog;
+            toolbarController?.BindBuildCatalog(_buildCatalog);
+        }
 
-            UpdateReputationLabel(_reputationSystem != null ? _reputationSystem.Reputation : 0);
+        public void BindClock(GameClockSystem clockSystem)
+        {
+            _clockSystem = clockSystem;
+            topBarController?.BindClock(_clockSystem);
+        }
+
+        public void BindWeather(IWeatherService weatherService)
+        {
+            _weatherService = weatherService;
+            topBarController?.BindWeather(_weatherService);
+        }
+
+        public void SetCustomers(int count)
+        {
+            topBarController?.SetCustomers(count);
         }
 
         public void PublishEvent(GameEvent gameEvent)
@@ -180,371 +462,20 @@ namespace TavernSim.UI
             }
         }
 
-        private void Awake()
+        // Event handlers
+        private void OnStaffButtonClicked()
         {
-            _document = GetComponent<UIDocument>();
-            _toastController = GetComponent<HudToastController>();
-            if (visualConfig == null)
-            {
-                visualConfig = Resources.Load<HUDVisualConfig>("UI/HUDVisualConfig");
-            }
+            staffPanelController?.TogglePanel();
         }
 
-        private void OnEnable()
+        private void OnBeautyToggleChanged()
         {
-            ApplyVisualTree();
-            HookEvents();
+            // Handle beauty toggle if needed
         }
 
-        private void OnDisable()
+        private void OnSidePanelToggled()
         {
-            UnhookEvents();
-            _isPointerOverHud = false;
-            UpdatePointerOverHud();
-        }
-
-        private void Update()
-        {
-            if (_saveService == null)
-            {
-                return;
-            }
-
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-            var keyboard = Keyboard.current;
-            if (keyboard == null)
-            {
-                return;
-            }
-
-            if (keyboard.f5Key.wasPressedThisFrame)
-            {
-                SaveGame();
-            }
-
-            if (keyboard.f9Key.wasPressedThisFrame)
-            {
-                LoadGame();
-            }
-#elif ENABLE_LEGACY_INPUT_MANAGER
-            if (Input.GetKeyDown(KeyCode.F5))
-            {
-                SaveGame();
-            }
-
-            if (Input.GetKeyDown(KeyCode.F9))
-            {
-                LoadGame();
-            }
-#else
-            return;
-#endif
-        }
-
-        public void SetCustomers(int count)
-        {
-            if (_customerLabel != null)
-            {
-                _customerLabel.text = $"Customers: {count}";
-            }
-        }
-
-        private void ApplyVisualTree()
-        {
-            if (_document == null)
-            {
-                Debug.LogWarning("HUDController requires a UIDocument to build the HUD visuals.");
-                return;
-            }
-
-            var rootElement = _document.rootVisualElement;
-            if (rootElement == null)
-            {
-                Debug.LogWarning("HUDController could not access the UIDocument root. UI will be applied once the panel is ready.");
-                return;
-            }
-
-            rootElement.Clear();
-
-            VisualElement layoutRoot;
-            if (visualConfig != null && visualConfig.VisualTree != null)
-            {
-                layoutRoot = visualConfig.VisualTree.Instantiate();
-                rootElement.Add(layoutRoot);
-            }
-            else
-            {
-                layoutRoot = new VisualElement { style = { flexDirection = FlexDirection.Column } };
-                rootElement.Add(layoutRoot);
-            }
-
-            if (visualConfig != null && visualConfig.StyleSheet != null && !rootElement.styleSheets.Contains(visualConfig.StyleSheet))
-            {
-                rootElement.styleSheets.Add(visualConfig.StyleSheet);
-            }
-
-            _controlsLabel = rootElement.Q<Label>("controlsLabel") ?? CreateLabel(layoutRoot, "controlsLabel", string.Empty);
-            _controlsLabel.text = GetControlsSummary();
-
-            _cashLabel = rootElement.Q<Label>("cashLabel") ?? CreateLabel(layoutRoot, "cashLabel", "Cash: 0");
-            _customerLabel = rootElement.Q<Label>("customerLabel") ?? CreateLabel(layoutRoot, "customerLabel", "Customers: 0");
-            _ordersScroll = rootElement.Q<ScrollView>("ordersScroll") ?? CreateScroll(layoutRoot);
-            _saveButton = rootElement.Q<Button>("saveBtn") ?? CreateButton(layoutRoot, "saveBtn", "Save (F5)");
-            _loadButton = rootElement.Q<Button>("loadBtn") ?? CreateButton(layoutRoot, "loadBtn", "Load (F9)");
-            _hireControls = rootElement.Q<VisualElement>("hireControls") ?? CreateHireControls(layoutRoot);
-            _hireWaiterButton = rootElement.Q<Button>("hireWaiterBtn") ?? CreateButton(_hireControls, "hireWaiterBtn", "Contratar garçom");
-            _hireCookButton = rootElement.Q<Button>("hireCookBtn") ?? CreateButton(_hireControls, "hireCookBtn", "Contratar cozinheiro");
-            _hireBartenderButton = rootElement.Q<Button>("hireBartenderBtn") ?? CreateButton(_hireControls, "hireBartenderBtn", "Contratar bartender");
-            _hireWaiterButton?.AddToClassList("hud-button");
-            _hireCookButton?.AddToClassList("hud-button");
-            _hireCookButton?.AddToClassList("stacked");
-            _hireBartenderButton?.AddToClassList("hud-button");
-            _hireBartenderButton?.AddToClassList("stacked");
-
-            if (_hireWaiterButton != null)
-            {
-                _hireWaiterButton.style.marginTop = 0f;
-            }
-
-            _buildToggleButton = rootElement.Q<Button>("buildToggleBtn") ?? CreateButton(layoutRoot, "buildToggleBtn", "Construir");
-            _buildMenu = rootElement.Q<VisualElement>("buildMenu") ?? CreateBuildMenu(layoutRoot);
-
-            CreateBuildButtons();
-            SetBuildMenuVisible(false, true);
-
-            var menuController = GetComponent<MenuController>();
-            menuController?.RebuildMenu();
-
-            _toastController?.AttachTo(rootElement);
-
-            EnsureSelectionDetailsPanel(rootElement);
-            EnsureReputationLabel(rootElement);
-            RegisterHudPointerGuards(rootElement);
-        }
-
-        private void HookEvents()
-        {
-            if (_economy != null)
-            {
-                _economy.CashChanged -= OnCashChanged;
-                _economy.CashChanged += OnCashChanged;
-                OnCashChanged(_economy.Cash);
-            }
-
-            if (_orders != null)
-            {
-                _orders.OrdersChanged -= OnOrdersChanged;
-                _orders.OrdersChanged += OnOrdersChanged;
-                OnOrdersChanged(_orders.GetOrders());
-            }
-
-            if (_saveButton != null)
-            {
-                _saveButton.clicked -= SaveGame;
-                _saveButton.clicked += SaveGame;
-            }
-
-            if (_loadButton != null)
-            {
-                _loadButton.clicked -= LoadGame;
-                _loadButton.clicked += LoadGame;
-            }
-
-            if (_buildToggleButton != null)
-            {
-                _buildToggleButton.clicked -= ToggleBuildMenu;
-                _buildToggleButton.clicked += ToggleBuildMenu;
-            }
-
-            if (_hireWaiterButton != null)
-            {
-                _hireWaiterButton.clicked -= OnHireWaiterClicked;
-                _hireWaiterButton.clicked += OnHireWaiterClicked;
-            }
-
-            if (_hireCookButton != null)
-            {
-                _hireCookButton.clicked -= OnHireCookClicked;
-                _hireCookButton.clicked += OnHireCookClicked;
-            }
-
-            if (_hireBartenderButton != null)
-            {
-                _hireBartenderButton.clicked -= OnHireBartenderClicked;
-                _hireBartenderButton.clicked += OnHireBartenderClicked;
-            }
-
-            if (_selectionService != null)
-            {
-                _selectionService.SelectionChanged -= OnSelectionChanged;
-                _selectionService.SelectionChanged += OnSelectionChanged;
-                OnSelectionChanged(_selectionService.Current);
-            }
-
-            if (_gridPlacer != null)
-            {
-                _gridPlacer.PlacementModeChanged -= OnPlacementModeChanged;
-                _gridPlacer.PlacementModeChanged += OnPlacementModeChanged;
-                OnPlacementModeChanged(_gridPlacer.ActiveKind);
-            }
-
-            AttachBuildOptionCallbacks();
-
-            if (_eventBus != null)
-            {
-                _eventBus.OnEvent -= OnGameEvent;
-                _eventBus.OnEvent += OnGameEvent;
-            }
-
-            if (_reputationSystem != null)
-            {
-                _reputationSystem.ReputationChanged -= OnReputationChanged;
-                _reputationSystem.ReputationChanged += OnReputationChanged;
-                UpdateReputationLabel(_reputationSystem.Reputation);
-            }
-        }
-
-        private void UnhookEvents()
-        {
-            if (_economy != null)
-            {
-                _economy.CashChanged -= OnCashChanged;
-            }
-
-            if (_orders != null)
-            {
-                _orders.OrdersChanged -= OnOrdersChanged;
-            }
-
-            if (_saveButton != null)
-            {
-                _saveButton.clicked -= SaveGame;
-            }
-
-            if (_loadButton != null)
-            {
-                _loadButton.clicked -= LoadGame;
-            }
-
-            if (_buildToggleButton != null)
-            {
-                _buildToggleButton.clicked -= ToggleBuildMenu;
-            }
-
-            if (_hireWaiterButton != null)
-            {
-                _hireWaiterButton.clicked -= OnHireWaiterClicked;
-            }
-
-            if (_hireCookButton != null)
-            {
-                _hireCookButton.clicked -= OnHireCookClicked;
-            }
-
-            if (_hireBartenderButton != null)
-            {
-                _hireBartenderButton.clicked -= OnHireBartenderClicked;
-            }
-
-            if (_selectionService != null)
-            {
-                _selectionService.SelectionChanged -= OnSelectionChanged;
-            }
-
-            if (_gridPlacer != null)
-            {
-                _gridPlacer.PlacementModeChanged -= OnPlacementModeChanged;
-            }
-
-            DetachBuildOptionCallbacks();
-
-            if (_eventBus != null)
-            {
-                _eventBus.OnEvent -= OnGameEvent;
-            }
-
-            if (_reputationSystem != null)
-            {
-                _reputationSystem.ReputationChanged -= OnReputationChanged;
-            }
-        }
-
-        private void OnGameEvent(GameEvent gameEvent)
-        {
-            if (_toastController == null)
-            {
-                return;
-            }
-
-            var text = string.IsNullOrEmpty(gameEvent.Source)
-                ? gameEvent.Message
-                : $"{gameEvent.Source}: {gameEvent.Message}";
-
-            if (string.IsNullOrEmpty(text))
-            {
-                return;
-            }
-
-            _toastController.Show(text);
-        }
-
-        private void OnCashChanged(float value)
-        {
-            if (_cashLabel != null)
-            {
-                _cashLabel.text = $"Cash: {value:0}";
-            }
-        }
-
-        private void OnOrdersChanged(IReadOnlyList<Order> orders)
-        {
-            if (_ordersScroll == null)
-            {
-                return;
-            }
-
-            _ordersScroll.contentContainer.Clear();
-            _orderEntries.Clear();
-            if (orders == null)
-            {
-                return;
-            }
-
-            for (int i = 0; i < orders.Count; i++)
-            {
-                var order = orders[i];
-                var recipeName = order.Recipe != null ? order.Recipe.DisplayName : "Desconhecido";
-                var areaLabel = order.Area.GetDisplayName();
-                var status = order.IsReady ? "Pronto" : order.State == OrderState.Queued ? "Fila" : $"{order.Remaining:0.0}s";
-                var label = new Label
-                {
-                    text = $"Mesa {order.TableId} - {recipeName} ({areaLabel}) [{status}]"
-                };
-                ApplyOrderStyle(label, order);
-                _ordersScroll.contentContainer.Add(label);
-                _orderEntries.Add(label);
-            }
-        }
-
-        private static void ApplyOrderStyle(Label label, Order order)
-        {
-            if (label == null || order == null)
-            {
-                return;
-            }
-
-            if (order.IsReady)
-            {
-                label.style.color = new StyleColor(new Color(0.56f, 0.87f, 0.3f));
-            }
-            else if (order.State == OrderState.Queued)
-            {
-                label.style.color = new StyleColor(new Color(0.7f, 0.7f, 0.7f));
-            }
-            else
-            {
-                label.style.color = new StyleColor(Color.white);
-            }
+            // Handle side panel toggle if needed
         }
 
         private void SaveGame()
@@ -554,10 +485,18 @@ namespace TavernSim.UI
                 return;
             }
 
-            var model = _saveService.CreateModel();
-            var path = _saveService.GetDefaultPath();
-            _saveService.Save(path, model);
-            Debug.Log($"Game saved to {path}");
+            try
+            {
+                var model = _saveService.CreateModel();
+                var path = _saveService.GetDefaultPath();
+                _saveService.Save(path, model);
+                toastController?.Show(GameEventSeverity.Success, HUDStrings.SaveSuccess);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Falha ao salvar o jogo: {ex}");
+                toastController?.Show(GameEventSeverity.Error, HUDStrings.SaveFailed);
+            }
         }
 
         private void LoadGame()
@@ -568,498 +507,43 @@ namespace TavernSim.UI
             }
 
             var path = _saveService.GetDefaultPath();
-            _saveService.Load(path);
-            Debug.Log($"Game loaded from {path}");
-        }
-
-        private void ToggleBuildMenu()
-        {
-            SetBuildMenuVisible(!_buildMenuVisible, true);
-        }
-
-        private void OnHireWaiterClicked()
-        {
-            HireWaiterRequested?.Invoke();
-        }
-
-        private void OnHireCookClicked()
-        {
-            HireCookRequested?.Invoke();
-        }
-
-        private void OnHireBartenderClicked()
-        {
-            HireBartenderRequested?.Invoke();
-        }
-
-        private void SetBuildMenuVisible(bool visible, bool triggeredByToggle = false)
-        {
-            _buildMenuVisible = visible;
-            if (_buildMenu != null)
+            if (!_saveService.HasSave(path))
             {
-                _buildMenu.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
-            }
-
-            if (_gridPlacer != null)
-            {
-                if (visible)
-                {
-                    _gridPlacer.SetBuildMode(true);
-                }
-                else if (triggeredByToggle)
-                {
-                    _gridPlacer.ExitBuildMode();
-                }
-                else if (!_gridPlacer.HasActivePlacement)
-                {
-                    _gridPlacer.SetBuildMode(false);
-                }
-            }
-        }
-
-        private void AttachBuildOptionCallbacks()
-        {
-            if (_buildMenu == null || _buildOptionButtons.Count == 0)
-            {
+                toastController?.Show(GameEventSeverity.Warning, HUDStrings.LoadUnavailable);
                 return;
             }
 
-            _buildOptionHandler ??= OnBuildOptionClicked;
-            foreach (var button in _buildOptionButtons)
+            try
             {
-                button.UnregisterCallback(_buildOptionHandler);
-                button.RegisterCallback(_buildOptionHandler);
+                _saveService.Load(path);
+                toastController?.Show(GameEventSeverity.Success, HUDStrings.LoadSuccess);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Falha ao carregar o jogo: {ex}");
+                toastController?.Show(GameEventSeverity.Error, HUDStrings.LoadFailed);
             }
         }
-
-        private void DetachBuildOptionCallbacks()
-        {
-            if (_buildOptionHandler == null)
-            {
-                return;
-            }
-
-            foreach (var button in _buildOptionButtons)
-            {
-                button.UnregisterCallback(_buildOptionHandler);
-            }
-        }
-
-        private void OnBuildOptionClicked(ClickEvent evt)
-        {
-            if (_gridPlacer == null)
-            {
-                return;
-            }
-
-            if (evt.currentTarget is Button optionButton && optionButton.userData is GridPlacer.PlaceableKind kind)
-            {
-                if (_gridPlacer.ActiveKind == kind && _gridPlacer.BuildModeActive)
-                {
-                    _gridPlacer.ExitBuildMode();
-                }
-                else
-                {
-                    _gridPlacer.BeginPlacement(kind);
-                }
-
-                HighlightActiveOption(_gridPlacer.ActiveKind);
-                SetBuildMenuVisible(false);
-            }
-        }
-
-        private void OnSelectionChanged(ISelectable selectable)
-        {
-            UpdateSelectionDetails(selectable);
-        }
-
-        private void UpdateSelectionDetails(ISelectable selectable)
-        {
-            if (_selectionDetailsPanel == null || _selectionDetailsTitle == null || _selectionDetailsBody == null)
-            {
-                return;
-            }
-
-            if (selectable == null)
-            {
-                _selectionDetailsPanel.style.display = DisplayStyle.None;
-                _selectionDetailsTitle.text = string.Empty;
-                _selectionDetailsBody.text = string.Empty;
-                return;
-            }
-
-            _selectionDetailsPanel.style.display = DisplayStyle.Flex;
-            _selectionDetailsTitle.text = selectable.DisplayName ?? "Selecionado";
-            _selectionDetailsBuilder.Clear();
-
-            void AppendLine(string label, string value)
-            {
-                if (string.IsNullOrWhiteSpace(value))
-                {
-                    value = "-";
-                }
-
-                _selectionDetailsBuilder.Append(label);
-                _selectionDetailsBuilder.Append(": ");
-                _selectionDetailsBuilder.AppendLine(value);
-            }
-
-            void AppendSpeed(float speed)
-            {
-                AppendLine("Speed", speed > 0.01f ? speed.ToString("0.##") : "-");
-            }
-
-            void AppendStatus(string status)
-            {
-                AppendLine("Status", string.IsNullOrWhiteSpace(status) ? "-" : status);
-            }
-
-            void AppendGold(int gold)
-            {
-                if (gold >= 0)
-                {
-                    AppendLine("Gold", gold.ToString());
-                }
-            }
-
-            void AppendSalary(float salary)
-            {
-                if (salary > 0f)
-                {
-                    AppendLine("Salário", salary.ToString("0.##"));
-                }
-            }
-
-            switch (selectable)
-            {
-                case Customer customer:
-                    AppendLine("Nome", customer.FullName);
-                    AppendSpeed(customer.Agent != null ? customer.Agent.speed : 0f);
-                    AppendStatus(customer.Status);
-                    AppendGold(customer.Gold);
-                    AppendLine("Paciência", customer.Patience > 0f ? customer.Patience.ToString("0.#") : "-");
-                    break;
-                case Waiter waiter:
-                    AppendLine("Nome", waiter.name);
-                    AppendSpeed(waiter.MovementSpeed);
-                    AppendStatus(waiter.Status);
-                    AppendSalary(waiter.Salary);
-                    break;
-                case Bartender bartender:
-                    AppendLine("Nome", bartender.name);
-                    AppendSpeed(bartender.MovementSpeed);
-                    AppendStatus(bartender.Status);
-                    AppendSalary(bartender.Salary);
-                    break;
-                case Cook cook:
-                    AppendLine("Nome", cook.name);
-                    AppendSpeed(cook.MovementSpeed);
-                    AppendStatus(cook.Status);
-                    AppendSalary(cook.Salary);
-                    break;
-                case TablePresenter tablePresenter:
-                    AppendLine("Nome", tablePresenter.DisplayName);
-                    AppendLine("Lugares", tablePresenter.SeatCount.ToString());
-                    AppendLine("Ocupados", tablePresenter.OccupiedSeats.ToString());
-                    AppendLine("Necessita limpeza", tablePresenter.Dirtiness > 0.01f ? "Sim" : "Não");
-                    break;
-                default:
-                    var go = selectable.Transform != null ? selectable.Transform.gameObject : null;
-                    AppendLine("Nome", go != null ? go.name : "-");
-                    AppendSpeed(GetNavAgentSpeed(go));
-                    AppendStatus(GetIntent(go));
-                    break;
-            }
-
-            if (_selectionDetailsBuilder.Length == 0)
-            {
-                _selectionDetailsBuilder.Append("Sem dados adicionais.");
-            }
-
-            _selectionDetailsBody.text = _selectionDetailsBuilder.ToString().TrimEnd();
-        }
-
-        private void OnPlacementModeChanged(GridPlacer.PlaceableKind kind)
-        {
-            HighlightActiveOption(kind);
-        }
-
-        private void HighlightActiveOption(GridPlacer.PlaceableKind kind)
-        {
-            foreach (var button in _buildOptionButtons)
-            {
-                if (button.userData is GridPlacer.PlaceableKind buttonKind && buttonKind == kind)
-                {
-                    button.AddToClassList("build-option--active");
-                }
-                else
-                {
-                    button.RemoveFromClassList("build-option--active");
-                }
-            }
-        }
-
-        private static float GetNavAgentSpeed(GameObject go)
-        {
-            if (go != null && go.TryGetComponent(out NavMeshAgent agent))
-            {
-                return agent.speed;
-            }
-
-            return 0f;
-        }
-
-        private static string GetIntent(GameObject go)
-        {
-            if (go != null && go.TryGetComponent(out AgentIntentDisplay intentDisplay))
-            {
-                return intentDisplay.CurrentIntent;
-            }
-
-            return string.Empty;
-        }
-
-        private void RefreshBuildOptionLabels()
-        {
-            foreach (var pair in _buildOptionLookup)
-            {
-                var option = pair.Value;
-                var cost = _gridPlacer != null ? _gridPlacer.GetPlacementCost(option.Kind) : 0f;
-                pair.Key.text = cost > 0f ? $"{option.Label} ({cost:0})" : option.Label;
-            }
-        }
-
-        private void CreateBuildButtons()
-        {
-            if (_buildMenu == null)
-            {
-                return;
-            }
-
-            _buildMenu.Clear();
-            _buildOptionButtons.Clear();
-            _buildOptionLookup.Clear();
-
-            foreach (var option in BuildOptions)
-            {
-                var button = new Button
-                {
-                    name = option.Name,
-                    text = option.Label,
-                    userData = option.Kind
-                };
-                button.AddToClassList("build-option");
-                if (_buildOptionButtons.Count > 0)
-                {
-                    button.AddToClassList("build-option--spaced");
-                }
-                _buildMenu.Add(button);
-                _buildOptionButtons.Add(button);
-                _buildOptionLookup[button] = option;
-            }
-
-            RefreshBuildOptionLabels();
-            HighlightActiveOption(GridPlacer.PlaceableKind.None);
-        }
-
-        private void EnsureSelectionDetailsPanel(VisualElement rootElement)
-        {
-            if (rootElement == null)
-            {
-                return;
-            }
-
-            _selectionDetailsPanel = rootElement.Q<VisualElement>("selectionDetailsPanel");
-            if (_selectionDetailsPanel == null)
-            {
-                _selectionDetailsPanel = new VisualElement
-                {
-                    name = "selectionDetailsPanel"
-                };
-                _selectionDetailsPanel.style.position = Position.Absolute;
-                _selectionDetailsPanel.style.right = 16f;
-                _selectionDetailsPanel.style.top = 16f;
-                _selectionDetailsPanel.style.width = 320f;
-                _selectionDetailsPanel.style.paddingLeft = 12f;
-                _selectionDetailsPanel.style.paddingRight = 12f;
-                _selectionDetailsPanel.style.paddingTop = 12f;
-                _selectionDetailsPanel.style.paddingBottom = 12f;
-                _selectionDetailsPanel.style.backgroundColor = new Color(0.18f, 0.15f, 0.12f, 0.85f);
-                _selectionDetailsPanel.style.borderTopLeftRadius = 8f;
-                _selectionDetailsPanel.style.borderTopRightRadius = 8f;
-                _selectionDetailsPanel.style.borderBottomLeftRadius = 8f;
-                _selectionDetailsPanel.style.borderBottomRightRadius = 8f;
-                _selectionDetailsPanel.style.flexDirection = FlexDirection.Column;
-                _selectionDetailsPanel.style.display = DisplayStyle.None;
-                rootElement.Add(_selectionDetailsPanel);
-            }
-
-            _selectionDetailsTitle = _selectionDetailsPanel.Q<Label>("selectionDetailsTitle");
-            if (_selectionDetailsTitle == null)
-            {
-                _selectionDetailsTitle = new Label
-                {
-                    name = "selectionDetailsTitle"
-                };
-                _selectionDetailsTitle.style.unityFontStyleAndWeight = FontStyle.Bold;
-                _selectionDetailsTitle.style.fontSize = 16f;
-                _selectionDetailsTitle.style.marginBottom = 6f;
-                _selectionDetailsPanel.Add(_selectionDetailsTitle);
-            }
-
-            _selectionDetailsBody = _selectionDetailsPanel.Q<Label>("selectionDetailsBody");
-            if (_selectionDetailsBody == null)
-            {
-                _selectionDetailsBody = new Label
-                {
-                    name = "selectionDetailsBody"
-                };
-                _selectionDetailsBody.style.whiteSpace = WhiteSpace.Normal;
-                _selectionDetailsBody.style.fontSize = 13f;
-                _selectionDetailsPanel.Add(_selectionDetailsBody);
-            }
-
-            UpdateSelectionDetails(_selectionService != null ? _selectionService.Current : null);
-        }
-
-        private void EnsureReputationLabel(VisualElement rootElement)
-        {
-            if (rootElement == null)
-            {
-                return;
-            }
-
-            _reputationLabel = rootElement.Q<Label>("reputationLabel");
-            if (_reputationLabel == null)
-            {
-                _reputationLabel = new Label
-                {
-                    name = "reputationLabel"
-                };
-                _reputationLabel.style.position = Position.Absolute;
-                _reputationLabel.style.left = 16f;
-                _reputationLabel.style.top = 16f;
-                _reputationLabel.style.backgroundColor = new Color(0.18f, 0.15f, 0.12f, 0.85f);
-                _reputationLabel.style.paddingLeft = 8f;
-                _reputationLabel.style.paddingRight = 8f;
-                _reputationLabel.style.paddingTop = 6f;
-                _reputationLabel.style.paddingBottom = 6f;
-                _reputationLabel.style.borderTopLeftRadius = 6f;
-                _reputationLabel.style.borderTopRightRadius = 6f;
-                _reputationLabel.style.borderBottomLeftRadius = 6f;
-                _reputationLabel.style.borderBottomRightRadius = 6f;
-                _reputationLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-                _reputationLabel.style.fontSize = 14f;
-                rootElement.Add(_reputationLabel);
-            }
-
-            UpdateReputationLabel(_reputationSystem != null ? _reputationSystem.Reputation : 0);
-        }
-
-        private void UpdateReputationLabel(int value)
-        {
-            if (_reputationLabel == null)
-            {
-                return;
-            }
-
-            _reputationLabel.text = $"Reputação: {value}";
-        }
-
-        private int _hudPointerDepth;
 
         private void RegisterHudPointerGuards(VisualElement rootElement)
         {
-            if (_pointerGuardsRegistered || rootElement == null)
+            if (rootElement == null)
             {
                 return;
             }
 
             rootElement.RegisterCallback<PointerEnterEvent>(OnHudPointerEnter, TrickleDown.TrickleDown);
             rootElement.RegisterCallback<PointerLeaveEvent>(OnHudPointerLeave, TrickleDown.TrickleDown);
-            _pointerGuardsRegistered = true;
         }
 
         private void OnHudPointerEnter(PointerEnterEvent evt)
         {
-            if (evt == null)
-            {
-                return;
-            }
-
-            _hudPointerDepth++;
-
-            if (_hudPointerDepth == 1)
-            {
-                _isPointerOverHud = true;
-                UpdatePointerOverHud();
-            }
+            cursorManager?.SetPointerOverHud(true);
         }
 
         private void OnHudPointerLeave(PointerLeaveEvent evt)
         {
-            if (evt == null)
-            {
-                return;
-            }
-
-            if (_hudPointerDepth > 0)
-            {
-                _hudPointerDepth--;
-            }
-
-            if (_hudPointerDepth == 0)
-            {
-                _isPointerOverHud = false;
-                UpdatePointerOverHud();
-            }
-        }
-
-        private void UpdatePointerOverHud()
-        {
-            _gridPlacer?.SetPointerOverUI(_isPointerOverHud);
-        }
-
-        private void OnReputationChanged(int value)
-        {
-            UpdateReputationLabel(value);
-        }
-
-        private static Label CreateLabel(VisualElement root, string name, string text)
-        {
-            var label = new Label(text) { name = name };
-            root.Add(label);
-            return label;
-        }
-
-        private static ScrollView CreateScroll(VisualElement root)
-        {
-            var scroll = new ScrollView { name = "ordersScroll" };
-            root.Add(scroll);
-            return scroll;
-        }
-
-        private static Button CreateButton(VisualElement root, string name, string text)
-        {
-            var button = new Button { name = name, text = text };
-            root.Add(button);
-            return button;
-        }
-
-        private static VisualElement CreateBuildMenu(VisualElement root)
-        {
-            var container = new VisualElement { name = "buildMenu" };
-            root.Add(container);
-            return container;
-        }
-
-        private static VisualElement CreateHireControls(VisualElement root)
-        {
-            var container = new VisualElement { name = "hireControls" };
-            container.AddToClassList("hire-controls");
-            container.AddToClassList("stacked");
-            root.Add(container);
-            return container;
+            cursorManager?.SetPointerOverHud(false);
         }
 
         private static string GetControlsSummary()
@@ -1067,18 +551,70 @@ namespace TavernSim.UI
             return "Camera: WASD/Arrows move • Shift sprint • Scroll zoom • Right Drag pan • Middle Drag orbit • Q/E rotate • Left Click select • Build button to place props";
         }
 
-        private readonly struct BuildOption
+        private void CreateToolbar(VisualElement rootElement)
         {
-            public readonly string Name;
-            public readonly string Label;
-            public readonly GridPlacer.PlaceableKind Kind;
-
-            public BuildOption(string name, string label, GridPlacer.PlaceableKind kind)
-            {
-                Name = name;
-                Label = label;
-                Kind = kind;
-            }
+            Debug.Log("HUDController: Creating toolbar dynamically");
+            
+            // Create toolbar container
+            var toolbarRoot = new VisualElement();
+            toolbarRoot.name = "toolbarRoot";
+            toolbarRoot.AddToClassList("toolbar");
+            toolbarRoot.style.display = DisplayStyle.Flex;
+            
+            // Create toolbar buttons group
+            var toolbarButtons = new VisualElement();
+            toolbarButtons.name = "toolbarButtons";
+            toolbarButtons.AddToClassList("toolbar-group");
+            
+            // Create buttons
+            var buildBtn = new Button { text = "Construção" };
+            buildBtn.name = "buildToggleBtn";
+            buildBtn.AddToClassList("tool-button");
+            buildBtn.clicked += () => {
+                Debug.Log("Build button clicked!");
+                toolbarController?.OnBuildButton();
+            };
+            
+            var decoBtn = new Button { text = "Decoração" };
+            decoBtn.name = "decoToggleBtn";
+            decoBtn.AddToClassList("tool-button");
+            decoBtn.clicked += () => {
+                Debug.Log("Deco button clicked!");
+                toolbarController?.OnDecoToggleClicked();
+            };
+            
+            var beautyBtn = new Button { text = "Beleza" };
+            beautyBtn.name = "beautyToggleBtn";
+            beautyBtn.AddToClassList("tool-button");
+            beautyBtn.clicked += () => {
+                Debug.Log("Beauty button clicked!");
+                toolbarController?.OnBeautyToggleClicked();
+            };
+            
+            // Add buttons to group
+            toolbarButtons.Add(buildBtn);
+            toolbarButtons.Add(decoBtn);
+            toolbarButtons.Add(beautyBtn);
+            
+            // Create separator
+            var separator = new VisualElement();
+            separator.name = "toolbarSeparator";
+            separator.AddToClassList("toolbar-separator");
+            
+            // Create build menu
+            var buildMenu = new VisualElement();
+            buildMenu.name = "buildMenu";
+            buildMenu.AddToClassList("toolbar-options");
+            
+            // Assemble toolbar
+            toolbarRoot.Add(toolbarButtons);
+            toolbarRoot.Add(separator);
+            toolbarRoot.Add(buildMenu);
+            
+            // Add to root
+            rootElement.Add(toolbarRoot);
+            
+            Debug.Log("HUDController: Toolbar created and added to root");
         }
     }
 }

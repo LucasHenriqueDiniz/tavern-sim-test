@@ -27,6 +27,16 @@ namespace TavernSim.Save
             File.WriteAllText(path, json);
         }
 
+        public bool HasSave(string path = null)
+        {
+            if (string.IsNullOrEmpty(path))
+            {
+                path = GetDefaultPath();
+            }
+
+            return File.Exists(path);
+        }
+
         public SaveModel CreateModel()
         {
             return new SaveModel

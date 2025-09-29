@@ -152,6 +152,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   catalog: {fileID: 11400000, guid: a7132c3498ffdf0408ee99174f21fbb6, type: 2}
+  buildCatalog: {fileID: 0}
 --- !u!4 &591699498
 Transform:
   m_ObjectHideFlags: 0

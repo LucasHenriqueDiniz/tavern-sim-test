@@ -1,0 +1,8 @@
+LICENSE
+*.meta
+.gitattributes
+README.md
+.github/*
+Assets/TextMesh Pro/Examples & Extras/*
+.gitignore
+.idea/*

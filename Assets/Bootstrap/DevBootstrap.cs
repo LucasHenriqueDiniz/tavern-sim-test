@@ -26,9 +26,11 @@ namespace TavernSim.Bootstrap
     public sealed class DevBootstrap : MonoBehaviour
     {
         [SerializeField] private Catalog catalog;
+        [SerializeField] private BuildCatalog buildCatalog;
 
         private static PanelSettings _panelSettings;
         private static ThemeStyleSheet _panelTheme;
+        private static ThemeStyleSheet _fallbackTheme;
         private static bool _themeLookupAttempted;
 
         private SimulationRunner _runner;
@@ -38,6 +40,7 @@ namespace TavernSim.Bootstrap
         private CleaningSystem _cleaningSystem;
         private TableRegistry _tableRegistry;
         private ReputationSystem _reputationSystem;
+        private GameClockSystem _gameClock;
         private CustomerSpawner _customerSpawner;
         private SaveService _saveService;
         private NavMeshSurface _navMeshSurface;
@@ -54,6 +57,7 @@ namespace TavernSim.Bootstrap
         private int _waiterCount;
         private int _cookCount;
         private int _bartenderCount;
+        private int _cleanerCount;
 
         private Vector3 _entryPoint;
         private Vector3 _exitPoint;
@@ -64,6 +68,7 @@ namespace TavernSim.Bootstrap
         private static readonly Vector3 WaiterSpawnBase = new Vector3(-1f, 0f, 0f);
         private static readonly Vector3 CookSpawnBase = new Vector3(-1.5f, 0f, 2.6f);
         private static readonly Vector3 BartenderSpawnBase = new Vector3(-2.5f, 0f, 1.5f);
+        private static readonly Vector3 CleanerSpawnBase = new Vector3(-3f, 0f, 0f);
         private const float StaffSpawnSpacing = 0.75f;
 
         public EconomySystem Economy => _economySystem;
@@ -87,6 +92,16 @@ namespace TavernSim.Bootstrap
             {
                 Debug.LogWarning("DevBootstrap could not locate a Catalog asset in Resources. Assign one in the inspector to enable recipes and menu items.");
                 catalog = ScriptableObject.CreateInstance<Catalog>();
+            }
+
+            if (buildCatalog == null)
+            {
+                buildCatalog = Resources.Load<BuildCatalog>("Build/BuildCatalog");
+            }
+
+            if (buildCatalog == null)
+            {
+                buildCatalog = BuildCatalog.CreateDefault();
             }
 
             SetupScene();
@@ -136,6 +151,7 @@ namespace TavernSim.Bootstrap
             _waiterCount = 0;
             _cookCount = 0;
             _bartenderCount = 0;
+            _cleanerCount = 0;
         }
 
         private void SetupSimulation()
@@ -151,6 +167,7 @@ namespace TavernSim.Bootstrap
             _cleaningSystem = new CleaningSystem(0.1f);
             _tableRegistry = new TableRegistry();
             _reputationSystem = new ReputationSystem();
+            _gameClock = new GameClockSystem();
             _agentSystem = new AgentSystem(_tableRegistry, _orderSystem, _economySystem, _cleaningSystem, catalog);
             _agentSystem.Configure(_entryPoint, _exitPoint, _kitchenPoint, _kitchenPickupPoint, _barPickupPoint);
             _agentSystem.SetInventory(_inventory);
@@ -164,6 +181,7 @@ namespace TavernSim.Bootstrap
             _runner.RegisterSystem(_cleaningSystem);
             _runner.RegisterSystem(_tableRegistry);
             _runner.RegisterSystem(_reputationSystem);
+            _runner.RegisterSystem(_gameClock);
             _runner.RegisterSystem(_agentSystem);
 
             _customerSpawner = new GameObject("CustomerSpawner").AddComponent<CustomerSpawner>();
@@ -182,6 +200,7 @@ namespace TavernSim.Bootstrap
 
             _saveService = new SaveService(_economySystem);
             _gridPlacer?.Configure(_economySystem, _selectionService, _tableRegistry, _cleaningSystem);
+            _gridPlacer?.SetCatalog(buildCatalog);
 
             _debugOverlay.Configure(_agentSystem, _orderSystem);
         }
@@ -193,14 +212,27 @@ namespace TavernSim.Bootstrap
             uiGo.SetActive(false);
 
             var document = uiGo.AddComponent<UIDocument>();
-            document.panelSettings = GetOrCreatePanelSettings();
+            var panel = GetOrCreatePanelSettings();
+            document.panelSettings = panel;   // ✅ reativa PanelSettings
+
+            var hudConfig = Resources.Load<HUDVisualConfig>("UI/HUDVisualConfig");
+            if (hudConfig == null)
+            {
+                Debug.LogWarning("DevBootstrap could not locate HUDVisualConfig in Resources/UI. HUD will fall back to minimal layout.");
+            }
 
             _hudController = uiGo.AddComponent<HUDController>();
+            if (hudConfig != null)
+            {
+                _hudController.SetVisualConfig(hudConfig);
+            }
             _hudController.Initialize(_economySystem, _orderSystem);
             _hudController.BindSaveService(_saveService);
             _hudController.BindSelection(_selectionService, _gridPlacer);
             _hudController.BindEventBus(_eventBus);
             _hudController.BindReputation(_reputationSystem);
+            _hudController.BindBuildCatalog(buildCatalog);
+            _hudController.BindClock(_gameClock);
 
             _toastController = uiGo.AddComponent<HudToastController>();
 
@@ -217,11 +249,12 @@ namespace TavernSim.Bootstrap
                 _hudController.HireWaiterRequested += HandleHireWaiterRequested;
                 _hudController.HireCookRequested += HandleHireCookRequested;
                 _hudController.HireBartenderRequested += HandleHireBartenderRequested;
+                _hudController.HireCleanerRequested += HandleHireCleanerRequested;
             }
 
             uiGo.SetActive(true);
 
-            _timeControls.Initialize();
+            _timeControls.Initialize(_gameClock);
             _hudController.SetCustomers(_agentSystem != null ? _agentSystem.ActiveCustomerCount : 0);
         }
 
@@ -244,6 +277,7 @@ namespace TavernSim.Bootstrap
                 _hudController.HireWaiterRequested -= HandleHireWaiterRequested;
                 _hudController.HireCookRequested -= HandleHireCookRequested;
                 _hudController.HireBartenderRequested -= HandleHireBartenderRequested;
+                _hudController.HireCleanerRequested -= HandleHireCleanerRequested;
             }
         }
 
@@ -272,6 +306,13 @@ namespace TavernSim.Bootstrap
             var spawn = GetBartenderSpawnPosition(_bartenderCount);
             CreateBartender(spawn);
             _bartenderCount++;
+        }
+
+        private void HandleHireCleanerRequested()
+        {
+            var spawn = GetCleanerSpawnPosition(_cleanerCount);
+            CreateCleaner(spawn);
+            _cleanerCount++;
         }
 
         private Waiter CreateWaiter(Vector3 position)
@@ -324,6 +365,23 @@ namespace TavernSim.Bootstrap
             return cookGo.AddComponent<Cook>();
         }
 
+        private Cleaner CreateCleaner(Vector3 position)
+        {
+            var index = _cleanerCount + 1;
+            var cleanerGo = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            cleanerGo.name = index == 1 ? "Cleaner" : $"Cleaner_{index}";
+            cleanerGo.transform.SetParent(transform, false);
+            var agent = EnsureNavMeshAgent(cleanerGo);
+            agent.speed = 1.4f;
+            if (!agent.Warp(position))
+            {
+                Debug.LogWarning($"Cleaner NavMeshAgent.Warp falhou para {cleanerGo.name}; verifique o NavMesh.");
+            }
+
+            cleanerGo.AddComponent<AgentIntentDisplay>();
+            return cleanerGo.AddComponent<Cleaner>();
+        }
+
         private static NavMeshAgent EnsureNavMeshAgent(GameObject go)
         {
             if (!go.TryGetComponent(out NavMeshAgent agent))
@@ -349,6 +407,11 @@ namespace TavernSim.Bootstrap
         private static Vector3 GetBartenderSpawnPosition(int index)
         {
             return BartenderSpawnBase + new Vector3(-StaffSpawnSpacing * index, 0f, 0f);
+        }
+
+        private static Vector3 GetCleanerSpawnPosition(int index)
+        {
+            return CleanerSpawnBase + new Vector3(-StaffSpawnSpacing * index, 0f, 0f);
         }
 
         private static Customer CreateCustomerPrefab(Transform parent)
@@ -413,21 +476,98 @@ namespace TavernSim.Bootstrap
                 return _panelSettings;
             }
 
+            var resourceSettings = Resources.Load<PanelSettings>(PanelSettingsResourcePath);
+            if (resourceSettings != null)
+            {
+                _panelSettings = ScriptableObject.Instantiate(resourceSettings);
+                _panelSettings.name = resourceSettings.name + "_Runtime";
+                _panelSettings.hideFlags = HideFlags.HideAndDontSave;
+                return _panelSettings;
+            }
+
+            // Create PanelSettings if not found
             _panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
-            _panelSettings.name = "DevBootstrapPanelSettings";
+            _panelSettings.name = "HUDPanelSettings_Runtime";
             _panelSettings.hideFlags = HideFlags.HideAndDontSave;
             _panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
             _panelSettings.referenceResolution = new Vector2Int(1920, 1080);
             _panelSettings.sortingOrder = 100;
             _panelSettings.targetTexture = null;
 
+            // Create TextSettings if not found
+            if (_panelSettings.textSettings == null)
+            {
+                var panelTextSettings = Resources.Load<PanelTextSettings>(PanelTextSettingsResourcePath);
+                if (panelTextSettings != null)
+                {
+                    _panelSettings.textSettings = panelTextSettings;
+                }
+                else
+                {
+                    var runtimeTextSettings = ScriptableObject.CreateInstance<PanelTextSettings>();
+                    runtimeTextSettings.name = "HUDTextSettings_Runtime";
+                    runtimeTextSettings.hideFlags = HideFlags.HideAndDontSave;
+                    _panelSettings.textSettings = runtimeTextSettings;
+                }
+            }
+
+            // Set theme
             var theme = GetOrLoadTheme();
             if (theme != null)
             {
                 _panelSettings.themeStyleSheet = theme;
             }
+            else if (_panelSettings.themeStyleSheet == null)
+            {
+                _panelSettings.themeStyleSheet = GetOrCreateFallbackTheme();
+            }
+
+#if UNITY_EDITOR
+            // Create assets in editor
+            CreatePanelSettingsAssets();
+#endif
 
             return _panelSettings;
+        }
+
+#if UNITY_EDITOR
+        private static void CreatePanelSettingsAssets()
+        {
+            // Create PanelSettings asset
+            var panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+            panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+            panelSettings.referenceResolution = new Vector2Int(1920, 1080);
+            panelSettings.sortingOrder = 100;
+            panelSettings.targetTexture = null;
+
+            // Create TextSettings asset
+            var textSettings = ScriptableObject.CreateInstance<PanelTextSettings>();
+            panelSettings.textSettings = textSettings;
+
+            // Set theme
+            var theme = GetOrLoadTheme();
+            if (theme != null)
+            {
+                panelSettings.themeStyleSheet = theme;
+            }
+
+            // Save assets
+            UnityEditor.AssetDatabase.CreateAsset(panelSettings, "Assets/Resources/UI/HUDPanelSettings.asset");
+            UnityEditor.AssetDatabase.CreateAsset(textSettings, "Assets/Resources/UI/HUDTextSettings.asset");
+            UnityEditor.AssetDatabase.SaveAssets();
+        }
+#endif
+
+        private static ThemeStyleSheet GetOrCreateFallbackTheme()
+        {
+            if (_fallbackTheme == null)
+            {
+                _fallbackTheme = ScriptableObject.CreateInstance<ThemeStyleSheet>();
+                _fallbackTheme.name = "DevBootstrapFallbackTheme";
+                _fallbackTheme.hideFlags = HideFlags.HideAndDontSave;
+            }
+
+            return _fallbackTheme;
         }
 
         private static ThemeStyleSheet GetOrLoadTheme()
@@ -450,6 +590,8 @@ namespace TavernSim.Bootstrap
         }
 
         private const string ThemeResourcePath = "UIToolkit/UnityThemes/UnityDefaultRuntimeTheme";
+        private const string PanelSettingsResourcePath = "UI/HUDPanelSettings";
+        private const string PanelTextSettingsResourcePath = "UI/HUDTextSettings";
 
     }
 }
