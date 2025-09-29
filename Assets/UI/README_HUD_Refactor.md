@@ -135,7 +135,7 @@ Crie os seguintes arquivos na pasta `Assets/UI/Cursors/`:
 - `pan.png` (hotspot 16,16)
 
 ### Ícones de Clima
-Os ícones carregados pelo `IconManager` ficam em `Assets/UI/Icons/` e devem ser fornecidos como SVG/texto (evite binários `.png`).
+Os ícones carregados pelo `IconManager` ficam em `Assets/Resources/UI/Icons/` e devem ser fornecidos como SVG/texto (evite binários `.png`).
 - `weather-sun.svg`
 - `weather-partly.svg`
 - `weather-cloud.svg`
