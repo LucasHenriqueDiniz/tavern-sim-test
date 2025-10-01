@@ -1,0 +1,14 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI/HUD/Styles/BottomBar.uss?fileID=7433441132597879392&amp;guid=bc9c51c815a5bbd47823de9cdcc65c2a&amp;type=3#BottomBar" />
+    <ui:VisualElement name="bottomBar" class="hud-bottom">
+        <ui:VisualElement class="gold-display">
+            <ui:VisualElement name="goldIcon" class="gold-icon" style="background-image: url(&apos;Assets/UI/Icons/HUD/two-coins.png&apos;);" />
+            <ui:Label name="goldLabel" text="0" class="gold-value" />
+        </ui:VisualElement>
+        <ui:VisualElement class="bottom-spacer" />
+        <ui:VisualElement class="bottom-actions">
+            <ui:Button name="settingsBtn" tooltip="Configurações" class="hud-icon-button hud-icon-button--small" style="background-image: url(&apos;Assets/UI/Icons/BottomBar/settings.png&apos;);" />
+            <ui:Button name="helpBtn" tooltip="Ajuda" class="hud-icon-button hud-icon-button--small" style="background-image: url(&apos;Assets/UI/Icons/BottomBar/help.png&apos;);" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

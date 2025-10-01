@@ -1,0 +1,80 @@
+/* Container da TopBar */
+.hud-top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background-color: rgba(0, 0, 0, 0.8);
+    border-bottom: 2px solid #4a4a4a;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 20px;
+}
+
+/* Linha principal */
+.hud-top__row {
+    flex-direction: row;
+    align-items: center;
+    gap: 20px;
+}
+
+/* Texto + ícone */
+.hud-top__label-group {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+}
+
+.hud-top__label {
+    font-size: 16px;
+    font-weight: bold;
+    color: #ffffff;
+}
+
+.hud-top__label-icon {
+    width: 20px;
+    height: 20px;
+    -unity-background-scale-mode: scale-and-crop;
+    -unity-background-image-tint-color: #bdbdbd;
+}
+
+/* Grupos de botões */
+.hud-top__big-buttons,
+.hud-top__small-buttons {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Botão base */
+.hud-icon-button {
+    background-color: #3a3a3a;
+    border: 1px solid #555555;
+    border-radius: 50%;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -unity-background-scale-mode: scale-and-crop;
+    -unity-background-image-tint-color: #bdbdbd;
+    transition-duration: 0.15s;
+}
+
+.hud-icon-button:hover {
+    background-color: #4a4a4a;
+    border-color: #777777;
+    -unity-background-image-tint-color: #ffffff;
+}
+
+/* Variantes */
+.hud-icon-button--big {
+    width: 48px;
+    height: 48px;
+}
+
+.hud-icon-button--small {
+    width: 28px;
+    height: 28px;
+}

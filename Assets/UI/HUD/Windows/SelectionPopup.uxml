@@ -1,0 +1,21 @@
+<engine:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xmlns:engine="UnityEngine.UIElements">
+  <!-- Selection Popup Window - Ações Contextuais -->
+  <ui:VisualElement name="selectionPopup" class="selection-popup selection-popup--hidden">
+    <ui:Label class="group-title" text="Seleção Atual" />
+    <ui:VisualElement class="summary-grid">
+      <ui:Label class="summary-label" text="Nome" />
+      <ui:Label name="selectionName" class="summary-value" text="" />
+      <ui:Label class="summary-label" text="Tipo" />
+      <ui:Label name="selectionType" class="summary-value" text="-" />
+      <ui:Label class="summary-label" text="Status" />
+      <ui:Label name="selectionStatus" class="summary-value" text="-" />
+      <ui:Label class="summary-label" text="Velocidade" />
+      <ui:Label name="selectionSpeed" class="summary-value" text="-" />
+    </ui:VisualElement>
+    <ui:VisualElement class="selection-actions" name="selectionActions">
+      <ui:Button name="selectionFireBtn" class="selection-action__button selection-action__button--danger" text="Demitir" />
+      <ui:Button name="selectionMoveBtn" class="selection-action__button" text="Mover" />
+      <ui:Button name="selectionSellBtn" class="selection-action__button" text="Vender" />
+    </ui:VisualElement>
+  </ui:VisualElement>
+</engine:UXML>

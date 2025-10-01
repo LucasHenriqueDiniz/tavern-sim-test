@@ -1,0 +1,28 @@
+/* HUD root ocupa tela inteira */
+.hud-root {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    flex-direction: column; /* opcional */
+}
+
+/* topo à direita */
+.hud-top {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+}
+
+/* centro embaixo */
+.center-hud-wrapper {
+    position: absolute;
+    bottom: 72px;        /* um pouco acima do bottom */
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* canto inferior esquerdo */
+.hud-bottom-left {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+}

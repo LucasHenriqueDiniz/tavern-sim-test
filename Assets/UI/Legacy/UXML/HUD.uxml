@@ -1,0 +1,205 @@
+<engine:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xmlns:engine="UnityEngine.UIElements">
+  <ui:VisualElement name="hudRoot" class="hud-root">
+    <ui:VisualElement class="hud-top">
+      <ui:VisualElement class="hud-top__left">
+        <ui:Button name="messagesBtn" class="hud-icon-button" tooltip="Mensagens e eventos" text="" />
+        <ui:Button name="statsBtn" class="hud-icon-button" tooltip="Estatísticas" text="" />
+        <ui:Button name="infoBtn" class="hud-icon-button" tooltip="Informações gerais" text="" />
+      </ui:VisualElement>
+      <ui:VisualElement class="hud-top__center">
+        <ui:VisualElement class="top-metric">
+          <ui:VisualElement name="goldIcon" class="metric-icon" />
+          <ui:Label class="metric-label" text="Ouro" />
+          <ui:Label name="cashLabel" class="metric-value" text="0" />
+        </ui:VisualElement>
+        <ui:VisualElement class="top-metric">
+          <ui:VisualElement name="reputationIcon" class="metric-icon" />
+          <ui:Label class="metric-label" text="Reputação" />
+          <ui:Label name="reputationLabel" class="metric-value" text="0" />
+        </ui:VisualElement>
+        <ui:VisualElement class="top-metric">
+          <ui:VisualElement name="customersIcon" class="metric-icon" />
+          <ui:Label class="metric-label" text="Clientes" />
+          <ui:Label name="customerLabel" class="metric-value" text="0" />
+        </ui:VisualElement>
+        <ui:VisualElement class="top-metric top-metric--time">
+          <ui:VisualElement name="topWeatherIcon" class="metric-icon metric-icon--weather" />
+          <ui:Label name="timeLabel" class="metric-value" text="Dia 1 – 08:00" />
+          <ui:Label name="weatherLabel" class="metric-subvalue" text="--" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+      <ui:VisualElement class="hud-top__right">
+        <ui:Button name="staffBtn" class="hud-button hud-button--pill" text="Equipe" />
+        <ui:VisualElement class="top-mode-group" name="topBuildGroup">
+          <ui:Button name="buildMenuBtn" class="hud-button hud-button--icon" tooltip="Construção" text="" />
+          <ui:VisualElement class="top-mode-group__options">
+            <ui:Button name="buildStructuresBtn" class="mode-option" tooltip="Estruturas" text="" />
+            <ui:Button name="buildStairsBtn" class="mode-option" tooltip="Escadas e andares" text="" />
+            <ui:Button name="buildDoorsBtn" class="mode-option" tooltip="Portas" text="" />
+            <ui:Button name="buildDemolishBtn" class="mode-option" tooltip="Demolição" text="" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="top-mode-group" name="topDecorGroup">
+          <ui:Button name="decorMenuBtn" class="hud-button hud-button--icon" tooltip="Decoração" text="" />
+          <ui:VisualElement class="top-mode-group__options">
+            <ui:Button name="decorArtBtn" class="mode-option" tooltip="Arte e quadros" text="" />
+            <ui:Button name="decorBasicBtn" class="mode-option" tooltip="Móveis básicos" text="" />
+            <ui:Button name="decorThemeBtn" class="mode-option" tooltip="Itens temáticos" text="" />
+            <ui:Button name="decorNatureBtn" class="mode-option" tooltip="Natureza" text="" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:Button name="panelToggleBtn" class="panel-fab" tooltip="Resumo da taverna" text="" />
+
+    <ui:VisualElement name="sidePanel" class="side-panel">
+      <ui:VisualElement class="panel-header">
+        <ui:Label class="panel-title" text="Resumo da Taverna" />
+        <ui:Button name="panelPinBtn" class="panel-pin" tooltip="Fixar painel" text="" />
+      </ui:VisualElement>
+      <ui:ScrollView class="panel-content">
+        <ui:VisualElement name="statsBlock" class="stat-group">
+          <ui:Label class="group-title" text="Reputação" />
+          <ui:VisualElement class="stat-line">
+            <ui:Label class="stat-label" text="Pontuação" />
+            <ui:Label name="reputationScore" class="stat-value" text="0" />
+          </ui:VisualElement>
+          <ui:VisualElement class="stat-line">
+            <ui:Label class="stat-label" text="Variação/min" />
+            <ui:Label name="reputationTrend" class="stat-value" text="0" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="ordersBlock" class="stat-group">
+          <ui:Label class="group-title" text="Pedidos" />
+          <ui:VisualElement class="stat-line">
+            <ui:Label class="stat-label" text="Fila" />
+            <ui:Label name="ordersQueue" class="stat-value" text="0" />
+          </ui:VisualElement>
+          <ui:VisualElement class="stat-line">
+            <ui:Label class="stat-label" text="Tempo médio" />
+            <ui:Label name="ordersAverage" class="stat-value" text="0s" />
+          </ui:VisualElement>
+          <ui:ScrollView name="ordersScroll" class="order-list" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="tipsBlock" class="stat-group">
+          <ui:Label class="group-title" text="Gorjetas" />
+          <ui:VisualElement class="stat-line">
+            <ui:Label class="stat-label" text="Última" />
+            <ui:Label name="tipsLast" class="stat-value" text="0" />
+          </ui:VisualElement>
+          <ui:VisualElement class="stat-line">
+            <ui:Label class="stat-label" text="Média" />
+            <ui:Label name="tipsAverage" class="stat-value" text="0" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="menuBlock" class="stat-group">
+          <ui:Label class="group-title" text="Cardápio" />
+          <ui:VisualElement name="menuAnchor" class="group-body" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="logBlock" class="stat-group">
+          <ui:Label class="group-title" text="Registro de Eventos" />
+          <ui:VisualElement name="logFilters" class="log-filters" />
+          <ui:ScrollView name="logScroll" class="log-scroll" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="contextActions" class="stat-group context-actions">
+          <ui:Label class="group-title" text="Ações" />
+          <ui:VisualElement name="contextActionsBody" class="group-body" />
+        </ui:VisualElement>
+      </ui:ScrollView>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="selectionPopup" class="selection-popup">
+      <ui:Label class="group-title" text="Seleção atual" />
+      <ui:VisualElement class="summary-grid">
+        <ui:Label class="summary-label" text="Nome" />
+        <ui:Label name="selectionName" class="summary-value" text="" />
+        <ui:Label class="summary-label" text="Tipo" />
+        <ui:Label name="selectionType" class="summary-value" text="-" />
+        <ui:Label class="summary-label" text="Status" />
+        <ui:Label name="selectionStatus" class="summary-value" text="-" />
+        <ui:Label class="summary-label" text="Velocidade" />
+        <ui:Label name="selectionSpeed" class="summary-value" text="-" />
+      </ui:VisualElement>
+      <ui:VisualElement class="selection-actions" name="selectionActions">
+        <ui:Button name="selectionFireBtn" class="selection-action__button selection-action__button--danger" text="Demitir" />
+        <ui:Button name="selectionMoveBtn" class="selection-action__button" text="Mover" />
+        <ui:Button name="selectionSellBtn" class="selection-action__button" text="Vender" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement class="bottom-hud">
+      <ui:VisualElement class="bottom-left">
+        <ui:VisualElement name="tavernBadge" class="tavern-badge" />
+        <ui:VisualElement class="quick-indicators">
+          <ui:VisualElement class="quick-indicator">
+            <ui:VisualElement name="quickReputationIcon" class="quick-indicator__icon" />
+            <ui:Label name="quickReputationLabel" class="quick-indicator__value" text="--" />
+          </ui:VisualElement>
+          <ui:VisualElement class="quick-indicator">
+            <ui:VisualElement name="quickCleanlinessIcon" class="quick-indicator__icon" />
+            <ui:Label name="quickCleanlinessLabel" class="quick-indicator__value" text="--" />
+          </ui:VisualElement>
+          <ui:VisualElement class="quick-indicator">
+            <ui:VisualElement name="quickSatisfactionIcon" class="quick-indicator__icon" />
+            <ui:Label name="quickSatisfactionLabel" class="quick-indicator__value" text="--" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+      </ui:VisualElement>
+      <ui:VisualElement class="bottom-center">
+        <ui:Label name="clockLargeLabel" class="clock-display" text="Dia 1 – 08:00" />
+        <ui:VisualElement class="weather-banner">
+          <ui:VisualElement name="weatherLargeIcon" class="weather-banner__icon" />
+          <ui:Label name="weatherLargeLabel" class="weather-banner__label" text="--" />
+        </ui:VisualElement>
+        <ui:VisualElement class="time-controls">
+          <ui:Button name="pauseBtn" class="hud-button" text="" tooltip="Pausar" />
+          <ui:Button name="play1Btn" class="hud-button" text="" tooltip="Velocidade normal" />
+          <ui:Button name="play2Btn" class="hud-button" text="" tooltip="Velocidade x2" />
+          <ui:Button name="play4Btn" class="hud-button" text="" tooltip="Velocidade x4" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+      <ui:VisualElement class="bottom-right">
+        <ui:VisualElement class="management-buttons">
+          <ui:Button name="inventoryBtn" class="hud-button hud-button--stacked" text="Estoque" />
+          <ui:Button name="managementStaffBtn" class="hud-button hud-button--stacked" text="Equipe" />
+          <ui:Button name="financesBtn" class="hud-button hud-button--stacked" text="Finanças" />
+          <ui:Button name="eventsBtn" class="hud-button hud-button--stacked" text="Eventos" />
+          <ui:Button name="questsBtn" class="hud-button hud-button--stacked" text="Objetivos" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="toolbarRoot" class="toolbar">
+      <ui:VisualElement class="toolbar__bar">
+        <ui:VisualElement class="toolbar__group toolbar__group--left">
+          <ui:Button name="buildToggleBtn" class="tool-button" text="Construção" tooltip="Construir estruturas" />
+          <ui:Button name="decoToggleBtn" class="tool-button" text="Decoração" tooltip="Itens decorativos" />
+        </ui:VisualElement>
+        <ui:VisualElement class="toolbar__group toolbar__group--center">
+          <ui:Button name="staffToggleBtn" class="tool-button tool-button--primary" text="Equipe" tooltip="Painel de funcionários" />
+        </ui:VisualElement>
+        <ui:VisualElement class="toolbar__group toolbar__group--right">
+          <ui:Button name="beautyToggleBtn" class="tool-button" text="Beleza" tooltip="Overlay de beleza" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+      <ui:VisualElement name="toolbarSeparator" class="toolbar-separator" />
+      <ui:VisualElement name="buildMenu" class="toolbar-options">
+        <ui:VisualElement name="buildTabs" class="toolbar-modes">
+          <ui:Button name="buildModeBtn" class="toolbar-mode__button toolbar-mode__button--active" text="Construir" />
+          <ui:Button name="decorModeBtn" class="toolbar-mode__button" text="Decorar" />
+        </ui:VisualElement>
+        <ui:ScrollView name="buildOptionsScroll" class="toolbar-options__scroll" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:Button name="devLogBtn" class="dev-fab" text="Log" />
+
+    <ui:VisualElement name="toastLayer" class="toast-layer" />
+  </ui:VisualElement>
+</engine:UXML>

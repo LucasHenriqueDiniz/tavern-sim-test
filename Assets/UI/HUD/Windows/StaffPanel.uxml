@@ -1,0 +1,18 @@
+<engine:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xmlns:engine="UnityEngine.UIElements">
+  <!-- Staff Panel Window - Gestão de Funcionários -->
+  <ui:VisualElement name="staffPanel" class="staff-panel staff-panel--hidden">
+    <ui:VisualElement class="panel-header">
+      <ui:Label class="panel-title" text="Gestão de Funcionários" />
+      <ui:Button name="staffCloseBtn" class="panel-close" tooltip="Fechar" text="" />
+    </ui:VisualElement>
+    <ui:VisualElement class="panel-content">
+      <ui:VisualElement name="staffTabs" class="staff-tabs">
+        <ui:Button name="waitersTab" class="tab-button tab-button--active" text="Garçons" />
+        <ui:Button name="cooksTab" class="tab-button" text="Cozinheiros" />
+        <ui:Button name="bartendersTab" class="tab-button" text="Bartenders" />
+        <ui:Button name="cleanersTab" class="tab-button" text="Limpeza" />
+      </ui:VisualElement>
+      <ui:ScrollView name="staffContent" class="staff-content" />
+    </ui:VisualElement>
+  </ui:VisualElement>
+</engine:UXML>

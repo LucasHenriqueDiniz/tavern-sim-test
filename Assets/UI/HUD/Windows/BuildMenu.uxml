@@ -1,0 +1,16 @@
+<engine:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xmlns:engine="UnityEngine.UIElements">
+  <!-- Build Menu Window - Construção e Decoração -->
+  <ui:VisualElement name="buildMenu" class="build-menu build-menu--hidden">
+    <ui:VisualElement class="panel-header">
+      <ui:Label class="panel-title" text="Construção e Decoração" />
+      <ui:Button name="buildCloseBtn" class="panel-close" tooltip="Fechar" text="" />
+    </ui:VisualElement>
+    <ui:VisualElement class="panel-content">
+      <ui:VisualElement name="buildTabs" class="build-tabs">
+        <ui:Button name="buildModeBtn" class="tab-button tab-button--active" text="Construir" />
+        <ui:Button name="decorModeBtn" class="tab-button" text="Decorar" />
+      </ui:VisualElement>
+      <ui:ScrollView name="buildOptionsScroll" class="build-options" />
+    </ui:VisualElement>
+  </ui:VisualElement>
+</engine:UXML>

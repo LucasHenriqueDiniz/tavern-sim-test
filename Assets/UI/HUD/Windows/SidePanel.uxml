@@ -1,0 +1,53 @@
+<engine:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xmlns:engine="UnityEngine.UIElements">
+  <!-- Side Panel Window - Resumo da Taverna -->
+  <ui:VisualElement name="sidePanel" class="side-panel side-panel--hidden">
+    <ui:VisualElement class="panel-header">
+      <ui:Label class="panel-title" text="Resumo da Taverna" />
+      <ui:Button name="panelCloseBtn" class="panel-close" tooltip="Fechar" text="" />
+    </ui:VisualElement>
+    <ui:ScrollView class="panel-content">
+      <ui:VisualElement name="statsBlock" class="stat-group">
+        <ui:Label class="group-title" text="Reputação" />
+        <ui:VisualElement class="stat-line">
+          <ui:Label class="stat-label" text="Pontuação" />
+          <ui:Label name="reputationScore" class="stat-value" text="0" />
+        </ui:VisualElement>
+        <ui:VisualElement class="stat-line">
+          <ui:Label class="stat-label" text="Variação/min" />
+          <ui:Label name="reputationTrend" class="stat-value" text="0" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+
+      <ui:VisualElement name="ordersBlock" class="stat-group">
+        <ui:Label class="group-title" text="Pedidos" />
+        <ui:VisualElement class="stat-line">
+          <ui:Label class="stat-label" text="Fila" />
+          <ui:Label name="ordersQueue" class="stat-value" text="0" />
+        </ui:VisualElement>
+        <ui:VisualElement class="stat-line">
+          <ui:Label class="stat-label" text="Tempo médio" />
+          <ui:Label name="ordersAverage" class="stat-value" text="0s" />
+        </ui:VisualElement>
+        <ui:ScrollView name="ordersScroll" class="order-list" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="tipsBlock" class="stat-group">
+        <ui:Label class="group-title" text="Gorjetas" />
+        <ui:VisualElement class="stat-line">
+          <ui:Label class="stat-label" text="Última" />
+          <ui:Label name="tipsLast" class="stat-value" text="0" />
+        </ui:VisualElement>
+        <ui:VisualElement class="stat-line">
+          <ui:Label class="stat-label" text="Média" />
+          <ui:Label name="tipsAverage" class="stat-value" text="0" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+
+      <ui:VisualElement name="logBlock" class="stat-group">
+        <ui:Label class="group-title" text="Registro de Eventos" />
+        <ui:VisualElement name="logFilters" class="log-filters" />
+        <ui:ScrollView name="logScroll" class="log-scroll" />
+      </ui:VisualElement>
+    </ui:ScrollView>
+  </ui:VisualElement>
+</engine:UXML>
