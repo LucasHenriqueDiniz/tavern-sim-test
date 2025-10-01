@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using TavernSim.Domain;
 using TavernSim.UI;
+using TavernSim.UI.Legacy;
 
 namespace TavernSim.Editor
 {
@@ -18,8 +19,8 @@ namespace TavernSim.Editor
         private const string CatalogPath = RootPath + "/DemoCatalog.asset";
         private const string HudConfigFolder = "Assets/Resources/UI";
         private const string HudConfigPath = HudConfigFolder + "/HUDVisualConfig.asset";
-        private const string HudUxmlPath = "Assets/UI/UXML/HUD.uxml";
-        private const string HudUssPath = "Assets/UI/USS/HUD.uss";
+        private const string HudUxmlPath = "Assets/UI/HUD/HUD.uxml";
+        private const string HudUssPath = "Assets/UI/HUD/HUD.uss";
 
         [InitializeOnLoadMethod]
         private static void EnsureAssets()

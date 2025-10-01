@@ -209,13 +209,12 @@ namespace TavernSim.Bootstrap
         {
             var uiGo = new GameObject("HUD");
             uiGo.transform.SetParent(transform, false);
-            uiGo.SetActive(false);
 
             var document = uiGo.AddComponent<UIDocument>();
             var panel = GetOrCreatePanelSettings();
             document.panelSettings = panel;   // ✅ reativa PanelSettings
 
-            var hudConfig = Resources.Load<HUDVisualConfig>("UI/HUDVisualConfig");
+            var hudConfig = Resources.Load<TavernSim.UI.Legacy.HUDVisualConfig>("UI/HUDVisualConfig");
             if (hudConfig == null)
             {
                 Debug.LogWarning("DevBootstrap could not locate HUDVisualConfig in Resources/UI. HUD will fall back to minimal layout.");
@@ -226,9 +225,11 @@ namespace TavernSim.Bootstrap
             {
                 _hudController.SetVisualConfig(hudConfig);
             }
-            _hudController.Initialize(_economySystem, _orderSystem);
+            // Ativar o GO antes de inicializar para garantir rootVisualElement disponível
+            uiGo.SetActive(true);
+            _hudController.Initialize();
             _hudController.BindSaveService(_saveService);
-            _hudController.BindSelection(_selectionService, _gridPlacer);
+            _hudController.BindSelection(_selectionService);
             _hudController.BindEventBus(_eventBus);
             _hudController.BindReputation(_reputationSystem);
             _hudController.BindBuildCatalog(buildCatalog);
@@ -251,8 +252,6 @@ namespace TavernSim.Bootstrap
                 _hudController.HireBartenderRequested += HandleHireBartenderRequested;
                 _hudController.HireCleanerRequested += HandleHireCleanerRequested;
             }
-
-            uiGo.SetActive(true);
 
             _timeControls.Initialize(_gameClock);
             _hudController.SetCustomers(_agentSystem != null ? _agentSystem.ActiveCustomerCount : 0);

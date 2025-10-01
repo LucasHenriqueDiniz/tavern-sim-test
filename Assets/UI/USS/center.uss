@@ -1,0 +1,48 @@
+/* Componente isolado (sem position absoluto) */
+.centerHUD {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    width: 275px;
+    min-height: 92px;
+
+    /* respiro p/ ícones e relógio */
+    background-image: url("Assets/UI/Images/center.png");
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
+/* Barra de controles (centralizada e contida) */
+.timeControls {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    min-height: 28px;
+}
+
+/* Ícones, todos cinza e do mesmo tamanho */
+.timeButton {
+    width: 18px;
+    height: 18px;
+    margin-right: 6px;
+
+    -unity-background-scale-mode: scale-and-crop;
+    -unity-background-image-tint-color: #BDBDBD;
+    /* cinza uniforme */
+    opacity: 1.0;
+}
+
+.timeButton:last-child {
+    margin-right: 0;
+}
+
+/* Relógio abaixo dos controles, sem cor forçada */
+.clock {
+    align-self: center;
+    font-size: 10px;
+    -unity-text-align: middle-center;
+    padding-top: 0px;
+}

@@ -1,0 +1,78 @@
+/* Barra inferior única */
+.hud-bottom {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 38px; /* altura conforme seu mock */
+    background-color: rgba(0, 0, 0, 0.85);
+    border-top: 2px solid #4a4a4a;
+
+    /* linha, tudo em row */
+    flex-direction: row;
+    align-items: center;
+    padding: 0 12px;
+
+    /* canto direito levemente arredondado opcional */
+    border-top-right-radius: 10px;
+}
+
+/* Ouro (ícone + valor) */
+.gold-display {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+}
+
+.gold-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+
+    -unity-background-scale-mode: scale-and-crop;
+    -unity-background-image-tint-color: #FFD700; /* dourado */
+    background-color: rgba(0,0,0,0);            /* sem fundo sólido */
+}
+
+.gold-value {
+    font-size: 14px;
+    font-weight: bold;
+    color: #ffffff;
+}
+
+/* Espaço flexível ao centro */
+.bottom-spacer {
+    flex-grow: 1;
+}
+
+/* Ações (2-3 botões pequenos no canto direito) */
+.bottom-actions {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Botão base */
+.hud-icon-button {
+    background-color: #3a3a3a;
+    border: 1px solid #555555;
+    border-radius: 50%;
+    padding: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -unity-background-scale-mode: scale-and-crop;
+    -unity-background-image-tint-color: #bdbdbd;
+    transition-duration: 0.15s;
+}
+
+.hud-icon-button:hover {
+    background-color: #4a4a4a;
+    border-color: #777777;
+    -unity-background-image-tint-color: #ffffff;
+}
+
+/* Variante pequena */
+.hud-icon-button--small {
+    width: 28px;
+    height: 28px;
+}
