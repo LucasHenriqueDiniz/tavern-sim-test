@@ -214,16 +214,17 @@ namespace TavernSim.Bootstrap
             var panel = GetOrCreatePanelSettings();
             document.panelSettings = panel;   // ✅ reativa PanelSettings
 
-            var hudConfig = Resources.Load<TavernSim.UI.Legacy.HUDVisualConfig>("UI/HUDVisualConfig");
-            if (hudConfig == null)
+            var hudVta = Resources.Load<VisualTreeAsset>("UI/HUD");
+            if (hudVta == null)
             {
-                Debug.LogWarning("DevBootstrap could not locate HUDVisualConfig in Resources/UI. HUD will fall back to minimal layout.");
+                Debug.LogWarning("DevBootstrap could not locate UI/HUD (VisualTreeAsset) in Resources. HUD will fall back to minimal layout.");
             }
 
             _hudController = uiGo.AddComponent<HUDController>();
-            if (hudConfig != null)
+            if (hudVta != null)
             {
-                _hudController.SetVisualConfig(hudConfig);
+                // Prefer assigning directly to the document so HUDController can use it immediately
+                document.visualTreeAsset = hudVta;
             }
             // Ativar o GO antes de inicializar para garantir rootVisualElement disponível
             uiGo.SetActive(true);

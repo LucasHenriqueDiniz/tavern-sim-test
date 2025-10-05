@@ -4,7 +4,6 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using TavernSim.Domain;
 using TavernSim.UI;
-using TavernSim.UI.Legacy;
 
 namespace TavernSim.Editor
 {
@@ -17,10 +16,7 @@ namespace TavernSim.Editor
         private const string ItemPath = RootPath + "/Ale.asset";
         private const string RecipePath = RootPath + "/AlePint.asset";
         private const string CatalogPath = RootPath + "/DemoCatalog.asset";
-        private const string HudConfigFolder = "Assets/Resources/UI";
-        private const string HudConfigPath = HudConfigFolder + "/HUDVisualConfig.asset";
-        private const string HudUxmlPath = "Assets/UI/HUD/HUD.uxml";
-        private const string HudUssPath = "Assets/UI/HUD/HUD.uss";
+        private const string HudConfigFolder = "Assets/Resources/UI"; // kept for Resources root existence
 
         [InitializeOnLoadMethod]
         private static void EnsureAssets()
@@ -37,7 +33,7 @@ namespace TavernSim.Editor
             var catalog = LoadOrCreate<Catalog>(CatalogPath);
             ConfigureCatalog(catalog, item, recipe);
 
-            EnsureHudVisualConfig();
+            // No Legacy HUDVisualConfig needed anymore
 
             AssetDatabase.SaveAssets();
         }
@@ -113,21 +109,7 @@ namespace TavernSim.Editor
             EditorUtility.SetDirty(catalog);
         }
 
-        private static void EnsureHudVisualConfig()
-        {
-            var config = AssetDatabase.LoadAssetAtPath<HUDVisualConfig>(HudConfigPath);
-            if (config == null)
-            {
-                config = ScriptableObject.CreateInstance<HUDVisualConfig>();
-                AssetDatabase.CreateAsset(config, HudConfigPath);
-            }
-
-            var so = new SerializedObject(config);
-            so.FindProperty("visualTree").objectReferenceValue = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(HudUxmlPath);
-            so.FindProperty("styleSheet").objectReferenceValue = AssetDatabase.LoadAssetAtPath<StyleSheet>(HudUssPath);
-            so.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(config);
-        }
+        // Legacy HUDVisualConfig creation removed
     }
 }
 #endif

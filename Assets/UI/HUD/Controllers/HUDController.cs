@@ -10,7 +10,6 @@ using TavernSim.Save;
 using TavernSim.Core;
 using TavernSim.UI.Events;
 using TavernSim.UI.SystemStubs;
-using TavernSim.UI.Legacy;
 
 namespace TavernSim.UI
 {
@@ -31,8 +30,10 @@ namespace TavernSim.UI
         [SerializeField] private GridPlacer gridPlacer;
         [SerializeField] private IEventBus eventBus;
 
-        [Header("Visual Config")]
-        [SerializeField] private HUDVisualConfig visualConfig;
+        [Header("Visual Assets")]
+        [SerializeField] private VisualTreeAsset visualTree;
+        [SerializeField] private StyleSheet styleSheet;
+        [SerializeField] private string visualTreeResourcePath = "UI/HUD";
 
         // UI Document
         private UIDocument _document;
@@ -180,9 +181,10 @@ namespace TavernSim.UI
             Debug.Log($"Setting customer count to: {count}");
         }
         
-        public void SetVisualConfig(HUDVisualConfig config) 
+        public void SetVisualAssets(VisualTreeAsset tree, StyleSheet sheet = null)
         {
-            visualConfig = config;
+            visualTree = tree;
+            styleSheet = sheet;
         }
         
         public void Initialize() 
@@ -192,11 +194,20 @@ namespace TavernSim.UI
                 _document = GetComponent<UIDocument>();
             }
 
-            if (visualConfig != null)
+            // Ensure a VisualTree is assigned either via serialized field or loaded from Resources
+            if (_document.visualTreeAsset == null)
             {
-                if (visualConfig.VisualTree != null)
+                if (visualTree != null)
                 {
-                    _document.visualTreeAsset = visualConfig.VisualTree;
+                    _document.visualTreeAsset = visualTree;
+                }
+                else if (!string.IsNullOrEmpty(visualTreeResourcePath))
+                {
+                    var loaded = Resources.Load<VisualTreeAsset>(visualTreeResourcePath);
+                    if (loaded != null)
+                    {
+                        _document.visualTreeAsset = loaded;
+                    }
                 }
             }
 
@@ -217,12 +228,9 @@ namespace TavernSim.UI
             }
 
             // Apply stylesheet if provided
-            if (visualConfig != null && visualConfig.StyleSheet != null)
+            if (styleSheet != null && !_root.styleSheets.Contains(styleSheet))
             {
-                if (!_root.styleSheets.Contains(visualConfig.StyleSheet))
-                {
-                    _root.styleSheets.Add(visualConfig.StyleSheet);
-                }
+                _root.styleSheets.Add(styleSheet);
             }
 
             SetupControllers();
@@ -255,12 +263,9 @@ namespace TavernSim.UI
                 _root = hudRoot;
             }
 
-            if (visualConfig != null && visualConfig.StyleSheet != null)
+            if (styleSheet != null && !_root.styleSheets.Contains(styleSheet))
             {
-                if (!_root.styleSheets.Contains(visualConfig.StyleSheet))
-                {
-                    _root.styleSheets.Add(visualConfig.StyleSheet);
-                }
+                _root.styleSheets.Add(styleSheet);
             }
 
             SetupControllers();
