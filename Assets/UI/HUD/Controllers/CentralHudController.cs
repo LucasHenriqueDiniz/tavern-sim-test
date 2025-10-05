@@ -50,10 +50,10 @@ namespace TavernSim.UI
 
             CacheButtons();
 
-            _pauseButton?.RegisterCallback<ClickEvent>(_ => OnTimeButtonClicked(0f));
-            _step1Button?.RegisterCallback<ClickEvent>(_ => OnTimeButtonClicked(1f));
-            _step2Button?.RegisterCallback<ClickEvent>(_ => OnTimeButtonClicked(2f));
-            _step3Button?.RegisterCallback<ClickEvent>(_ => OnTimeButtonClicked(3f));
+            _pauseButton?.RegisterCallback<ClickEvent>(evt => OnTimeButtonClicked(0f, evt.currentTarget as VisualElement));
+            _step1Button?.RegisterCallback<ClickEvent>(evt => OnTimeButtonClicked(1f, evt.currentTarget as VisualElement));
+            _step2Button?.RegisterCallback<ClickEvent>(evt => OnTimeButtonClicked(2f, evt.currentTarget as VisualElement));
+            _step3Button?.RegisterCallback<ClickEvent>(evt => OnTimeButtonClicked(3f, evt.currentTarget as VisualElement));
 
             if (_clock != null)
             {
@@ -102,8 +102,18 @@ namespace TavernSim.UI
             }
         }
 
-        private void OnTimeButtonClicked(float scale)
+        private void OnTimeButtonClicked(float scale, VisualElement source)
         {
+            var buttonName = source?.name;
+            if (!string.IsNullOrEmpty(buttonName))
+            {
+                Debug.Log($"[CentralHudController] Botão '{buttonName}' clicado com escala {scale}.");
+            }
+            else
+            {
+                Debug.Log($"[CentralHudController] Controle de tempo clicado com escala {scale}.");
+            }
+
             _clock?.SetScale(scale);
             _lastKnownScale = scale;
             UpdateActiveButton(scale);

@@ -17,7 +17,11 @@
     position: absolute;
     bottom: 72px;        /* um pouco acima do bottom */
     left: 50%;
-    transform: translateX(-50%);
+    transform: translate(-50%, 0) scale(1.2);
+    transform-origin: center bottom;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 /* canto inferior esquerdo */
