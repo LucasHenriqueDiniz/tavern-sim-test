@@ -35,6 +35,10 @@
     opacity: 1.0;
 }
 
+.timeButton-active {
+    -unity-background-image-tint-color: #FFFFFF;
+}
+
 .timeButton:last-child {
     margin-right: 0;
 }

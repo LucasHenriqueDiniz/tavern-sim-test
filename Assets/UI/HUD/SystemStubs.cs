@@ -14,19 +14,38 @@ namespace TavernSim.UI.SystemStubs
     public static class SystemAPIStubs
     {
         // GameClockSystem stubs
-        public static void Pause(this GameClockSystem clock) 
+        public static void Pause(this GameClockSystem clock)
         {
-            Debug.Log("GameClockSystem.Pause() - stub implementation");
+            if (clock != null)
+            {
+                clock.SetScale(0f);
+            }
+            else
+            {
+                Debug.Log("GameClockSystem.Pause() - stub implementation");
+            }
         }
-        
-        public static void SetSpeed(this GameClockSystem clock, float speed) 
+
+        public static void SetSpeed(this GameClockSystem clock, float speed)
         {
-            Debug.Log($"GameClockSystem.SetSpeed({speed}) - stub implementation");
+            if (clock != null)
+            {
+                clock.SetScale(Mathf.Max(0f, speed));
+            }
+            else
+            {
+                Debug.Log($"GameClockSystem.SetSpeed({speed}) - stub implementation");
+            }
         }
-        
-        public static string GetTimeString(this GameClockSystem clock) 
+
+        public static string GetTimeString(this GameClockSystem clock)
         {
-            return "Dia 1 - 08:00"; // Stub implementation
+            if (clock != null)
+            {
+                return clock.Snapshot.ToString();
+            }
+
+            return "Dia 1 – 08:00"; // Stub implementation
         }
         
         public static GameClockSnapshot GetSnapshot(this GameClockSystem clock) 

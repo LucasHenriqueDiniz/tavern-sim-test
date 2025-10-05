@@ -47,6 +47,7 @@ namespace TavernSim.UI
         private BuildMenuController _buildMenuController;
         private SelectionPopupController _selectionPopupController;
         private HudToastController _toastController;
+        private CentralHudController _centralHudController;
         
         // Sistemas para compatibilidade
         private SaveService _saveService;
@@ -82,6 +83,7 @@ namespace TavernSim.UI
             // Buscar elementos dos templates importados
             var topBar = _root.Q("topBar");
             var bottomBar = _root.Q("bottomBar");
+            var centralHud = _root.Q("centralHUD");
             var sidePanel = _root.Q("sidePanel");
             var staffPanel = _root.Q("staffPanel");
             var buildMenu = _root.Q("buildMenu");
@@ -90,6 +92,7 @@ namespace TavernSim.UI
             // Criar controllers especializados
             _topBarController = new TopBarController(topBar, economySystem, reputationSystem, clockSystem, weatherService);
             _bottomBarController = new BottomBarController(bottomBar, economySystem, clockSystem, weatherService);
+            _centralHudController = new CentralHudController(centralHud, clockSystem ?? _clockSystem);
             _sidePanelController = new SidePanelController(sidePanel, economySystem, orderSystem, reputationSystem);
             _staffPanelController = new StaffPanelController(staffPanel);
             _buildMenuController = new BuildMenuController(buildMenu, buildCatalog, gridPlacer);
@@ -106,6 +109,7 @@ namespace TavernSim.UI
         {
             _topBarController?.Initialize();
             _bottomBarController?.Initialize();
+            _centralHudController?.Initialize();
             _sidePanelController?.Initialize();
             _staffPanelController?.Initialize();
             _buildMenuController?.Initialize();
