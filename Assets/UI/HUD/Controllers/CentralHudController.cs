@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.UIElements;
 using TavernSim.Simulation.Systems;
@@ -23,6 +25,8 @@ namespace TavernSim.UI
         private Button _step3Button;
 
         private readonly List<Button> _timeButtons = new List<Button>();
+        private float _lastKnownScale = 1f;
+        private PropertyInfo _currentScaleProperty;
 
         public CentralHudController(VisualElement root, GameClockSystem clock)
         {
@@ -55,13 +59,21 @@ namespace TavernSim.UI
             {
                 _clock.TimeChanged -= OnTimeChanged;
                 _clock.TimeChanged += OnTimeChanged;
-                UpdateActiveButton(_clock.CurrentScale);
-                UpdateTimeLabel(_clock.Snapshot.ToString());
+                UpdateActiveButton(GetClockScale());
+                UpdateTimeLabel(FormatTime(_clock.Snapshot));
             }
             else
             {
                 UpdateActiveButton(1f);
                 UpdateTimeLabel("Dia 1 – 08:00");
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_clock != null)
+            {
+                _clock.TimeChanged -= OnTimeChanged;
             }
         }
 
@@ -93,16 +105,14 @@ namespace TavernSim.UI
         private void OnTimeButtonClicked(float scale)
         {
             _clock?.SetScale(scale);
+            _lastKnownScale = scale;
             UpdateActiveButton(scale);
         }
 
         private void OnTimeChanged(GameClockSystem.GameClockSnapshot snapshot)
         {
-            UpdateTimeLabel(snapshot.ToString());
-            if (_clock != null)
-            {
-                UpdateActiveButton(_clock.CurrentScale);
-            }
+            UpdateTimeLabel(FormatTime(snapshot));
+            UpdateActiveButton(GetClockScale());
         }
 
         private void UpdateTimeLabel(string text)
@@ -117,6 +127,8 @@ namespace TavernSim.UI
 
         private void UpdateActiveButton(float scale)
         {
+            _lastKnownScale = scale;
+
             foreach (var button in _timeButtons)
             {
                 button?.RemoveFromClassList(ActiveClass);
@@ -142,6 +154,43 @@ namespace TavernSim.UI
             }
 
             target?.AddToClassList(ActiveClass);
+        }
+
+        private float GetClockScale()
+        {
+            if (_clock == null)
+            {
+                return _lastKnownScale;
+            }
+
+            if (_currentScaleProperty == null)
+            {
+                _currentScaleProperty = typeof(GameClockSystem).GetProperty("CurrentScale", BindingFlags.Public | BindingFlags.Instance);
+            }
+
+            if (_currentScaleProperty != null)
+            {
+                try
+                {
+                    var value = _currentScaleProperty.GetValue(_clock);
+                    if (value is float scale)
+                    {
+                        _lastKnownScale = scale;
+                        return scale;
+                    }
+                }
+                catch (TargetInvocationException ex)
+                {
+                    Debug.LogException(ex);
+                }
+            }
+
+            return _lastKnownScale;
+        }
+
+        private static string FormatTime(GameClockSystem.GameClockSnapshot snapshot)
+        {
+            return $"Dia {snapshot.Day} – {snapshot.Hour:00}:{snapshot.Minute:00}";
         }
     }
 }

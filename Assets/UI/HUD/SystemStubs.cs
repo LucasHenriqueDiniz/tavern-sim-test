@@ -92,6 +92,16 @@ namespace TavernSim.UI.SystemStubs
     {
         public int Day;
         public string Time;
+
+        public override string ToString()
+        {
+            if (string.IsNullOrEmpty(Time))
+            {
+                return $"Dia {Day} – 00:00";
+            }
+
+            return $"Dia {Day} – {Time}";
+        }
     }
     
     public struct WeatherSnapshot

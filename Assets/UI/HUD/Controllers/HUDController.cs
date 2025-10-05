@@ -76,6 +76,7 @@ namespace TavernSim.UI
         private void OnDisable()
         {
             UnhookEvents();
+            _centralHudController?.Dispose();
         }
 
         private void SetupControllers()
