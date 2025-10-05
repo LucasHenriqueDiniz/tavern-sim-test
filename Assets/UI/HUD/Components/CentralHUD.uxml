@@ -2,11 +2,11 @@
     <Style src="project://database/Assets/UI/USS/center.uss?fileID=7433441132597879392&amp;guid=5c43e8d21f62e3a4aac3cc48d550e776&amp;type=3#center" />
     <ui:VisualElement name="centralHUD" class="centerHUD" style="background-image: url(&quot;project://database/Assets/UI/Images/center.png?fileID=2800000&amp;guid=93fb208b0ab53f546858d4cde02817c2&amp;type=3#center&quot;); height: 120px; align-items: auto; justify-content: center;">
         <ui:VisualElement name="timeControls" class="timeControls">
-            <ui:VisualElement class="timeButton" style="background-image: url(&quot;project://database/Assets/UI/Icons/HUD/pause-button.png?fileID=2800000&amp;guid=2688b1657b3b1384f9343df330eb0c1d&amp;type=3#pause-button&quot;);" />
-            <ui:VisualElement class="timeButton" style="background-image: url(&quot;project://database/Assets/UI/Icons/HUD/play-button.png?fileID=2800000&amp;guid=9ee744a3e7dee1441bf08d03a1169d68&amp;type=3#play-button&quot;);" />
-            <ui:VisualElement class="timeButton" style="background-image: url(&quot;project://database/Assets/UI/Icons/HUD/faststep.png?fileID=2800000&amp;guid=9ac0c2708f4c8f84cafd7804a647f56a&amp;type=3#faststep&quot;);" />
-            <ui:VisualElement class="timeButton" style="background-image: url(&quot;project://database/Assets/UI/Icons/HUD/step.png?fileID=2800000&amp;guid=43043f2bbbcbb2b4a89ea2de76bbad98&amp;type=3#step&quot;);" />
+            <ui:VisualElement name="pauseBtn" class="timeButton" style="background-image: url(&quot;project://database/Assets/UI/Icons/HUD/pause-button.png?fileID=2800000&amp;guid=2688b1657b3b1384f9343df330eb0c1d&amp;type=3#pause-button&quot;);" />
+            <ui:VisualElement name="step1Btn" class="timeButton" style="background-image: url(&quot;project://database/Assets/UI/Icons/HUD/play-button.png?fileID=2800000&amp;guid=9ee744a3e7dee1441bf08d03a1169d68&amp;type=3#play-button&quot;);" />
+            <ui:VisualElement name="step2Btn" class="timeButton" style="background-image: url(&quot;project://database/Assets/UI/Icons/HUD/faststep.png?fileID=2800000&amp;guid=9ac0c2708f4c8f84cafd7804a647f56a&amp;type=3#faststep&quot;);" />
+            <ui:VisualElement name="step3Btn" class="timeButton" style="background-image: url(&quot;project://database/Assets/UI/Icons/HUD/step.png?fileID=2800000&amp;guid=43043f2bbbcbb2b4a89ea2de76bbad98&amp;type=3#step&quot;);" />
         </ui:VisualElement>
-        <ui:Label name="clockLabel" text="Sun. 10:21 AM" class="clock" />
+        <ui:Label name="currentTimeLabel" text="Sun. 10:21 AM" class="clock" />
     </ui:VisualElement>
 </ui:UXML>

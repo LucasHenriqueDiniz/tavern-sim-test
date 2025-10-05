@@ -143,6 +143,20 @@ namespace TavernSim.UI
             }
         }
 
+        public void Toggle()
+        {
+            if (_isVisible)
+            {
+                Hide();
+            }
+            else
+            {
+                Show();
+            }
+        }
+
+        public bool IsVisible => _isVisible;
+
     }
 
     // BuildCategory is defined in TavernSim.Building

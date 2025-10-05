@@ -2,13 +2,17 @@
     <Style src="project://database/Assets/UI/HUD/Styles/BottomBar.uss?fileID=7433441132597879392&amp;guid=bc9c51c815a5bbd47823de9cdcc65c2a&amp;type=3#BottomBar" />
     <ui:VisualElement name="bottomBar" class="hud-bottom">
         <ui:VisualElement class="gold-display">
-            <ui:VisualElement name="goldIcon" class="gold-icon" style="background-image: url(&apos;Assets/UI/Icons/HUD/two-coins.png&apos;);" />
-            <ui:Label name="goldLabel" text="0" class="gold-value" />
+            <ui:VisualElement name="goldIcon" class="gold-icon" style="background-image: url(&quot;project://database/Assets/UI/Icons/HUD/two-coins.png?fileID=2800000&amp;guid=177274da2e92818479d56ef5dbf5e9b9&amp;type=3#two-coins&quot;);" />
+            <ui:Label name="cashLabel" text="0" class="gold-value" />
+        </ui:VisualElement>
+        <ui:VisualElement name="VisualElement" class="gold-display">
+            <ui:VisualElement name="repIcon" class="gold-icon" style="background-image: url(&quot;project://database/Assets/UI/Cursors/hand_small_point_e.png?fileID=2800000&amp;guid=9c4407a9eda5df548baa4b67eef43477&amp;type=3#hand_small_point_e&quot;); -unity-background-image-tint-color: rgb(167, 179, 255);" />
+            <ui:Label name="repLabel" text="0" class="gold-value" />
         </ui:VisualElement>
         <ui:VisualElement class="bottom-spacer" />
         <ui:VisualElement class="bottom-actions">
-            <ui:Button name="settingsBtn" tooltip="Configurações" class="hud-icon-button hud-icon-button--small" style="background-image: url(&apos;Assets/UI/Icons/BottomBar/settings.png&apos;);" />
-            <ui:Button name="helpBtn" tooltip="Ajuda" class="hud-icon-button hud-icon-button--small" style="background-image: url(&apos;Assets/UI/Icons/BottomBar/help.png&apos;);" />
+            <ui:Button name="settingsBtn" tooltip="Configurações" class="hud-icon-button hud-icon-button--small" style="background-image: url(&quot;project://database/Assets/UI/Icons/HUD/path-distance.png?fileID=2800000&amp;guid=4cd2637be1cfc7b49a2004689d926e79&amp;type=3#path-distance&quot;);" />
+            <ui:Button name="helpBtn" tooltip="Ajuda" class="hud-icon-button hud-icon-button--small" style="background-image: url(&quot;project://database/Assets/UI/Icons/HUD/earth-america.png?fileID=2800000&amp;guid=915f3611f5cfb204cb30581167588fd9&amp;type=3#earth-america&quot;); align-self: center;" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

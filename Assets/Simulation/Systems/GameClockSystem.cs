@@ -67,6 +67,26 @@ namespace TavernSim.Simulation.Systems
             _timeScale = Mathf.Max(0f, scale);
         }
 
+        public void Pause()
+        {
+            SetScale(0f);
+        }
+
+        public void Resume()
+        {
+            if (_timeScale <= 0f)
+            {
+                SetScale(1f);
+            }
+        }
+
+        public void SetSpeed(float speed)
+        {
+            SetScale(speed);
+        }
+
+        public float CurrentScale => _timeScale;
+
         public readonly struct GameClockSnapshot
         {
             public readonly int Day;

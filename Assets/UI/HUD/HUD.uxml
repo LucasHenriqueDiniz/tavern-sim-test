@@ -1,11 +1,11 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" engine="UnityEngine.UIElements">
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" engine="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Template name="TopBar" src="project://database/Assets/UI/HUD/Components/TopBar.uxml?fileID=9197481963319205126&amp;guid=9a00aad717044e4408b023e6aca95b59&amp;type=3#TopBar" />
     <ui:Template name="BottomBar" src="project://database/Assets/UI/HUD/Components/BottomBar.uxml?fileID=9197481963319205126&amp;guid=f0fd9a3f7cc263e44a9216f2ff1e39d3&amp;type=3#BottomBar" />
     <ui:Template name="CentralHUD" src="project://database/Assets/UI/HUD/Components/CentralHUD.uxml?fileID=9197481963319205126&amp;guid=98b33f0173bc8ae4a8eff437e1f850a6&amp;type=3#CentralHUD" />
-    <ui:Template name="TopBar" src="project://database/Assets/UI/HUD/Components/TopBar.uxml?fileID=9197481963319205126&amp;guid=9a00aad717044e4408b023e6aca95b59&amp;type=3#TopBar" />
     <Style src="project://database/Assets/UI/HUD/Styles/HUD.uss?fileID=7433441132597879392&amp;guid=62dcbfcf8caabc14a81ecc993a592c77&amp;type=3#HUD" />
-    <ui:VisualElement name="hudRoot" class="hud-root">
+    <ui:VisualElement name="hudRoot" class="hud-root" style="position: absolute; bottom: 0; top: 0; right: -1px; left: 1px;">
         <ui:Instance template="TopBar" name="TopBar" />
-        <ui:Instance template="BottomBar" name="BottomBar" />
-        <ui:Instance template="CentralHUD" name="CentralHUD" />
+        <ui:Instance template="BottomBar" name="BottomBar" style="position: absolute; left: auto; bottom: 1px; height: -1px; width: 339px;" />
+        <ui:Instance template="CentralHUD" name="CentralHUD" style="position: absolute; top: auto; left: 50%; bottom: -40px; right: 50%; align-self: center; align-items: center;" />
     </ui:VisualElement>
 </ui:UXML>

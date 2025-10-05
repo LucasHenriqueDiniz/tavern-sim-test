@@ -1,12 +1,12 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" engine="UnityEngine.UIElements" editor-extension-mode="False">
     <Style src="project://database/Assets/UI/HUD/Styles/TopBar.uss?fileID=7433441132597879392&amp;guid=4d0153205f11b334890e9262f2bacb5f&amp;type=3#TopBar" />
-    <ui:VisualElement name="topBar" class="hud-top">
-        <ui:VisualElement class="hud-top__row" style="align-items: flex-start;">
-            <ui:VisualElement class="hud-top__label-group">
-                <ui:VisualElement class="hud-top__label-icon" style="background-image: url(&quot;project://database/Assets/UI/Icons/HUD/earth-america.png?fileID=2800000&amp;guid=915f3611f5cfb204cb30581167588fd9&amp;type=3#earth-america&quot;);" />
-                <ui:Label text="Nome do Evento" class="hud-top__label" />
-            </ui:VisualElement>
-            <ui:VisualElement class="hud-top__big-buttons">
+    <ui:VisualElement name="topBar" class="hud-top" style="justify-content: space-between;">
+        <ui:VisualElement class="hud-top__label-group">
+            <ui:VisualElement class="hud-top__label-icon" style="background-image: url(&quot;project://database/Assets/UI/Icons/HUD/earth-america.png?fileID=2800000&amp;guid=915f3611f5cfb204cb30581167588fd9&amp;type=3#earth-america&quot;);" />
+            <ui:Label text="Nome do Evento" class="hud-top__label" />
+        </ui:VisualElement>
+        <ui:VisualElement style="flex-grow: 1; flex-direction: row; align-items: center; justify-content: flex-end;">
+            <ui:VisualElement class="hud-top__big-buttons" style="width: auto;">
                 <ui:Button tooltip="Botão Grande 1" class="hud-icon-button hud-icon-button--big" style="background-image: url(&quot;project://database/Assets/UI/Icons/HUD/hammer.png?fileID=2800000&amp;guid=326d41c80e375804cb56befbe4707135&amp;type=3#hammer&quot;);" />
                 <ui:Button tooltip="Botão Grande 2" class="hud-icon-button hud-icon-button--big" style="background-image: url(&quot;project://database/Assets/UI/Icons/HUD/decoration.png?fileID=2800000&amp;guid=726344df68c19af4c8426235cf751820&amp;type=3#decoration&quot;);" />
                 <ui:Button tooltip="Botão Grande 3" class="hud-icon-button hud-icon-button--big" style="background-image: url(&quot;project://database/Assets/UI/Icons/HUD/cook.png?fileID=2800000&amp;guid=b645b22aa7d33234ab6c94aef988c03a&amp;type=3#cook&quot;); -unity-slice-scale: 2px; -unity-background-scale-mode: stretch-to-fill; transform-origin: center;" />

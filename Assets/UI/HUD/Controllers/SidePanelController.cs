@@ -145,6 +145,8 @@ namespace TavernSim.UI
                 Show();
         }
 
+        public bool IsVisible => _isVisible;
+
         // Update Methods
         public void UpdateStats()
         {

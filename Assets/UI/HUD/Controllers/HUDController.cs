@@ -97,9 +97,9 @@ namespace TavernSim.UI
             _toastController = gameObject.AddComponent<HudToastController>();
 
             // Hook eventos dos controllers
-            _topBarController.StaffButtonClicked += () => StaffPanelRequested?.Invoke();
-            _bottomBarController.BuildButtonClicked += () => BuildMenuRequested?.Invoke();
-            _bottomBarController.SidePanelButtonClicked += () => SidePanelRequested?.Invoke();
+            _topBarController.StaffButtonClicked += HandleStaffButtonClicked;
+            _bottomBarController.BuildButtonClicked += HandleBuildButtonClicked;
+            _bottomBarController.SidePanelButtonClicked += HandleSidePanelButtonClicked;
         }
 
         private void InitializeControllers()
@@ -307,7 +307,7 @@ namespace TavernSim.UI
         {
             _weatherService = weatherService;
         }
-        
+
         // Eventos para compatibilidade
         public event Action HireWaiterRequested;
         public event Action HireCookRequested;
@@ -317,5 +317,62 @@ namespace TavernSim.UI
         public event Action FireCookRequested;
         public event Action FireBartenderRequested;
         public event Action FireCleanerRequested;
+
+        private void HandleStaffButtonClicked()
+        {
+            if (_staffPanelController != null)
+            {
+                if (_staffPanelController.IsVisible)
+                {
+                    _staffPanelController.Hide();
+                }
+                else
+                {
+                    HideBuildMenu();
+                    HideSidePanel();
+                    _staffPanelController.Show();
+                }
+            }
+
+            StaffPanelRequested?.Invoke();
+        }
+
+        private void HandleBuildButtonClicked()
+        {
+            if (_buildMenuController != null)
+            {
+                if (_buildMenuController.IsVisible)
+                {
+                    _buildMenuController.Hide();
+                }
+                else
+                {
+                    HideStaffPanel();
+                    HideSidePanel();
+                    _buildMenuController.Show();
+                }
+            }
+
+            BuildMenuRequested?.Invoke();
+        }
+
+        private void HandleSidePanelButtonClicked()
+        {
+            if (_sidePanelController != null)
+            {
+                if (_sidePanelController.IsVisible)
+                {
+                    _sidePanelController.Hide();
+                }
+                else
+                {
+                    HideStaffPanel();
+                    HideBuildMenu();
+                    _sidePanelController.Show();
+                }
+            }
+
+            SidePanelRequested?.Invoke();
+        }
     }
 }

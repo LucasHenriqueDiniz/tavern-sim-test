@@ -134,6 +134,20 @@ namespace TavernSim.UI
             }
         }
 
+        public void Toggle()
+        {
+            if (_isVisible)
+            {
+                Hide();
+            }
+            else
+            {
+                Show();
+            }
+        }
+
+        public bool IsVisible => _isVisible;
+
         public void UpdateStaffList(StaffType type, List<StaffMember> current, List<StaffMember> candidates)
         {
             if (type != _activeTab) return;
