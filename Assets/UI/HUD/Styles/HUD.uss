@@ -1,45 +1,50 @@
 /* HUD root ocupa tela inteira */
 .hud-root {
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    flex-direction: column; /* opcional */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.hud-layer {
+    position: absolute;
+    display: flex;
 }
 
 /* barra superior ocupa toda a largura no topo */
-.hud-top {
-    position: absolute;
+.hud-layer__top {
     top: 0;
     left: 0;
     right: 0;
     padding: 16px 24px 0 24px;
-    display: flex;
     justify-content: center;
+    align-items: flex-start;
 }
 
-.hud-top > * {
+.hud-layer__top > * {
     width: 100%;
 }
 
 /* centro embaixo (centralizado horizontalmente) */
-.center-hud-wrapper {
-    position: absolute;
+.hud-layer__center {
     bottom: 56px;
     left: 50%;
-    transform: translate(-50%, 0) scale(1.2);
+    transform: translate(-50%, 0) scale(1.25);
     transform-origin: center bottom;
-    display: flex;
     justify-content: center;
     align-items: flex-end;
 }
 
 /* canto inferior esquerdo com largura fixa */
-.hud-bottom-left {
-    position: absolute;
-    bottom: 24px;
-    left: 24px;
+.hud-layer__bottom-left {
+    bottom: 32px;
+    left: 32px;
     width: 200px;
+    justify-content: flex-start;
+    align-items: stretch;
 }
 
-.hud-bottom-left > * {
+.hud-layer__bottom-left > * {
     width: 100%;
 }
