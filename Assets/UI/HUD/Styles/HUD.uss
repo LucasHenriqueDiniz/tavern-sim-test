@@ -5,28 +5,41 @@
     flex-direction: column; /* opcional */
 }
 
-/* topo à direita */
+/* barra superior ocupa toda a largura no topo */
 .hud-top {
     position: absolute;
-    top: 16px;
-    right: 16px;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 16px 24px 0 24px;
+    display: flex;
+    justify-content: center;
 }
 
-/* centro embaixo */
+.hud-top > * {
+    width: 100%;
+}
+
+/* centro embaixo (centralizado horizontalmente) */
 .center-hud-wrapper {
     position: absolute;
-    bottom: 72px;        /* um pouco acima do bottom */
+    bottom: 56px;
     left: 50%;
     transform: translate(-50%, 0) scale(1.2);
     transform-origin: center bottom;
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-end;
 }
 
-/* canto inferior esquerdo */
+/* canto inferior esquerdo com largura fixa */
 .hud-bottom-left {
     position: absolute;
-    bottom: 16px;
-    left: 16px;
+    bottom: 24px;
+    left: 24px;
+    width: 200px;
+}
+
+.hud-bottom-left > * {
+    width: 100%;
 }
