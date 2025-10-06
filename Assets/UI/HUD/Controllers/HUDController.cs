@@ -303,9 +303,10 @@ namespace TavernSim.UI
             _buildCatalog = buildCatalog;
         }
         
-        public void BindClock(GameClockSystem clockSystem) 
+        public void BindClock(GameClockSystem clockSystem)
         {
             _clockSystem = clockSystem;
+            _centralHudController?.BindClock(clockSystem);
         }
         
         public void BindWeather(IWeatherService weatherService) 
