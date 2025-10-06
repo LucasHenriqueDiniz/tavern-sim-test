@@ -47,6 +47,7 @@ namespace TavernSim.UI
         private BuildMenuController _buildMenuController;
         private SelectionPopupController _selectionPopupController;
         private HudToastController _toastController;
+        private CentralHudController _centralHudController;
         
         // Sistemas para compatibilidade
         private SaveService _saveService;
@@ -75,6 +76,7 @@ namespace TavernSim.UI
         private void OnDisable()
         {
             UnhookEvents();
+            _centralHudController?.Dispose();
         }
 
         private void SetupControllers()
@@ -82,6 +84,7 @@ namespace TavernSim.UI
             // Buscar elementos dos templates importados
             var topBar = _root.Q("topBar");
             var bottomBar = _root.Q("bottomBar");
+            var centralHud = _root.Q("centralHUD");
             var sidePanel = _root.Q("sidePanel");
             var staffPanel = _root.Q("staffPanel");
             var buildMenu = _root.Q("buildMenu");
@@ -90,7 +93,15 @@ namespace TavernSim.UI
             // Criar controllers especializados
             _topBarController = new TopBarController(topBar, economySystem, reputationSystem, clockSystem, weatherService);
             _bottomBarController = new BottomBarController(bottomBar, economySystem, clockSystem, weatherService);
-            _sidePanelController = new SidePanelController(sidePanel, economySystem, orderSystem, reputationSystem);
+            _centralHudController = new CentralHudController(centralHud, clockSystem ?? _clockSystem);
+            if (sidePanel != null)
+            {
+                _sidePanelController = new SidePanelController(sidePanel, economySystem, orderSystem, reputationSystem);
+            }
+            else
+            {
+                Debug.LogWarning("HUDController: elemento 'sidePanel' não encontrado. Controlador do painel lateral não será inicializado.");
+            }
             _staffPanelController = new StaffPanelController(staffPanel);
             _buildMenuController = new BuildMenuController(buildMenu, buildCatalog, gridPlacer);
             _selectionPopupController = new SelectionPopupController(selectionPopup);
@@ -106,6 +117,7 @@ namespace TavernSim.UI
         {
             _topBarController?.Initialize();
             _bottomBarController?.Initialize();
+            _centralHudController?.Initialize();
             _sidePanelController?.Initialize();
             _staffPanelController?.Initialize();
             _buildMenuController?.Initialize();
@@ -298,9 +310,10 @@ namespace TavernSim.UI
             _buildCatalog = buildCatalog;
         }
         
-        public void BindClock(GameClockSystem clockSystem) 
+        public void BindClock(GameClockSystem clockSystem)
         {
             _clockSystem = clockSystem;
+            _centralHudController?.BindClock(clockSystem);
         }
         
         public void BindWeather(IWeatherService weatherService) 

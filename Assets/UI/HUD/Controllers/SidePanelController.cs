@@ -46,6 +46,12 @@ namespace TavernSim.UI
 
         public void Initialize()
         {
+            if (_root == null)
+            {
+                Debug.LogWarning("SidePanelController: raiz do painel lateral não encontrada. Inicialização ignorada.");
+                return;
+            }
+
             SetupUI();
             HookEvents();
             Hide(); // Começar oculto
@@ -53,6 +59,11 @@ namespace TavernSim.UI
 
         private void SetupUI()
         {
+            if (_root == null)
+            {
+                return;
+            }
+
             _sidePanel = _root.Q("sidePanel");
             _closeButton = _root.Q<Button>("panelCloseBtn");
             _toggleButton = _root.Q<Button>("sidePanelToggleBtn");
