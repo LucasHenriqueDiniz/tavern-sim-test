@@ -94,7 +94,14 @@ namespace TavernSim.UI
             _topBarController = new TopBarController(topBar, economySystem, reputationSystem, clockSystem, weatherService);
             _bottomBarController = new BottomBarController(bottomBar, economySystem, clockSystem, weatherService);
             _centralHudController = new CentralHudController(centralHud, clockSystem ?? _clockSystem);
-            _sidePanelController = new SidePanelController(sidePanel, economySystem, orderSystem, reputationSystem);
+            if (sidePanel != null)
+            {
+                _sidePanelController = new SidePanelController(sidePanel, economySystem, orderSystem, reputationSystem);
+            }
+            else
+            {
+                Debug.LogWarning("HUDController: elemento 'sidePanel' não encontrado. Controlador do painel lateral não será inicializado.");
+            }
             _staffPanelController = new StaffPanelController(staffPanel);
             _buildMenuController = new BuildMenuController(buildMenu, buildCatalog, gridPlacer);
             _selectionPopupController = new SelectionPopupController(selectionPopup);
